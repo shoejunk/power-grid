@@ -1,0 +1,18 @@
+@charset "UTF-8";
+
+/* =====================================================================
+ * POWER GRID — design system entry point
+ * ---------------------------------------------------------------------
+ * Import order matters: tokens define the custom properties everything
+ * else consumes, then the reset, then the type system, then the shared
+ * effects, then components, then screen layouts.
+ *
+ * `src/main.tsx` imports this file and nothing else CSS-wise.
+ * ===================================================================== */
+
+@use 'tokens';
+@use 'reset';
+@use 'typography';
+@use 'effects';
+@use 'components';
+@use 'screens';

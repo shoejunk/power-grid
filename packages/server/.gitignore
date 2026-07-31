@@ -1,0 +1,6 @@
+# Build output
+dist/
+
+# Persistent game database — every lobby and in-progress game lives here.
+# The directory is created on boot; its contents are machine-local state.
+data/

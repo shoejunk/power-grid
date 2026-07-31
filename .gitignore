@@ -1,0 +1,28 @@
+node_modules/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# server persistence
+packages/server/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# env / local
+.env
+.env.local
+*.local
+
+# editor / os
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# logs
+*.log
+npm-debug.log*

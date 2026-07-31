@@ -1,0 +1,283 @@
+@charset "UTF-8";
+@use 'sass:map';
+@use 'tokens' as tokens;
+
+/* =====================================================================
+ * MIXINS — the physical language of the UI
+ * ---------------------------------------------------------------------
+ * These encode the three surface treatments the whole game reuses:
+ *   panel()  — a milled metal plate with a bevelled edge
+ *   glass()  — a frosted sheet floating over the animated background
+ *   bevel()  — the light-top / dark-bottom edge pair on its own
+ * plus focus, glow, texture and responsive helpers.
+ * ===================================================================== */
+
+/* ------------------------------------------------------------------ *
+ * Responsive
+ * ------------------------------------------------------------------ */
+@mixin up($name) {
+  $bp: map.get(tokens.$pg-breakpoints, $name);
+  @if $bp == null {
+    @error "Unknown breakpoint `#{$name}`.";
+  }
+  @media (min-width: $bp) {
+    @content;
+  }
+}
+
+@mixin down($name) {
+  $bp: map.get(tokens.$pg-breakpoints, $name);
+  @if $bp == null {
+    @error "Unknown breakpoint `#{$name}`.";
+  }
+  @media (max-width: #{$bp - 0.02px}) {
+    @content;
+  }
+}
+
+/** Short-viewport guard — 1366x768 and laptop 16:10 need tighter vertical rhythm. */
+@mixin short-viewport {
+  @media (max-height: 820px) {
+    @content;
+  }
+}
+
+@mixin reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    @content;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Edges and surfaces
+ * ------------------------------------------------------------------ */
+
+/** The light-top / dark-bottom inner edge that gives plates thickness. */
+@mixin bevel($strength: 1) {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09 * $strength),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.62 * $strength);
+}
+
+/**
+ * Milled metal plate. The default panel treatment: gradient body, hairline
+ * border, bevel, and a drop shadow at the requested elevation.
+ */
+@mixin panel($radius: var(--pg-radius-lg), $elevation: 3, $tone: 'default') {
+  position: relative;
+  border-radius: #{$radius};
+  border: 1px solid var(--pg-line-subtle);
+
+  @if $tone == 'dark' {
+    background: var(--pg-metal-fill-dark);
+  } @else if $tone == 'sunken' {
+    background: linear-gradient(180deg, #080d13 0%, #0c131b 100%);
+  } @else {
+    background: var(--pg-metal-fill);
+  }
+
+  @if $elevation == 1 {
+    box-shadow: var(--pg-bevel-inner), var(--pg-elev-1);
+  } @else if $elevation == 2 {
+    box-shadow: var(--pg-bevel-inner), var(--pg-elev-2);
+  } @else if $elevation == 4 {
+    box-shadow: var(--pg-bevel-inner), var(--pg-elev-4);
+  } @else if $elevation == 5 {
+    box-shadow: var(--pg-bevel-inner), var(--pg-elev-5);
+  } @else if $elevation == 0 {
+    box-shadow: var(--pg-bevel-inner);
+  } @else {
+    box-shadow: var(--pg-bevel-inner), var(--pg-elev-3);
+  }
+}
+
+/** Frosted glass sheet. Falls back to a solid fill when backdrop-filter
+    is unsupported or the user asked for reduced transparency. */
+@mixin glass($radius: var(--pg-radius-lg), $strong: false) {
+  position: relative;
+  border-radius: #{$radius};
+  border: 1px solid var(--pg-line-subtle);
+  background: if($strong, var(--pg-glass-bg-strong), var(--pg-glass-bg));
+  backdrop-filter: blur(var(--pg-glass-blur)) saturate(1.35);
+  -webkit-backdrop-filter: blur(var(--pg-glass-blur)) saturate(1.35);
+  box-shadow: var(--pg-bevel-inner), var(--pg-elev-3);
+
+  @supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+    background: var(--pg-surface-panel);
+  }
+}
+
+/**
+ * A one-pixel specular highlight running along the top edge of a plate.
+ * Applied as a ::before so it can fade independently of the border.
+ */
+@mixin top-sheen($inset: 1px, $opacity: 0.5) {
+  &::before {
+    content: '';
+    position: absolute;
+    inset: $inset $inset auto $inset;
+    height: 1px;
+    border-radius: inherit;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, $opacity) 22%,
+      rgba(255, 255, 255, $opacity) 78%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+}
+
+/** Inset well — for inputs, resource trays, anything that should read as
+    carved into the plate rather than sitting on it. */
+@mixin well($radius: var(--pg-radius-md)) {
+  border-radius: #{$radius};
+  background: linear-gradient(180deg, #070c12 0%, #0b121a 100%);
+  border: 1px solid var(--pg-line-hairline);
+  box-shadow: var(--pg-elev-inset), inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* ------------------------------------------------------------------ *
+ * Light
+ * ------------------------------------------------------------------ */
+
+/** Outer bloom in an arbitrary colour. Used on hover/active accents. */
+@mixin glow($color, $size: 22px, $spread: 0) {
+  box-shadow: 0 0 $size $spread $color;
+}
+
+/**
+ * A soft radial bloom behind an element (::after, non-interactive).
+ * This is the "AAA" light-leak that makes accents feel emissive.
+ */
+@mixin bloom($color, $scale: 1.7, $opacity: 1) {
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(60% 60% at 50% 50%, #{$color} 0%, transparent 72%);
+    transform: scale($scale);
+    opacity: $opacity;
+    pointer-events: none;
+    z-index: -1;
+    filter: blur(6px);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Focus
+ * ------------------------------------------------------------------ */
+
+/** Keyboard focus ring. Always paired with :focus-visible, never :focus. */
+@mixin focus-ring($offset: 2px) {
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 $offset var(--pg-surface-base), 0 0 0 #{$offset + 2px} var(--pg-cyan),
+      0 0 18px var(--pg-cyan-glow);
+    z-index: 1;
+  }
+}
+
+/** Focus ring for elements that already own a box-shadow stack. */
+@mixin focus-ring-outline {
+  &:focus-visible {
+    outline: 2px solid var(--pg-cyan);
+    outline-offset: 2px;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Texture
+ * ------------------------------------------------------------------ */
+
+/**
+ * Fine film grain. Inline SVG fractal noise — zero network cost, tiles
+ * seamlessly, and stays crisp on 4K where a bitmap would smear.
+ */
+@mixin noise($opacity: var(--pg-noise-opacity), $pseudo: 'after') {
+  &::#{$pseudo} {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: #{$opacity};
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 160px 160px;
+  }
+}
+
+/** Engineering grid — the faint blueprint lattice on backgrounds. */
+@mixin grid-lines($size: 46px, $color: rgba(120, 170, 210, 0.05)) {
+  background-image: linear-gradient(#{$color} 1px, transparent 1px),
+    linear-gradient(90deg, #{$color} 1px, transparent 1px);
+  background-size: #{$size} #{$size};
+}
+
+/** Corner registration marks — the little L-brackets on heavy panels. */
+@mixin corner-ticks($len: 9px, $color: var(--pg-line-strong), $inset: 7px) {
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    width: #{$len};
+    height: #{$len};
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  &::before {
+    top: #{$inset};
+    left: #{$inset};
+    border-top: 1px solid #{$color};
+    border-left: 1px solid #{$color};
+  }
+  &::after {
+    bottom: #{$inset};
+    right: #{$inset};
+    border-bottom: 1px solid #{$color};
+    border-right: 1px solid #{$color};
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Layout helpers
+ * ------------------------------------------------------------------ */
+@mixin center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin row($gap: var(--pg-space-3)) {
+  display: flex;
+  align-items: center;
+  gap: #{$gap};
+}
+
+@mixin stack($gap: var(--pg-space-3)) {
+  display: flex;
+  flex-direction: column;
+  gap: #{$gap};
+}
+
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/** Scroll container with fade-out masks at both ends. */
+@mixin scroll-y($fade: 24px) {
+  overflow-y: auto;
+  overflow-x: hidden;
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    #000 #{$fade},
+    #000 calc(100% - #{$fade}),
+    transparent 100%
+  );
+}

@@ -1,0 +1,210 @@
+@charset "UTF-8";
+
+/* =====================================================================
+ * POWER GRID — TYPOGRAPHY
+ * ---------------------------------------------------------------------
+ * Two self-hosted variable faces:
+ *   · Oswald — condensed industrial grotesque. Display, headings, big
+ *     numerals, buttons. Digits are naturally uniform-width.
+ *   · Inter  — the UI workhorse. Body copy, labels, inputs, help text.
+ *
+ * Every money / cost / count surface uses `font-variant-numeric:
+ * tabular-nums` so digits never jitter while a value animates.
+ * ===================================================================== */
+
+/* ---------------------------------------------------------------- *
+ * @font-face — variable woff2, latin + latin-ext
+ * ---------------------------------------------------------------- */
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 200 700;
+  font-display: swap;
+  src: url('/fonts/oswald-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 200 700;
+  font-display: swap;
+  src: url('/fonts/oswald-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ---------------------------------------------------------------- *
+ * Family / scale tokens
+ * ---------------------------------------------------------------- */
+:root {
+  --pg-font-display: 'Oswald', 'Arial Narrow', 'Roboto Condensed', 'Helvetica Neue',
+    system-ui, sans-serif;
+  --pg-font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --pg-font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'JetBrains Mono',
+    Consolas, monospace;
+
+  /* Type scale — fluid between the 1280px floor and the 2560px ceiling.
+     Ratio ≈ 1.25 (major third), tightened at the small end. */
+  --pg-text-3xs: 0.625rem; /* 10px — micro labels, keycaps          */
+  --pg-text-2xs: 0.6875rem; /* 11px — overline, table micro-copy    */
+  --pg-text-xs: 0.75rem; /* 12px — captions, help text              */
+  --pg-text-sm: 0.8125rem; /* 13px — dense UI, secondary            */
+  --pg-text-base: 0.9375rem; /* 15px — body                         */
+  --pg-text-md: 1.0625rem; /* 17px — lead paragraph                 */
+  --pg-text-lg: clamp(1.25rem, 0.95rem + 0.5vw, 1.5rem);
+  --pg-text-xl: clamp(1.5rem, 1.1rem + 0.8vw, 2rem);
+  --pg-text-2xl: clamp(2rem, 1.4rem + 1.3vw, 2.75rem);
+  --pg-text-3xl: clamp(2.75rem, 1.8rem + 2.2vw, 4rem);
+  --pg-text-4xl: clamp(3.75rem, 2.2rem + 4vw, 6.5rem);
+
+  --pg-leading-tight: 1.05;
+  --pg-leading-snug: 1.2;
+  --pg-leading-normal: 1.5;
+  --pg-leading-relaxed: 1.68;
+
+  --pg-tracking-tighter: -0.02em;
+  --pg-tracking-tight: -0.01em;
+  --pg-tracking-normal: 0;
+  --pg-tracking-wide: 0.04em;
+  --pg-tracking-wider: 0.09em;
+  --pg-tracking-widest: 0.18em;
+}
+
+/* ---------------------------------------------------------------- *
+ * Base document type
+ * ---------------------------------------------------------------- */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--pg-font-ui);
+  font-size: var(--pg-text-base);
+  font-weight: 400;
+  line-height: var(--pg-leading-normal);
+  letter-spacing: var(--pg-tracking-normal);
+  color: var(--pg-text-primary);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------------------------------------------------------------- *
+ * Utility classes — the type system as composable primitives
+ * ---------------------------------------------------------------- */
+
+/* Display lockups: condensed, uppercase, tightly tracked. */
+.pg-display {
+  font-family: var(--pg-font-display);
+  font-weight: 600;
+  line-height: var(--pg-leading-tight);
+  letter-spacing: var(--pg-tracking-tight);
+  text-transform: uppercase;
+  color: var(--pg-text-bright);
+}
+
+.pg-h1 {
+  @extend .pg-display;
+  font-size: var(--pg-text-3xl);
+  font-weight: 700;
+}
+.pg-h2 {
+  @extend .pg-display;
+  font-size: var(--pg-text-2xl);
+}
+.pg-h3 {
+  @extend .pg-display;
+  font-size: var(--pg-text-xl);
+  letter-spacing: var(--pg-tracking-wide);
+}
+.pg-h4 {
+  @extend .pg-display;
+  font-size: var(--pg-text-lg);
+  letter-spacing: var(--pg-tracking-wide);
+  font-weight: 500;
+}
+
+/* Section eyebrow — small, wide-tracked, muted. The workhorse label. */
+.pg-overline {
+  font-family: var(--pg-font-display);
+  font-size: var(--pg-text-2xs);
+  font-weight: 500;
+  letter-spacing: var(--pg-tracking-widest);
+  text-transform: uppercase;
+  color: var(--pg-text-muted);
+  line-height: 1;
+}
+
+.pg-label {
+  font-family: var(--pg-font-ui);
+  font-size: var(--pg-text-xs);
+  font-weight: 600;
+  letter-spacing: var(--pg-tracking-wide);
+  text-transform: uppercase;
+  color: var(--pg-text-secondary);
+}
+
+.pg-body {
+  font-size: var(--pg-text-base);
+  line-height: var(--pg-leading-relaxed);
+  color: var(--pg-text-secondary);
+}
+
+.pg-lead {
+  font-size: var(--pg-text-md);
+  line-height: var(--pg-leading-relaxed);
+  color: var(--pg-text-secondary);
+}
+
+.pg-caption {
+  font-size: var(--pg-text-xs);
+  line-height: var(--pg-leading-normal);
+  color: var(--pg-text-muted);
+}
+
+/* Numerals: always tabular so animated values never reflow. */
+.pg-numeral {
+  font-family: var(--pg-font-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+  letter-spacing: var(--pg-tracking-tight);
+  font-weight: 600;
+}
+
+.pg-tabular {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+}
+
+/* Text that must never be selected mid-drag (labels on controls). */
+.pg-nosel {
+  user-select: none;
+  -webkit-user-select: none;
+}

@@ -1,0 +1,22 @@
+{
+  "name": "power-grid",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Power Grid — web implementation with persistent multiplayer",
+  "workspaces": [
+    "packages/shared",
+    "packages/server",
+    "packages/client"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@pg/server & npm run dev --workspace=@pg/client",
+    "dev:server": "npm run dev --workspace=@pg/server",
+    "dev:client": "npm run dev --workspace=@pg/client",
+    "build": "npm run build --workspace=@pg/shared && npm run build --workspace=@pg/server && npm run build --workspace=@pg/client",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
