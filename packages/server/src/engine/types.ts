@@ -31,6 +31,17 @@ export interface EnginePlayerSeed {
   isBot: boolean;
 }
 
+/**
+ * Optional extras the server passes so the engine can stay pure: the engine
+ * never reads the clock or invents ids, the server supplies both.
+ */
+export interface EngineCreateOptions {
+  /** Wall-clock stamp for `createdAt`/`updatedAt` and the setup log. */
+  now?: number;
+  /** The server's game id, so persistence keys line up. */
+  gameId?: string;
+}
+
 export interface RulesEngine {
   /** Builds a fully set-up `GameState` from finalised lobby settings. */
   createGame(
@@ -38,6 +49,7 @@ export interface RulesEngine {
     players: EnginePlayerSeed[],
     hostId: PlayerId,
     code: string,
+    options?: EngineCreateOptions,
   ): GameState;
 
   /** Pure check. Must not mutate `state`. */
@@ -47,8 +59,10 @@ export interface RulesEngine {
    * Applies a *previously validated* action and returns the next state.
    * Implementations may return a new object or mutate and return `state`;
    * the server treats the return value as authoritative either way.
+   * `now` is supplied so log timestamps are real without the engine reading
+   * the clock; implementations that do not need it may ignore it.
    */
-  applyAction(state: GameState, playerId: PlayerId, action: GameAction): GameState;
+  applyAction(state: GameState, playerId: PlayerId, action: GameAction, now?: number): GameState;
 
   /**
    * Optional: the safest legal move for a player who is not responding.

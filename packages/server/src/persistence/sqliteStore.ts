@@ -14,9 +14,23 @@
  */
 
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
+import type { DatabaseSync as DatabaseSyncType } from 'node:sqlite';
 import type { GameStore, PersistedGame, SessionRecord } from './types.js';
+
+/**
+ * `node:sqlite` is loaded through `createRequire` rather than a static import.
+ * Two reasons: bundlers (Vite, used by vitest) key their built-in module list
+ * on the un-prefixed name "sqlite", which Node does not expose, so a static
+ * import breaks under test tooling; and a runtime require lets the store
+ * factory catch the failure on Node builds without SQLite and fall back to
+ * JSON persistence instead of crashing at module-load time.
+ */
+const nodeRequire = createRequire(import.meta.url);
+const { DatabaseSync } = nodeRequire('node:sqlite') as {
+  DatabaseSync: new (path: string, options?: unknown) => DatabaseSyncType;
+};
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS games (
@@ -67,7 +81,7 @@ interface SessionRow {
 export class SqliteGameStore implements GameStore {
   readonly kind = 'sqlite' as const;
   readonly location: string;
-  private readonly db: DatabaseSync;
+  private readonly db: DatabaseSyncType;
 
   constructor(filePath: string) {
     this.location = filePath;

@@ -652,7 +652,7 @@ export class GameRoom {
    * ---------------------------------------------------------------- */
 
   /** Closes every socket and cancels timers. The record on disk is untouched. */
-  dispose(closeCode = CLOSE.SHUTDOWN, reason = 'server shutting down'): void {
+  dispose(closeCode: number = CLOSE.SHUTDOWN, reason = 'server shutting down'): void {
     this.disposed = true;
     this.clearTurnTimer();
     for (const [, conn] of this.sockets_()) conn.close(closeCode, reason);

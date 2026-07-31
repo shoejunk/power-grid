@@ -352,7 +352,11 @@ export class GameHub {
     return true;
   }
 
-  private onCreateGame(conn: Connection, name: string, settings: GameSettings & { seed?: string }): void {
+  private onCreateGame(
+    conn: Connection,
+    name: string,
+    settings: Omit<GameSettings, 'seed'> & { seed?: string },
+  ): void {
     // A socket can only be at one table; creating implies leaving.
     this.detachFromCurrentRoom(conn, 'switched tables');
 

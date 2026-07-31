@@ -44,8 +44,6 @@ export function zoneCities(map: GameMap, zone: readonly string[]): CityId[] {
   return map.cities.filter((c) => zone.includes(c.area)).map((c) => c.id);
 }
 
-export { buildAdjacency, isZoneContiguous };
-
 /**
  * Dijkstra from a set of source cities across the zone graph.
  * Returns the cheapest connection cost to every reachable city. §8.

@@ -102,6 +102,20 @@ export const MARKET_LAYOUT: Record<ResourceType, MarketLayout> = {
  *
  * Keyed by map → player count → step. Values are tokens added to the market
  * from the supply, filling the most expensive empty space first.
+ *
+ * Source: power-grid-rules.pdf. Setup step 7 (p. 3) states each refill summary
+ * card "shows the resource refill values for both maps", and the card
+ * illustration (p. 3 and p. 7) carries a single 4x3 table — so Germany and USA
+ * share one set of values; the USA's only resource difference is the separate
+ * coal storage (p. 5, p. 7). The 5-player card is legible in the PDF and reads
+ * coal 5/7/5, oil 4/5/6, garbage 3/3/5, uranium 2/3/2, matching the rows below;
+ * the worked example on p. 7 repeats the 5-player Step 1 values. The remaining
+ * player counts are corroborated by JeffyJeff's published per-map/per-count data
+ * (bgg.activityclub.org/powergrid/powergridmaps.zip, data/germany*.txt and
+ * data/usa*.txt — identical files for both maps) and by two independent
+ * open-source engines: github.com/boardgamers/powergrid (engine/src/engine.ts,
+ * one default table used for both Germany and USA) and
+ * github.com/boardzilla/powergrid (src/game/index.ts `refill`).
  * ------------------------------------------------------------------ */
 
 export type RefillRow = ResourceBundle;
@@ -123,12 +137,14 @@ export const REFILL_TABLE: Record<MapId, Record<number, RefillByStep>> = {
     5: { 1: r(5, 4, 3, 2), 2: r(7, 5, 3, 3), 3: r(5, 6, 5, 2) },
     6: { 1: r(7, 5, 3, 2), 2: r(9, 6, 5, 3), 3: r(6, 7, 6, 3) },
   },
+  // The USA map uses the same refill values as Germany; the map's only
+  // resource-side difference is the separate coal storage (§12).
   usa: {
-    2: { 1: r(4, 2, 1, 1), 2: r(5, 2, 2, 1), 3: r(4, 4, 3, 1) },
-    3: { 1: r(5, 2, 1, 1), 2: r(6, 3, 2, 1), 3: r(4, 4, 3, 1) },
-    4: { 1: r(6, 3, 2, 1), 2: r(7, 4, 3, 2), 3: r(5, 5, 4, 2) },
-    5: { 1: r(6, 4, 3, 2), 2: r(8, 5, 3, 3), 3: r(6, 6, 5, 2) },
-    6: { 1: r(8, 5, 3, 2), 2: r(10, 6, 5, 3), 3: r(7, 7, 6, 3) },
+    2: { 1: r(3, 2, 1, 1), 2: r(4, 2, 2, 1), 3: r(3, 4, 3, 1) },
+    3: { 1: r(4, 2, 1, 1), 2: r(5, 3, 2, 1), 3: r(3, 4, 3, 1) },
+    4: { 1: r(5, 3, 2, 1), 2: r(6, 4, 3, 2), 3: r(4, 5, 4, 2) },
+    5: { 1: r(5, 4, 3, 2), 2: r(7, 5, 3, 3), 3: r(5, 6, 5, 2) },
+    6: { 1: r(7, 5, 3, 2), 2: r(9, 6, 5, 3), 3: r(6, 7, 6, 3) },
   },
 };
 

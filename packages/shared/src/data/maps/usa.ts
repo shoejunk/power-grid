@@ -4,34 +4,46 @@
  * Provenance
  * ----------
  * City list, area (colour region) membership and every connection cost were
- * transcribed by cross-checking five independent open-source machine-readable
+ * transcribed by cross-checking six independent open-source machine-readable
  * transcriptions of the physical board:
  *
  *   1. gummyboars/lunboks            powerplant/cities.py (`USA()`)
  *      https://github.com/gummyboars/lunboks/blob/master/powerplant/cities.py
- *   2. yct21/pgboard                 frontend/game/maps/usa.js
- *      https://github.com/yct21/pgboard/blob/master/frontend/game/maps/usa.js
+ *   2. boardgamers/powergrid         engine/src/maps/america.ts (`map`, not
+ *      `mapRecharged`)
+ *      https://github.com/boardgamers/powergrid/blob/master/engine/src/maps/america.ts
  *   3. XBigTK13X/power-grid-automa   src/board/united_states_of_america.py
  *      https://github.com/XBigTK13X/power-grid-automa/blob/master/src/board/united_states_of_america.py
- *   4. js3692/TerraWatts             seed/connection.js
+ *   4. js3692/TerraWatts             seed/connection.js + seed/city.js
  *      https://github.com/js3692/TerraWatts/blob/master/seed/connection.js
- *   5. amirbawab/PowerGrid           Resources/config/map/USAMap.xml
+ *   5. yct21/pgboard                 frontend/game/maps/usa.js
+ *      https://github.com/yct21/pgboard/blob/master/frontend/game/maps/usa.js
+ *   6. amirbawab/PowerGrid           Resources/config/map/USAMap.xml
  *      https://github.com/amirbawab/PowerGrid/blob/master/Resources/config/map/USAMap.xml
  *
- * All five sources agree on the 42 cities and their six area groupings.
- * 83 of the 87 connections are unanimous. The four divergences:
+ * All six sources agree on the 42 cities, their spelling and their six area
+ * groupings (verified by comparing the partitions, not the colour labels).
+ * Sources 1, 2 and 3 reproduce all 87 connections below with identical costs.
+ * The remaining divergences and how they were resolved:
  *
- *   - Atlanta–Birmingham (3): present in 1-4, missing from 5. Included.
- *   - Las Vegas–Salt Lake City (18): present in 1-4, missing from 5. Included.
- *   - Jacksonville–Tampa: 4 in sources 1-4, 5 in source 5. Using 4.
- *   - Boise–Cheyenne (24): sources 1, 3 and 5 give 24; source 4 gives 21;
- *     source 2 instead draws the link as Boise–Denver 24. UNVERIFIED COST —
- *     24 is the 3-of-5 majority and Cheyenne–Denver is free, so the two
- *     variants are nearly equivalent in play, but the 21 reading could not be
- *     ruled out from a board photograph.
+ *   - Atlanta–Birmingham (3): in sources 1-5, missing from 6. Included.
+ *   - Las Vegas–Salt Lake City (18): in sources 1-5, missing from 6. Included.
+ *   - Jacksonville–Tampa: 4 in sources 1-5, 5 in source 6. Using 4.
+ *   - Boise–Cheyenne (24): sources 1, 2, 3 and 6 give 24; source 4 gives 21;
+ *     source 5 instead draws the link as Boise–Denver 24. Resolved against the
+ *     board via the BGG rules thread "Power Grid - Connection Cost Cheyenne to
+ *     Boise" (https://boardgamegeek.com/thread/115823/), which confirms both
+ *     the endpoints (Cheyenne, not Denver) and the printed 24, and notes that
+ *     Cheyenne–Billings–Boise (9+12=21) is always the cheaper route — which is
+ *     almost certainly where source 4's 21 came from.
  *
  * The Cheyenne–Denver (0), New York–Philadelphia (0) and Savannah–Jacksonville
  * (0) links are genuinely free on the board; §1 explicitly allows cost 0.
+ *
+ * NOTE on `adjacentAreas`: source 3 ships its own hand-written region-adjacency
+ * table which omits Southwest–South. That table is wrong — Santa Fe (SW) links
+ * to Kansas City, Oklahoma City, Dallas and Houston (S) in all six sources.
+ * The `adjacentAreas` below are derived mechanically from `connections`.
  *
  * Coordinates
  * -----------
@@ -41,7 +53,10 @@
  * two cities sit closer than 0.032 apart.
  *
  * Metropolises: the base USA board has NO metropolis city pairs, so no city
- * carries `metropolisPartner`.
+ * carries `metropolisPartner`. A metropolis is a pair of city nodes sharing one
+ * nameplate; it is a later-edition / expansion-map device (Recharged and the
+ * add-on boards), and all six sources above model the USA board as exactly 42
+ * single-node cities — which is also forced by the 6 areas x 7 cities count.
  *
  * Area names are our own descriptive labels — the printed board identifies the
  * six areas by colour only. Colours below follow the board's colour regions.

@@ -22,7 +22,14 @@ import type { RulesEngine } from './types.js';
 
 const SHARED_ROOT = path.resolve(SERVER_ROOT, '..', 'shared');
 
-/** Ordered candidates. First one exposing the full trio wins. */
+/**
+ * Ordered candidates. First one exposing the full trio wins.
+ *
+ * The package specifiers come first so that, when the engine is reachable
+ * through `@pg/shared`, the server shares a single module graph with it rather
+ * than loading a second copy through a file URL. The raw paths are a safety
+ * net for the window where the engine exists on disk but is not yet re-exported.
+ */
 function candidateSpecifiers(): string[] {
   const local = [
     path.join(SHARED_ROOT, 'src', 'engine', 'index.ts'),
@@ -31,7 +38,7 @@ function candidateSpecifiers(): string[] {
     .filter((p) => fs.existsSync(p))
     .map((p) => pathToFileURL(p).href);
 
-  return ['@pg/shared/engine', ...local, '@pg/shared'];
+  return ['@pg/shared/engine', '@pg/shared', ...local];
 }
 
 function isEngineModule(mod: unknown): mod is Record<string, unknown> {

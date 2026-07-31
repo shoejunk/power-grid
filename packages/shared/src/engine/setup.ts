@@ -41,7 +41,8 @@ import {
   syncOrderIndices,
   trustPlayer,
 } from './state.js';
-import { isZoneContiguous, neighboursInZone, resolveMap, zoneCities } from './mapAccess.js';
+import { isZoneContiguous } from '../data/maps/index.js';
+import { neighboursInZone, resolveMap, zoneCities } from './mapAccess.js';
 import { sortMarket, withRng } from './plantMarket.js';
 
 export interface SeatInput {

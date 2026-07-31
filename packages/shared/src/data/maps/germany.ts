@@ -4,7 +4,7 @@
  * Provenance
  * ----------
  * City list, area (colour region) membership and every connection cost were
- * transcribed by cross-checking five independent open-source machine-readable
+ * transcribed by cross-checking six independent open-source machine-readable
  * transcriptions of the physical board:
  *
  *   1. boardzilla/powergrid          src/game/index.ts
@@ -13,20 +13,32 @@
  *      https://github.com/gummyboars/lunboks/blob/master/powerplant/cities.py
  *   3. grnt426/PowuhGred             data/germany_connections.txt + germany_cities.txt
  *      https://github.com/grnt426/PowuhGred/tree/master/data
- *   4. yct21/pgboard                 frontend/game/maps/germany.js
+ *   4. boardgamers/powergrid         engine/src/maps/germany.ts (`map`, not
+ *      `mapRecharged` — the Recharged variant swaps Wiesbaden for Mainz and
+ *      adds Stralsund, so it is a different board)
+ *      https://github.com/boardgamers/powergrid/blob/master/engine/src/maps/germany.ts
+ *   5. yct21/pgboard                 frontend/game/maps/germany.js
  *      https://github.com/yct21/pgboard/blob/master/frontend/game/maps/germany.js
- *   5. powergrid-comp-345/PowerGrid  germany.map
+ *   6. powergrid-comp-345/PowerGrid  germany.map
  *      https://github.com/powergrid-comp-345/PowerGrid/blob/master/germany.map
  *
- * Sources 1-4 agree on all 83 connections and all costs. Two documented
- * divergences, both resolved 4-to-1 in favour of the majority:
+ * All six sources agree on the 42 cities, their spelling and their six area
+ * groupings (verified by comparing the partitions, not the colour labels).
+ * Sources 1-4 reproduce all 83 connections below with identical costs; source 5
+ * agrees on everything it lists but omits four edges (Bremen–Osnabrück,
+ * Mannheim–Saarbrücken, München–Passau, Trier–Wiesbaden). Two real divergences,
+ * both resolved 5-to-1 against source 6:
  *
- *   - Erfurt–Fulda: source 5 prints 15; sources 1-4 print 13. Using 13.
- *   - Wiesbaden–Frankfurt-M (cost 0): absent from source 5, present in 1-4.
+ *   - Erfurt–Fulda: source 6 prints 15; sources 1-5 print 13. Using 13.
+ *   - Wiesbaden–Frankfurt-M (cost 0): absent from source 6, present in 1-5.
  *     The two cities are ~30 km apart and the board does draw a free link
  *     between them, so it is included.
  *
- * Source 5's region-adjacency block independently confirms the six-area
+ * Two costs are additionally confirmed by the worked example in the published
+ * rulebook (Duisburg → Essen is free; Aachen costs 10+9+2 = 21 via Düsseldorf,
+ * i.e. Essen–Düsseldorf 2 and Düsseldorf–Aachen 9; Münster–Dortmund is 2).
+ *
+ * Source 6's region-adjacency block independently confirms the six-area
  * adjacency graph derived from `connections` below.
  *
  * The Essen–Duisburg (0), Halle–Leipzig (0) and Wiesbaden–Frankfurt-M (0)
@@ -42,8 +54,12 @@
  * therefore accurate to within a couple of pixels of nudging.
  *
  * Metropolises: the base Germany board has NO metropolis city pairs, so no
- * city carries `metropolisPartner`. (Frankfurt-M and Frankfurt-O are two
- * different cities, not a pair.)
+ * city carries `metropolisPartner`. A metropolis is a pair of city nodes
+ * sharing one nameplate; it is a later-edition / expansion-map device
+ * (Recharged and the add-on boards), and all six sources above model the
+ * Germany board as exactly 42 single-node cities — which is also forced by the
+ * 6 areas x 7 cities count. (Frankfurt-M and Frankfurt-O are two different
+ * cities, not a pair.)
  *
  * Area names are our own descriptive labels — the printed board identifies the
  * six areas by colour only. Colours below follow the board's colour regions.
