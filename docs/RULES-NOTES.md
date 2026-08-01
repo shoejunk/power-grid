@@ -63,6 +63,42 @@ Any future map with metropolises must be tested deliberately.
 
 ---
 
+## Engine interpretations
+
+The spec is precise but not total. These are places it is silent, ambiguous, or self-contradictory, and the
+reading the engine implements. Each is pinned by a test, so changing one will fail the suite loudly rather
+than drift.
+
+1. **Bid-passing vs nomination-passing.** §6 says "A player who passes is permanently out of the current
+   phase", but also "If another player wins, the auctioning player may offer another current-market plant or
+   pass." An outbid auctioneer can only have lost *by passing*, so a phase-permanent bid-pass is
+   self-contradictory. We read them as two different acts: **passing on nomination puts you out of the phase;
+   passing on a bid puts you out of that one auction only.** This matches the physical rulebook. *This is the
+   most consequential interpretation in the engine.*
+2. **"The last player to start an auction pays the minimum bid."** The spec states this as a consequence; we
+   *enforce* it — with no other eligible bidder, the opening bid must equal the minimum.
+3. **First-round mandatory purchase.** §6 gives no escape clause. A player who cannot afford any current-market
+   minimum is released, otherwise the phase deadlocks.
+4. **Order tie-break beyond §4's two rules.** Equal cities *and* equal largest plant (possible in round 1)
+   falls back to the previous order, so ordering stays deterministic.
+5. **Stack exhaustion (§9.3).** "During each later Phase 5, remove the smallest-numbered plant" is read as
+   *replacing* the normal market update, not running in addition to it.
+6. **The Trust taking plant 39.** §12 says the phase-out triggers when the plant is "bought by a player". The
+   Trust counts, so its free take fires the phase-out.
+7. **Experienced-player setup combined with the Trust (§13).** "…the Trust then has 8 houses in supply" only
+   reconciles if a Trust house also lands on the 15₤ slot of each human-marked city (16 − 6 − 2 = 8).
+8. **Endgame "available resources" (§11).** Read as tokens already stored on plants, freely rearrangeable —
+   not resources a player could still buy.
+9. **First house in an already-occupied city.** §8 says a player with no network may choose "any *empty*
+   city… for 10 Elektro". Taken literally, a player starting late in Step 2/3 could be stranded. We let a late
+   starter take the lowest empty slot at its printed cost.
+10. **Step 3 card bookkeeping.** The spec never says where the card goes once removed. We record it in
+    `plantMarket.removed` so all 43 cards stay accounted for (test-enforced).
+11. **Two-player Trust refill** follows spec §9.2, as documented above.
+
+Two engine bugs surfaced while writing these tests and were fixed: the Trust's Step-1 city block reported
+"city is full" instead of its own reason, and the Step 3 card was not being recorded as removed.
+
 ## Map data provenance
 
 Both maps were transcribed and then diffed against **six independent open-source transcriptions each**. City

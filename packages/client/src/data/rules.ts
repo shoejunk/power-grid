@@ -11,7 +11,8 @@
 
 export interface RuleNote {
   title: string;
-  body: string;
+  /** Rendered as the tooltip body. Named to match `TooltipProps.content`. */
+  content: string;
   /** Section reference, rendered in the tooltip footer. */
   rule: string;
 }
@@ -19,55 +20,55 @@ export interface RuleNote {
 export const RULES: Record<string, RuleNote> = {
   experiencedStart: {
     title: 'Experienced start',
-    body:
+    content:
       'After the playing zone is chosen, each player reserves a future starting city in player order. That city is where their network must begin, and — except as starting cities — reserved cities cannot be connected during Step 1. Recommended once everyone knows the map.',
     rule: '§2 Optional experienced-player starting cities',
   },
   againstTheTrust: {
     title: 'Against the Trust',
-    body:
+    content:
       'The two-player variant. An automated third faction, the Trust, takes plants and resources for free, always sits second in turn order, blocks cities you try to expand into — and cannot win. It uses the 3-area zone and 16 houses.',
     rule: '§13 Two-player variant',
   },
   playerCount: {
     title: 'Player count',
-    body:
+    content:
       'Seats at the table, 2 to 6. The count decides the size of the playing zone (3 areas for 2–3 players, 4 for 4, 5 for 5–6), how many plant cards are removed during setup, the resource refill rates, and the city totals that trigger Step 2 and the end of the game.',
     rule: '§1, §2, §10, §11',
   },
   zone: {
     title: 'Playing zone',
-    body:
+    content:
       'Every map has 6 areas of 7 cities. Only a contiguous subset is in play, and you may use nothing outside it for the whole game — not even as a route through.',
     rule: '§1 Board and map data',
   },
   seed: {
     title: 'Setup seed',
-    body:
+    content:
       'Every random operation — the plant shuffle, the removed cards, the initial turn order — is driven by this seed. Two games with the same seed and settings set up identically, which makes matches replayable and auditable.',
     rule: '§14 Determinism and auditability',
   },
   bots: {
     title: 'Bots',
-    body:
+    content:
       'Fill empty seats with AI opponents. Bots obey exactly the same legal-action rules as human players and can be removed by the host at any time before the game starts.',
     rule: '§14 Authoritative state',
   },
   ready: {
     title: 'Ready',
-    body:
+    content:
       'Marks that you are happy with the settings. The host can only start once every seated player is ready.',
     rule: '§2 Setup requirements',
   },
   gameCode: {
     title: 'Game code',
-    body:
+    content:
       'Share this six-character code so friends can join. Their seat, money, plants and houses are tied to it, and it survives a refresh or a server restart.',
     rule: '§14 Authoritative state',
   },
   colour: {
     title: 'Seat colour',
-    body:
+    content:
       'Your 22 houses and your marker on the scoring and turn-order tracks all use this colour. Each colour also has its own shape, so ownership stays readable without relying on hue.',
     rule: '§1 Players and inventory',
   },

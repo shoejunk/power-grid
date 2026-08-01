@@ -86,11 +86,18 @@ $pg-player-colors: ('red', 'blue', 'green', 'yellow', 'purple', 'black');
   /* ---------------------------------------------------------------
    * 3. TEXT
    * --------------------------------------------------------------- */
+  /*
+   * Contrast, measured against --pg-surface-panel (#141d28), the darkest
+   * surface any of these ever sit on. Every value clears WCAG AA for body
+   * text (4.5:1) — including `faint`, which carries real hints and captions
+   * and therefore does not get the "decorative" exemption.
+   *   bright 15.9  primary 13.2  secondary 8.4  muted 5.6  faint 4.6
+   */
   --pg-text-bright: #f2f7fc;
   --pg-text-primary: #dfe8f2;
   --pg-text-secondary: #a3b4c6;
-  --pg-text-muted: #71849a;
-  --pg-text-faint: #4d5d70;
+  --pg-text-muted: #8497ab;
+  --pg-text-faint: #74879c;
   --pg-text-inverse: #060a0f;
   --pg-text-on-accent: #04121a;
 
@@ -279,7 +286,13 @@ $pg-player-colors: ('red', 'blue', 'green', 'yellow', 'purple', 'black');
   --pg-noise-opacity: 0.032;
   --pg-scanline-opacity: 0.035;
   --pg-hud-height: 64px;
-  --pg-max-content: 1680px;
+  /*
+   * Content ceiling. Fluid rather than fixed: a hard 1680px cap turns a 4K
+   * display into a letterboxed phone layout, which is precisely the failure
+   * we are trying to beat. Grows with the viewport, stops before line lengths
+   * become unreadable.
+   */
+  --pg-max-content: min(2200px, 94vw);
 }
 
 /* A high-contrast variant, opt-in via <html data-contrast="high">.

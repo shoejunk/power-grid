@@ -170,16 +170,44 @@ export function MainMenu(): JSX.Element {
             <div className="pg-menu__maps">
               {Object.values(MAP_PRESENTATION).map((map) => (
                 <div key={map.id} className="pg-menu__map">
-                  <MapThumbnail mapId={map.id} />
+                  {/* Fixed letterbox rather than the map's own aspect ratio:
+                      a portrait Germany next to a landscape USA would make the
+                      two rows different heights and break the list rhythm. */}
+                  <div className="pg-menu__mapart">
+                    <MapThumbnail mapId={map.id} />
+                  </div>
                   <div>
                     <div className="pg-menu__map-name">{map.name}</div>
                     <div className="pg-menu__map-meta">
                       {map.cityCount} cities &middot; {map.areaCount} areas
                     </div>
+                    <div className="pg-menu__map-rule">{map.specialRules[0]?.title}</div>
                   </div>
                 </div>
               ))}
             </div>
+          </Panel>
+
+          <Panel
+            tone="glass"
+            title="Variants"
+            subtitle="Ship-ready optional rules"
+            className="pg-menu__variantspanel"
+          >
+            <ul className="pg-menu__variants">
+              <li>
+                <span className="pg-menu__variant-name">Experienced start</span>
+                <span className="pg-menu__variant-note">
+                  Reserve starting cities before anyone builds.
+                </span>
+              </li>
+              <li>
+                <span className="pg-menu__variant-name">Against the Trust</span>
+                <span className="pg-menu__variant-note">
+                  Two-player mode with an automated blocking faction.
+                </span>
+              </li>
+            </ul>
           </Panel>
         </motion.aside>
       </div>

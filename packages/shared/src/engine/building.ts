@@ -74,6 +74,13 @@ export function buildBlockReason(
     return 'You already have a house in the other half of that metropolis';
   }
 
+  // §13: "During Step 1, the six cities initially occupied by Trust houses
+  // cannot be connected by human players." Checked before the slot test so the
+  // player is told the actual rule rather than "the city is full".
+  if (state.step === 1 && (state.trustStartCities ?? []).includes(cityId) && !player.isTrust) {
+    return 'Trust starting cities are blocked during Step 1';
+  }
+
   const slot = lowestOpenSlot(state, cityId);
   if (slot < 0) return 'That city has no empty slot at the current Step';
 
@@ -91,12 +98,6 @@ export function buildBlockReason(
         }
       }
     }
-  }
-
-  // §13: "During Step 1, the six cities initially occupied by Trust houses
-  // cannot be connected by human players."
-  if (state.step === 1 && (state.trustStartCities ?? []).includes(cityId) && !player.isTrust) {
-    return 'Trust starting cities are blocked during Step 1';
   }
 
   return null;

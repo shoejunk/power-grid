@@ -6,6 +6,24 @@
  * connection, and is deliberately not shared with the server.
  */
 
+import type { ClientMessage, PlayerColor } from '@pg/shared';
+
+/**
+ * Messages the server accepts that are not (yet) part of the shared
+ * `ClientMessage` union.
+ *
+ * `packages/server/src/protocol.ts` parses these under its own
+ * `ClientMessageExtra` type; mirroring it here keeps the client fully typed
+ * without reaching into the server package or resorting to `any`. When they
+ * are promoted into @pg/shared this alias collapses to nothing.
+ */
+export type ClientMessageExtra =
+  | { t: 'setColor'; color: PlayerColor }
+  | { t: 'setName'; name: string };
+
+/** Everything this client is allowed to put on the wire. */
+export type OutboundMessage = ClientMessage | ClientMessageExtra;
+
 /**
  * Connection lifecycle.
  *

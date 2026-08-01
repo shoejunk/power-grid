@@ -57,13 +57,19 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: true,
-    // PixiJS is large and only needed once the board renderer mounts; keep it
-    // in its own chunk so the menu/lobby shell stays small.
     rollupOptions: {
       output: {
-        manualChunks: {
-          pixi: ['pixi.js'],
-          motion: ['framer-motion'],
+        /**
+         * PixiJS is large and only needed once the board renderer mounts, so it
+         * gets its own chunk to keep the menu/lobby shell small. Expressed as a
+         * function rather than a static map so the chunk simply does not exist
+         * until something actually imports Pixi — a static map emits an empty
+         * chunk (and a build warning) while the renderer is still a mount point.
+         */
+        manualChunks(id: string): string | undefined {
+          if (id.includes('node_modules/pixi.js')) return 'pixi';
+          if (id.includes('node_modules/framer-motion')) return 'motion';
+          return undefined;
         },
       },
     },

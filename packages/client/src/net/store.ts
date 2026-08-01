@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import type {
-  ClientMessage,
   GameAction,
   GameSettings,
   GameState,
   LobbyState,
+  PlayerColor,
   PlayerId,
   ServerMessage,
 } from '@pg/shared';
@@ -16,7 +16,7 @@ import {
   savePlayerName,
   saveSessionToken,
 } from './socket';
-import type { ConnectionStatus, Route, Toast, ToastInput } from './types';
+import type { ConnectionStatus, OutboundMessage, Route, Toast, ToastInput } from './types';
 
 /* ------------------------------------------------------------------ *
  * Chat
@@ -147,7 +147,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           const before = new Set(previous.players.map((p) => p.id));
           const after = new Set(message.lobby.players.map((p) => p.id));
           for (const player of message.lobby.players) {
-            if (!before.has(player.id) && player.id !== get().myPlayerId) {
+            // Bots only ever appear because the host just asked for one — the
+            // seat filling in on screen is feedback enough.
+            if (!before.has(player.id) && player.id !== get().myPlayerId && !player.isBot) {
               get().pushToast({ tone: 'info', title: `${player.name} joined` });
             }
           }
@@ -178,6 +180,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
 
       case 'error': {
+        /*
+         * `noSession` and `unknownSession` are the *expected* answers to the
+         * handshake when this browser has no live seat — a first visit, or a
+         * token that outlived its game. They are not failures, so we quietly
+         * drop the stale token and stay on the menu rather than alarming the
+         * player. Every other code is a genuine error.
+         */
+        if (message.code === 'noSession' || message.code === 'unknownSession') {
+          saveSessionToken(null);
+          set({ pending: false });
+          break;
+        }
         set({ lastError: { code: message.code, message: message.message }, pending: false });
         get().pushToast({ tone: 'error', title: 'Server error', message: message.message });
         break;
@@ -222,6 +236,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
  * Transport singleton
  * ------------------------------------------------------------------ */
 
+/** Id of the sticky offline notice, so we never stack more than one. */
+let offlineToastId: string | null = null;
+
 const socket = new GameSocket({
   onMessage: (message) => useGameStore.getState().applyServerMessage(message),
 
@@ -231,20 +248,35 @@ const socket = new GameSocket({
 
     // Only talk about the connection when it actually changes character —
     // a silent recovery is the good case and should stay silent.
-    if (status === 'connected' && (previous === 'reconnecting' || previous === 'offline')) {
+    // Only worth announcing when there was a seat to restore — recovering a
+    // connection while sitting on the main menu is not news.
+    const hadGame =
+      useGameStore.getState().lobby !== null || useGameStore.getState().gameState !== null;
+    if (
+      status === 'connected' &&
+      hadGame &&
+      (previous === 'reconnecting' || previous === 'offline')
+    ) {
       useGameStore.getState().pushToast({
         tone: 'success',
         title: 'Reconnected',
         message: 'Your seat and game state were restored.',
       });
     }
-    if (status === 'offline' && previous !== 'offline') {
-      useGameStore.getState().pushToast({
+    // The retry loop cycles connecting -> offline -> connecting, so guard on a
+    // latch rather than on the previous status: exactly one sticky notice per
+    // outage, cleared the moment we are back.
+    if (status === 'offline' && offlineToastId === null) {
+      offlineToastId = useGameStore.getState().pushToast({
         tone: 'error',
         title: 'Connection lost',
         message: 'Still retrying in the background. Your seat is held.',
         duration: 0,
       });
+    }
+    if (status === 'connected' && offlineToastId !== null) {
+      useGameStore.getState().dismissToast(offlineToastId);
+      offlineToastId = null;
     }
   },
 
@@ -313,6 +345,21 @@ export const net = {
     socket.send({ t: 'setReady', ready });
   },
 
+  /**
+   * Seat colour. Accepted by the server's protocol parser as an extra message
+   * type; the server rejects a colour already claimed by another seat, so the
+   * swatch list is disabled optimistically *and* validated authoritatively.
+   */
+  setColor(color: PlayerColor): void {
+    socket.send({ t: 'setColor', color });
+  },
+
+  /** Rename in place; also persisted locally so the next game pre-fills it. */
+  setName(name: string): void {
+    useGameStore.getState().setPlayerName(name);
+    socket.send({ t: 'setName', name });
+  },
+
   updateSettings(settings: Partial<GameSettings>): void {
     socket.send({ t: 'updateSettings', settings });
   },
@@ -342,7 +389,7 @@ export const net = {
   },
 
   /** Escape hatch for future message types; still typed against the union. */
-  raw(message: ClientMessage): void {
+  raw(message: OutboundMessage): void {
     socket.send(message);
   },
 } as const;

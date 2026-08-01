@@ -1,0 +1,1476 @@
+@charset "UTF-8";
+@use 'mixins' as *;
+
+/* =====================================================================
+ * SCREEN LAYOUTS
+ * ---------------------------------------------------------------------
+ * Desktop-first. Every screen is a fixed-height frame that fills the
+ * viewport; content columns manage their own overflow. Nothing here is
+ * sized for touch — the benchmark's biggest weakness is a phone layout
+ * stretched across a 27" monitor, and we do the opposite.
+ * ===================================================================== */
+
+.pg-route {
+  position: absolute;
+  inset: 0;
+}
+
+.pg-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: radial-gradient(135% 105% at 50% 0%, #0d151f 0%, #070b10 55%, #04070a 100%);
+}
+
+.pg-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--pg-z-background);
+  overflow: hidden;
+}
+
+.pg-pylons {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: min(34vh, 340px);
+  width: 100%;
+  opacity: 0.9;
+  mask-image: linear-gradient(180deg, transparent 0%, #000 42%, #000 100%);
+}
+
+/* ------------------------------------------------------------------ *
+ * Shared chrome
+ * ------------------------------------------------------------------ */
+.pg-topbar {
+  position: relative;
+  z-index: var(--pg-z-content);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--pg-space-4);
+  padding: var(--pg-space-4) var(--pg-gutter);
+  flex: none;
+
+  > :first-child {
+    justify-self: start;
+  }
+  > :last-child {
+    justify-self: end;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Wordmark
+ * ------------------------------------------------------------------ */
+.pg-wordmark {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.1vw, 20px);
+  isolation: isolate;
+  font-family: var(--pg-font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 0.9;
+  user-select: none;
+}
+
+.pg-wordmark__power {
+  font-size: var(--pg-text-4xl);
+  background: linear-gradient(178deg, #ffd9b0 0%, #f0a45c 34%, #d9813f 62%, #9c5624 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.42)) drop-shadow(0 0 34px rgba(217, 129, 63, 0.34));
+}
+
+.pg-wordmark__grid {
+  font-size: var(--pg-text-4xl);
+  font-weight: 300;
+  color: var(--pg-text-bright);
+  text-shadow: 0 0 30px rgba(70, 226, 255, 0.35), 0 3px 0 rgba(0, 0, 0, 0.4);
+}
+
+.pg-wordmark__bar {
+  position: relative;
+  align-self: stretch;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, transparent, var(--pg-cyan), transparent);
+  box-shadow: 0 0 16px var(--pg-cyan-glow);
+  transform-origin: center;
+}
+
+.pg-wordmark__bolt {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(20px, 2vw, 34px);
+  height: clamp(20px, 2vw, 34px);
+  /* The parent rule is 2px wide and the global reset caps every svg at
+     `max-width: 100%`, which would squash this to 2px. Opt out explicitly. */
+  max-width: none;
+  transform: translate(-50%, -50%);
+  color: var(--pg-cyan-bright);
+  filter: drop-shadow(0 0 14px var(--pg-cyan-glow)) drop-shadow(0 0 3px rgba(255, 255, 255, 0.7));
+}
+
+.pg-wordmark--compact {
+  gap: 7px;
+  .pg-wordmark__power,
+  .pg-wordmark__grid {
+    font-size: var(--pg-text-lg);
+    filter: none;
+    text-shadow: none;
+  }
+  .pg-wordmark__grid {
+    color: var(--pg-cyan-bright);
+    font-weight: 400;
+    letter-spacing: var(--pg-tracking-wide);
+  }
+}
+
+/* ==================================================================== *
+ * MAIN MENU
+ * ==================================================================== */
+.pg-menu__inner {
+  position: relative;
+  z-index: var(--pg-z-content);
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.8fr);
+  gap: clamp(28px, 3.4vw, 72px);
+  align-items: stretch;
+  padding: clamp(16px, 2.4vh, 40px) var(--pg-gutter);
+  max-width: var(--pg-max-content);
+  width: 100%;
+  margin: 0 auto;
+  min-height: 0;
+
+  @include down('lg') {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: center;
+  }
+}
+
+.pg-menu__hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(14px, 2.2vh, 28px);
+  min-width: 0;
+  padding-left: clamp(18px, 2vw, 34px);
+
+  /* Warm bloom behind the lockup — the light source the copper gradient in
+     the wordmark is nominally reflecting. */
+  &::after {
+    content: '';
+    position: absolute;
+    left: -6%;
+    top: 8%;
+    width: 72%;
+    height: 46%;
+    border-radius: 50%;
+    background: radial-gradient(
+      closest-side,
+      rgba(217, 129, 63, 0.2) 0%,
+      rgba(217, 129, 63, 0.07) 45%,
+      transparent 78%
+    );
+    filter: blur(30px);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* Anchoring rail: a lit conductor running the height of the lockup. It is
+     what stops the hero from floating in the middle of an empty frame. */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 6%;
+    bottom: 6%;
+    width: 2px;
+    border-radius: 2px;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      var(--pg-copper) 18%,
+      var(--pg-cyan) 62%,
+      transparent 100%
+    );
+    box-shadow: 0 0 22px rgba(70, 226, 255, 0.35);
+    opacity: 0.85;
+  }
+}
+
+.pg-menu__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--pg-space-3);
+  flex-wrap: wrap;
+}
+.pg-menu__eyebrow-dot {
+  display: block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--pg-copper);
+  box-shadow: 0 0 8px var(--pg-copper-glow);
+}
+
+.pg-menu__tagline {
+  max-width: 58ch;
+  font-size: clamp(1rem, 0.82rem + 0.32vw, 1.22rem);
+  line-height: var(--pg-leading-relaxed);
+  color: var(--pg-text-secondary);
+
+  em {
+    font-style: normal;
+    color: var(--pg-cyan-bright);
+    text-shadow: 0 0 18px var(--pg-cyan-glow);
+  }
+}
+
+.pg-menu__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pg-space-3);
+  margin-top: var(--pg-space-1);
+
+  /* Below ~1440 the three actions no longer fit on one line at the full large
+     size. Trimming them keeps the row intact, which reads far more confident
+     than a lone button orphaned on a second row. */
+  @media (max-width: 1500px) {
+    .pg-btn.pg-btn--lg {
+      height: 48px;
+      padding: 0 var(--pg-space-5);
+      font-size: var(--pg-text-sm);
+    }
+  }
+}
+
+.pg-menu__stats {
+  display: flex;
+  align-items: stretch;
+  gap: clamp(16px, 1.8vw, 34px);
+  margin-top: var(--pg-space-2);
+  padding: var(--pg-space-4) var(--pg-space-5);
+  align-self: flex-start;
+  border-radius: var(--pg-radius-lg);
+  border: 1px solid var(--pg-line-hairline);
+  background: linear-gradient(180deg, rgba(28, 39, 52, 0.5), rgba(10, 16, 24, 0.42));
+  backdrop-filter: blur(var(--pg-glass-blur-soft));
+  -webkit-backdrop-filter: blur(var(--pg-glass-blur-soft));
+  box-shadow: var(--pg-bevel-inner), var(--pg-elev-2);
+  flex-wrap: wrap;
+}
+
+.pg-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pg-stat__value {
+  font-family: var(--pg-font-display);
+  font-size: var(--pg-text-xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--pg-text-bright);
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+}
+.pg-stat__label {
+  font-family: var(--pg-font-display);
+  font-size: var(--pg-text-3xs);
+  letter-spacing: var(--pg-tracking-widest);
+  text-transform: uppercase;
+  color: var(--pg-text-muted);
+}
+
+.pg-menu__aside {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--pg-space-4);
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  @include down('lg') {
+    display: none;
+  }
+}
+
+/*
+ * The briefing panel absorbs leftover height, so the right rail reads as a
+ * deliberate column rather than cards floating in space — but only when there
+ * is height to spare. On a 768px-tall laptop the panels size to their content
+ * and the column centres instead, which is what keeps the list from clipping.
+ */
+.pg-menu__phases {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+@media (min-height: 900px) {
+  .pg-menu__phases {
+    flex: 1;
+
+    .pg-phaselist {
+      flex: 1;
+      justify-content: space-evenly;
+    }
+  }
+}
+
+/* Laptop heights: shed the least load-bearing panel and tighten the rest,
+   rather than scrolling or clipping. The right rail must always show whole
+   cards — a half-cut panel is the single most amateur-looking failure mode. */
+@media (max-height: 899px) {
+  /* Scoped with `.pg-menu` throughout: the unscoped versions of these rules
+     appear later in the file and would otherwise win on source order. */
+  .pg-menu .pg-menu__variantspanel {
+    display: none;
+  }
+  .pg-menu__aside .pg-panel {
+    padding: var(--pg-space-4);
+  }
+  .pg-menu__aside .pg-panel__header {
+    padding-bottom: var(--pg-space-2);
+    margin-bottom: var(--pg-space-3);
+  }
+  .pg-menu .pg-menu__mapart {
+    width: 76px;
+    height: 52px;
+  }
+  .pg-menu .pg-phaselist__item {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  .pg-menu .pg-menu__map {
+    padding: 5px;
+  }
+}
+
+/* 720p: the shortest supported frame. Drop the per-map rule line and tighten
+   the phase list further so the rail still shows two whole panels. */
+@media (max-height: 760px) {
+  .pg-menu .pg-menu__map-rule {
+    display: none;
+  }
+  .pg-menu .pg-phaselist__item {
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+}
+
+.pg-menu__maps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-space-3);
+}
+.pg-menu__map {
+  display: flex;
+  align-items: center;
+  gap: var(--pg-space-4);
+  padding: var(--pg-space-2);
+  border-radius: var(--pg-radius-md);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--pg-line-hairline);
+}
+.pg-menu__mapart {
+  width: 92px;
+  height: 64px;
+  flex: none;
+  border-radius: var(--pg-radius-sm);
+  overflow: hidden;
+  background: radial-gradient(90% 90% at 40% 20%, #16202c, #090f16);
+  box-shadow: var(--pg-elev-inset);
+  display: grid;
+  place-items: center;
+
+  .pg-mapthumb {
+    width: 100%;
+    height: 100%;
+    padding: 4px;
+  }
+}
+.pg-menu__map-name {
+  font-family: var(--pg-font-display);
+  font-size: var(--pg-text-sm);
+  letter-spacing: var(--pg-tracking-wide);
+  text-transform: uppercase;
+  color: var(--pg-text-bright);
+}
+.pg-menu__map-meta {
+  font-size: var(--pg-text-2xs);
+  color: var(--pg-text-muted);
+  letter-spacing: var(--pg-tracking-wide);
+}
+.pg-menu__map-rule {
+  margin-top: 4px;
+  font-size: var(--pg-text-3xs);
+  letter-spacing: var(--pg-tracking-wider);
+  text-transform: uppercase;
+  color: var(--pg-warning);
+}
+
+.pg-menu__variants {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-space-3);
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-left: var(--pg-space-3);
+    border-left: 2px solid var(--pg-copper-dim);
+  }
+}
+.pg-menu__variant-name {
+  font-family: var(--pg-font-display);
+  font-size: var(--pg-text-xs);
+  letter-spacing: var(--pg-tracking-wider);
+  text-transform: uppercase;
+  color: var(--pg-text-primary);
+}
+.pg-menu__variant-note {
+  font-size: var(--pg-text-xs);
+  line-height: var(--pg-leading-normal);
+  color: var(--pg-text-muted);
+}
+
+.pg-menu__footer {
+  position: relative;
+  z-index: var(--pg-z-content);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pg-space-4);
+  padding: var(--pg-space-3) var(--pg-gutter) var(--pg-space-4);
+  flex: none;
+}
+
+/* Phase list — reused by the menu aside and the how-to-play sheet. */
+.pg-phaselist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-space-1);
+}
+.pg-phaselist__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--pg-space-3);
+  padding: var(--pg-space-2) var(--pg-space-2) var(--pg-space-2) 0;
+  border-bottom: 1px solid var(--pg-line-hairline);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+.pg-phaselist--roomy .pg-phaselist__item {
+  padding: var(--pg-space-3) 0;
+}
+.pg-phaselist__index {
+  font-size: var(--pg-text-sm);
+  color: var(--pg-copper-bright);
+  min-width: 22px;
+  padding-top: 1px;
+  text-shadow: 0 0 12px var(--pg-copper-glow);
+}
+.pg-phaselist__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.pg-phaselist__name {
+  font-family: var(--pg-font-display);
+  font-size: var(--pg-text-sm);
+  letter-spacing: var(--pg-tracking-wide);
+  text-transform: uppercase;
+  color: var(--pg-text-primary);
+}
+.pg-phaselist__summary {
+  font-size: var(--pg-text-xs);
+  line-height: var(--pg-leading-normal);
+  color: var(--pg-text-muted);
+}
+
+/* How-to-play sheet */
+.pg-howto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-space-7);
+
+  section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pg-space-3);
+    align-items: flex-start;
+  }
+  strong {
+    color: var(--pg-text-bright);
+  }
+  em {
+    font-style: normal;
+    color: var(--pg-cyan-bright);
+  }
+}
+.pg-bullets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-space-4);
+
+  li {
+    display: flex;
+    gap: var(--pg-space-3);
+    font-size: var(--pg-text-sm);
+    line-height: var(--pg-leading-relaxed);
+    color: var(--pg-text-secondary);
+  }
+  svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    margin-top: 3px;
+    color: var(--pg-copper-bright);
+  }
+}
+
+/* ==================================================================== *
+ * CREATE GAME
+ * ==================================================================== */
+.pg-setup__grid {
+  position: relative;
+  z-index: var(--pg-z-content);
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 460px);
+  gap: clamp(18px, 2vw, 36px);
+  padding: 0 var(--pg-gutter) var(--pg-space-6);
+  /* Narrower than the shell ceiling: a setup form stretched to 2200px reads
+     as unfinished, not spacious. */
+  max-width: min(1720px, 92vw);
+  width: 100%;
+  margin: 0 auto;
+
+  @include down('lg') {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-y: auto;
+  }
+}
+
+.pg-setup__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-space-4);
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: var(--pg-space-4);
+  padding-right: 4px;
+}
+
+.pg-setup__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: var(--pg-space-1);
+}
+
+.pg-mapgrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--pg-space-3);
+}
+
+.pg-mapcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-space-3);
+  padding: var(--pg-space-3);
+  border-radius: var(--pg-radius-lg);
+  border: 1px solid var(--pg-line-hairline);
+  background: linear-gradient(180deg, rgba(38, 51, 66, 0.5), rgba(14, 20, 28, 0.6));
+  text-align: left;
+  transition: border-color var(--pg-dur-fast) linear, background-color var(--pg-dur-fast) linear,
+    box-shadow var(--pg-dur-base) var(--pg-ease-out);
+  @include focus-ring(2px);
+
+  &:hover {
+    border-color: var(--pg-line);
+    box-shadow: var(--pg-elev-2);
+  }
+  &[data-selected='true'] {
+    border-color: rgba(70, 226, 255, 0.4);
+    background: linear-gradient(180deg, rgba(20, 66, 82, 0.55), rgba(12, 22, 32, 0.7));
+    box-shadow: var(--pg-elev-3), inset 0 0 40px rgba(70, 226, 255, 0.08);
+  }
+}
+.pg-mapcard__ring {
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--pg-radius-lg);
+  border: 1px solid var(--pg-cyan);
+  box-shadow: 0 0 26px rgba(70, 226, 255, 0.28);
+  pointer-events: none;
+}
+.pg-mapcard__art {
+  position: relative;
+  width: 100%;
+  border-radius: var(--pg-radius-md);
+  overflow: hidden;
+  background: radial-gradient(90% 90% at 40% 20%, #16202c, #0a1017);
+  box-shadow: var(--pg-elev-inset);
+  display: grid;
+  place-items: center;
+  /* Grows into the space a 1080p frame leaves over, without ever letting a
+     portrait board (Germany, 0.78) tower over a landscape one (USA, 1.55). */
+  max-height: clamp(112px, 25vh, 300px);
+
+  .pg-mapthumb {
+    width: 100%;
+    height: 100%;
+    padding: 6px;
+  }
+}
+.pg-mapcard__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pg-mapcard__name {
+  display: flex;
+  align-items: center;
+  gap: var(--pg-space-2);
+  font-family: var(--pg-font-display);
+  font-size: var(--pg-text-md);
+  letter-spacing: var(--pg-tracking-wide);
+  text-transform: uppercase;
+  color: var(--pg-text-bright);
+
+  svg {
+    width: 15px;
+    height: 15px;
+    color: var(--pg-copper-bright);
+  }
+}
+.pg-mapcard__blurb {
+  font-size: var(--pg-text-xs);
+  line-height: var(--pg-leading-normal);
+  color: var(--pg-text-muted);
+}
+
+.pg-setup__rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-space-3);
+  margin-top: var(--pg-space-4);
+  padding-top: var(--pg-space-4);
+  border-top: 1px solid var(--pg-line-hairline);
+}
+.pg-setup__rule {
+  display: flex;
+  gap: var(--pg-space-3);
+
+  > svg {
+    width: 15px;
+    height: 15px;
+    flex: none;
+    margin-top: 2px;
+    color: var(--pg-warning);
+    filter: drop-shadow(0 0 8px var(--pg-warning-glow));
+  }
+  strong {
+    display: block;
+    font-family: var(--pg-font-display);
+    font-size: var(--pg-text-xs);
+    letter-spacing: var(--pg-tracking-wider);
+    text-transform: uppercase;
+    color: var(--pg-text-primary);
+  }
+  p {
+    margin-top: 3px;
+    font-size: var(--pg-text-xs);
+    line-height: var(--pg-leading-normal);
+    color: var(--pg-text-muted);
+  }
+}
+
+.pg-derived {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--pg-space-2);
+  margin-top: var(--pg-space-5);
+}
+.pg-derived__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--pg-space-3);
+  border-radius: var(--pg-radius-md);
+  @include well(var(--pg-radius-md));
+}
+.pg-derived__value {
+  font-size: var(--pg-text-md);
+  color: var(--pg-cyan-bright);
+  text-shadow: 0 0 16px var(--pg-cyan-glow);
+  line-height: 1.1;
+}
+.pg-derived__note {
+  font-size: var(--pg-text-3xs);
+  color: var(--pg-text-faint);
+  letter-spacing: var(--pg-tracking-wide);
+}
+
+/* The primary CTA is pinned to the bottom of its column: the setup form can
+   scroll on a laptop, but "Create lobby" must never be below the fold. */
+.pg-setup__submit {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--pg-z-sticky);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--pg-space-3);
+  margin-top: auto;
+  padding: var(--pg-space-3) var(--pg-space-3) var(--pg-space-2);
+  border-radius: var(--pg-radius-lg);
+  background: linear-gradient(180deg, rgba(7, 11, 16, 0) 0%, rgba(7, 11, 16, 0.88) 38%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.pg-inline-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--pg-space-3);
+  padding: var(--pg-space-3) var(--pg-space-4);
+  border-radius: var(--pg-radius-md);
+  border: 1px solid rgba(255, 85, 99, 0.35);
+  background: rgba(255, 85, 99, 0.08);
+  color: var(--pg-text-secondary);
+  font-size: var(--pg-text-xs);
+  line-height: var(--pg-leading-normal);
+
+  svg {
+    width: 15px;
+    height: 15px;
+    flex: none;
+    margin-top: 1px;
+    color: var(--pg-danger);
+  }
+  strong {
+    color: var(--pg-danger);
+    font-family: var(--pg-font-display);
+    letter-spacing: var(--pg-tracking-wide);
+    text-transform: uppercase;
+  }
+}
+
+/* ==================================================================== *
+ * JOIN GAME
+ * ==================================================================== */
+.pg-join__main {
+  position: relative;
+  z-index: var(--pg-z-content);
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: var(--pg-space-4) var(--pg-gutter) var(--pg-space-10);
+  min-height: 0;
+  overflow-y: auto;
+}
+.pg-join__card {
+  width: min(100%, 560px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-space-5);
+}
+.pg-join__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-space-2);
+  text-align: center;
+  align-items: center;
+}
+.pg-join__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-space-5);
+}
+.pg-join__codewrap {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--pg-space-3);
+
+  > .pg-field {
+    flex: 1;
+  }
+  > .pg-hint {
+    margin-top: 28px;
+  }
+}
+.pg-join__alt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pg-space-3);
+}
+
+/* ==================================================================== *
+ * LOBBY
+ * ==================================================================== */
+.pg-lobby__grid {
+  position: relative;
+  z-index: var(--pg-z-content);
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr) minmax(300px, 0.8fr);
+  gap: clamp(16px, 1.6vw, 28px);
+  padding: 0 var(--pg-gutter) var(--pg-space-6);
+  max-width: var(--pg-max-content);
+  width: 100%;
+  margin: 0 auto;
+
+  @include down('xl') {
+    grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.8fr);
+  }
+  @include down('lg') {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-y: auto;
+  }
+}
+
+.pg-lobby__roster,
+.pg-lobby__share,
+.pg-lobby__settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-space-4);
+  min-height: 0;
+}
+
+.pg-lobby__share {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/*
+ * 720p and other short frames: the chat is the one panel a player can live
+ * without, and dropping it is far better than clipping a seat row. The roster
+ * then takes the column it vacates.
+ */
+@media (max-height: 780px) {
+  /* Scoped with `.pg-lobby` so these win over the unconditional rules further
+     down the file, which carry the same specificity. */
+  .pg-lobby .pg-lobby__chat {
+    display: none;
+  }
+  .pg-lobby .pg-lobby__rosterpanel {
+    flex: 1 1 auto;
+  }
+}
+
+.pg-lobby__settings {
+  overflow-y: auto;
+
+  @include down('xl') {
+    display: none;
+  }
+}
+
+/* All three columns finish on the same baseline: the last panel in each
+   absorbs the slack, so the lobby reads as one composed frame rather than
+   three stacks of cards floating at different heights. */
+.pg-lobby__next,
+.pg-lobby__settings > .pg-panel:last-child {
+  flex: 1 1 auto;
+}
+
+/* The roster sizes to its seats and only shrinks under real pressure; the chat
+   below absorbs whatever height is left, so the column never ends in a void —
+   and a seat row is never left half-cut at the panel edge. */
+.pg-lobby__rosterpanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 0 1 auto;
+
+  .pg-panel__header {
+    padding: var(--pg-space-4) var(--pg-space-5) var(--pg-space-3);
+    margin-bottom: 0;
+  }
+}
+
+.pg-lobby__list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+  padding: var(--pg-space-2) var(--pg-space-3) var(--pg-space-3);
+  gap: 6px;
+}
+
+.pg-seat {
+  display: flex;
+  align-items: center;
+  gap: var(--pg-space-3);
+  padding: var(--pg-space-2) var(--pg-space-3);
+  border-radius: var(--pg-radius-md);
+  border: 1px solid var(--pg-line-hairline);
+  background: linear-gradient(180deg, rgba(38, 51, 66, 0.32), rgba(14, 20, 28, 0.4));
+  transition: border-color var(--pg-dur-fast) linear, background-color var(--pg-dur-fast) linear;
+
+  &[data-me='true'] {
+    border-color: color-mix(in srgb, var(--pg-pc) 45%, transparent);
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--pg-pc) 14%, transparent) 0%,
+      rgba(14, 20, 28, 0.45) 55%
+    );
+  }
+}
+.pg-seat--empty {
+  border-style: dashed;
+  border-color: var(--pg-line-subtle);
+  background: rgba(255, 255, 255, 0.014);
+  min-height: 58px;
+}
+.pg-seat__slot {
+  font-size: var(--pg-text-xs);
+  color: var(--pg-text-faint);
+  letter-spacing: var(--pg-tracking-wide);
+  flex: none;
+  width: 22px;
+}
+.pg-seat__chip {
+  flex: 1;
+  min-width: 0;
+}
+.pg-seat__right {
+  display: flex;
+  align-items: center;
+  gap: var(--pg-space-3);
+  flex: none;
+}
+.pg-seat__waiting {
+  flex: 1;
+  font-size: var(--pg-text-xs);
+  color: var(--pg-text-faint);
+  font-style: italic;
+}
+
+.pg-lobby__chat {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 148px;
+}
+.pg-lobby__chatlog {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: var(--pg-space-2) 0;
+}
+.pg-lobby__chatempty {
+  margin: auto;
+  text-align: center;
+  max-width: 34ch;
+}
+.pg-chatline {
+  display: flex;
+  gap: var(--pg-space-3);
+  align-items: baseline;
+  font-size: var(--pg-text-sm);
+  line-height: var(--pg-leading-normal);
+  padding: 2px 0;
+}
+.pg-chatline__name {
+  flex: none;
+  min-width: 88px;
+  font-family: var(--pg-font-display);
+  font-size: var(--pg-text-2xs);
+  letter-spacing: var(--pg-tracking-wide);
+  text-transform: uppercase;
+  color: var(--pg-text-muted);
+  text-align: right;
+}
+.pg-chatline[data-me='true'] .pg-chatline__name {
+  color: var(--pg-cyan);
+}
+.pg-chatline__text {
+  color: var(--pg-text-secondary);
+  overflow-wrap: anywhere;
+}
+.pg-lobby__chatform {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--pg-space-2);
+  padding-top: var(--pg-space-2);
+  border-top: 1px solid var(--pg-line-hairline);
+
+  > .pg-field {
+    flex: 1;
+  }
+  > .pg-btn {
+    height: 44px;
+  }
+}
+
+.pg-lobby__readybar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pg-space-4);
+  padding: var(--pg-space-3) var(--pg-space-4);
+  @include glass(var(--pg-radius-lg));
+  flex: none;
+}
+.pg-lobby__readyhint {
+  display: flex;
+  align-items: center;
+  gap: var(--pg-space-2);
+
+  svg {
+    width: 15px;
+    height: 15px;
+    color: var(--pg-success);
+  }
+}
+
+.pg-lobby__sharenote {
+  margin-top: var(--pg-space-3);
+}
+.pg-lobby__hostrow {
+  display: flex;
+  gap: var(--pg-space-3);
+  margin-bottom: var(--pg-space-4);
+
+  > * {
+    flex: 1;
+  }
+}
+.pg-lobby__startwrap {
+  display: block;
+}
+.pg-lobby__blocked {
+  margin-top: var(--pg-space-3);
+  text-align: center;
+  color: var(--pg-warning);
+}
+
+.pg-lobby__map {
+  display: flex;
+  gap: var(--pg-space-4);
+  align-items: center;
+  margin-bottom: var(--pg-space-4);
+}
+.pg-lobby__mapart {
+  width: 108px;
+  flex: none;
+  border-radius: var(--pg-radius-md);
+  overflow: hidden;
+  background: radial-gradient(90% 90% at 40% 20%, #16202c, #0a1017);
+  box-shadow: var(--pg-elev-inset);
+  display: grid;
+  place-items: center;
+
+  .pg-mapthumb {
+    width: 100%;
+    height: 100%;
+    padding: 5px;
+  }
+}
+
+.pg-summary {
+  display: flex;
+  flex-direction: column;
+}
+.pg-summary__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pg-space-4);
+  padding: var(--pg-space-2) 0;
+  border-bottom: 1px solid var(--pg-line-hairline);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+.pg-summary__label {
+  font-size: var(--pg-text-xs);
+  color: var(--pg-text-muted);
+  letter-spacing: var(--pg-tracking-wide);
+}
+.pg-summary__value {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--pg-font-display);
+  font-size: var(--pg-text-sm);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--pg-tracking-wide);
+  text-transform: uppercase;
+  color: var(--pg-text-bright);
+
+  svg {
+    width: 12px;
+    height: 12px;
+    color: var(--pg-cyan);
+  }
+  &.is-on {
+    color: var(--pg-cyan-bright);
+  }
+}
+.pg-lobby__specials {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-space-3);
+  margin-top: var(--pg-space-4);
+  padding-top: var(--pg-space-4);
+  border-top: 1px solid var(--pg-line-hairline);
+}
+
+/* ==================================================================== *
+ * GAME SCREEN (frame only — mounts are filled by later agents)
+ * ==================================================================== */
+.pg-game__chrome {
+  position: relative;
+  z-index: var(--pg-z-hud);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--pg-space-5);
+  padding: var(--pg-space-2) var(--pg-space-5);
+  height: 56px;
+  flex: none;
+  border-bottom: 1px solid var(--pg-line-subtle);
+  background: linear-gradient(180deg, rgba(24, 34, 46, 0.92), rgba(12, 18, 26, 0.92));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+.pg-game__chrome-left,
+.pg-game__chrome-right {
+  display: flex;
+  align-items: center;
+  gap: var(--pg-space-3);
+  min-width: 0;
+}
+.pg-game__chrome-right {
+  justify-content: flex-end;
+}
+
+.pg-game__phaserail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: var(--pg-radius-md);
+  @include well(var(--pg-radius-md));
+}
+.pg-phasepip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: var(--pg-radius-sm);
+  font-family: var(--pg-font-display);
+  font-size: var(--pg-text-3xs);
+  letter-spacing: var(--pg-tracking-wider);
+  text-transform: uppercase;
+  color: var(--pg-text-faint);
+  white-space: nowrap;
+
+  &[data-active='true'] {
+    color: var(--pg-text-bright);
+  }
+}
+.pg-phasepip__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--pg-radius-sm);
+  background: linear-gradient(180deg, rgba(70, 226, 255, 0.24), rgba(70, 226, 255, 0.08));
+  border: 1px solid rgba(70, 226, 255, 0.45);
+  box-shadow: 0 0 20px rgba(70, 226, 255, 0.24);
+  z-index: -1;
+}
+.pg-phasepip__index {
+  color: var(--pg-cyan);
+  font-size: var(--pg-text-2xs);
+}
+
+.pg-game__grid {
+  position: relative;
+  z-index: var(--pg-z-content);
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr) 372px;
+  grid-template-rows: auto minmax(0, 1fr) 168px;
+  grid-template-areas:
+    'hud hud hud'
+    'rail board phase'
+    'rail log phase';
+  gap: var(--pg-space-3);
+  padding: var(--pg-space-3);
+
+  @include down('xl') {
+    grid-template-columns: 208px minmax(0, 1fr) 320px;
+    grid-template-rows: auto minmax(0, 1fr) 140px;
+  }
+}
+
+.pg-mount--hud {
+  grid-area: hud;
+  min-height: 68px;
+}
+.pg-game__rail {
+  grid-area: rail;
+  min-height: 0;
+  display: flex;
+}
+.pg-game__railpanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.pg-mount--board {
+  grid-area: board;
+  min-height: 0;
+}
+.pg-game__log {
+  grid-area: log;
+  min-height: 0;
+  display: flex;
+
+  > .pg-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+}
+.pg-game__logbody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.pg-logline {
+  display: flex;
+  gap: var(--pg-space-3);
+  padding: 3px 0;
+  font-size: var(--pg-text-xs);
+  border-bottom: 1px solid var(--pg-line-hairline);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+.pg-logline__cat {
+  flex: none;
+  width: 78px;
+  font-family: var(--pg-font-display);
+  font-size: var(--pg-text-3xs);
+  letter-spacing: var(--pg-tracking-wider);
+  text-transform: uppercase;
+  color: var(--pg-copper-bright);
+  padding-top: 2px;
+}
+.pg-logline__text {
+  color: var(--pg-text-secondary);
+  line-height: var(--pg-leading-normal);
+}
+.pg-mount--phase {
+  grid-area: phase;
+  min-height: 0;
+}
+
+/* Mount placeholders — visible scaffolding, deliberately marked as such. */
+.pg-mount {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+.pg-mount__placeholder {
+  position: relative;
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  border-radius: var(--pg-radius-lg);
+  border: 1px dashed var(--pg-line-subtle);
+  background: repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.016) 0px,
+      rgba(255, 255, 255, 0.016) 10px,
+      transparent 10px,
+      transparent 20px
+    ),
+    linear-gradient(180deg, rgba(20, 29, 40, 0.55), rgba(10, 16, 24, 0.7));
+
+  &.is-inline {
+    border-radius: var(--pg-radius-md);
+  }
+}
+.pg-mount__label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  text-align: center;
+  padding: var(--pg-space-4);
+}
+.pg-mount__title {
+  font-family: var(--pg-font-display);
+  font-size: var(--pg-text-md);
+  letter-spacing: var(--pg-tracking-wide);
+  text-transform: uppercase;
+  color: var(--pg-text-secondary);
+}
+.pg-mount__code {
+  font-family: var(--pg-font-mono);
+  font-size: var(--pg-text-2xs);
+  color: var(--pg-cyan-dim);
+  padding: 2px 7px;
+  border-radius: var(--pg-radius-xs);
+  background: rgba(70, 226, 255, 0.07);
+  border: 1px solid rgba(70, 226, 255, 0.18);
+}
+.pg-mount__ticks {
+  position: absolute;
+  inset: 8px;
+  border-radius: var(--pg-radius-md);
+  background-image: linear-gradient(var(--pg-line-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--pg-line-subtle) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(70% 70% at 50% 50%, #000, transparent 80%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ==================================================================== *
+ * CRASH SCREEN (ErrorBoundary fallback)
+ * ==================================================================== */
+.pg-crash {
+  display: grid;
+  place-items: center;
+  padding: var(--pg-gutter);
+}
+.pg-crash__panel {
+  width: min(100%, 540px);
+  text-align: center;
+}
+.pg-crash__icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto var(--pg-space-5);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 85, 99, 0.4);
+  background: rgba(255, 85, 99, 0.1);
+  color: var(--pg-danger);
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+.pg-crash__detail {
+  margin: var(--pg-space-5) 0;
+  padding: var(--pg-space-3);
+  border-radius: var(--pg-radius-md);
+  @include well(var(--pg-radius-md));
+  font-family: var(--pg-font-mono);
+  font-size: var(--pg-text-xs);
+  color: var(--pg-text-muted);
+  text-align: left;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pg-crash__actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--pg-space-3);
+}
+
+/* ==================================================================== *
+ * SHORT VIEWPORTS (1366x768 and laptop 16:10)
+ * ==================================================================== */
+@include short-viewport {
+  .pg-menu__inner {
+    gap: clamp(20px, 2.4vw, 40px);
+  }
+  .pg-wordmark__power,
+  .pg-wordmark__grid {
+    font-size: clamp(3rem, 5.4vw, 4.4rem);
+  }
+  .pg-menu__tagline {
+    font-size: var(--pg-text-base);
+  }
+  .pg-menu__stats {
+    padding-top: var(--pg-space-4);
+  }
+  .pg-mapcard__art {
+    max-height: 118px;
+  }
+  .pg-game__grid {
+    grid-template-rows: auto minmax(0, 1fr) 132px;
+  }
+}
+
+/* Below the supported floor we still degrade rather than break. */
+@include down('md') {
+  .pg-topbar {
+    padding: var(--pg-space-3) var(--pg-space-4);
+  }
+  .pg-menu__inner,
+  .pg-setup__grid,
+  .pg-lobby__grid {
+    padding-left: var(--pg-space-4);
+    padding-right: var(--pg-space-4);
+  }
+  .pg-mapgrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pg-game__grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'hud'
+      'board'
+      'phase'
+      'log';
+    overflow-y: auto;
+  }
+  .pg-game__rail {
+    display: none;
+  }
+}

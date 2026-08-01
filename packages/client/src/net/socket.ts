@@ -1,6 +1,6 @@
-import type { ClientMessage, ServerMessage } from '@pg/shared';
+import type { ServerMessage } from '@pg/shared';
 
-import type { ConnectionStatus } from './types';
+import type { ConnectionStatus, OutboundMessage } from './types';
 
 /* ------------------------------------------------------------------ *
  * Session persistence
@@ -98,7 +98,7 @@ export class GameSocket {
   private pingSentAt = 0;
 
   /** Messages produced while the socket was down, replayed on reconnect. */
-  private queue: ClientMessage[] = [];
+  private queue: OutboundMessage[] = [];
 
   constructor(handlers: SocketHandlers) {
     this.handlers = handlers;
@@ -185,7 +185,7 @@ export class GameSocket {
    * Sends a message, or queues it if the socket is down.
    * `ping` is never queued — a stale heartbeat is worthless.
    */
-  send(message: ClientMessage): void {
+  send(message: OutboundMessage): void {
     if (this.isOpen) {
       this.ws!.send(JSON.stringify(message));
       return;
@@ -221,9 +221,9 @@ export class GameSocket {
   private identify(): void {
     const token = loadSessionToken();
     if (token !== null && token.length > 0) {
-      this.ws?.send(JSON.stringify({ t: 'rejoin', sessionToken: token } satisfies ClientMessage));
+      this.ws?.send(JSON.stringify({ t: 'rejoin', sessionToken: token } satisfies OutboundMessage));
     } else {
-      this.ws?.send(JSON.stringify({ t: 'hello' } satisfies ClientMessage));
+      this.ws?.send(JSON.stringify({ t: 'hello' } satisfies OutboundMessage));
     }
   }
 
@@ -259,7 +259,7 @@ export class GameSocket {
     this.heartbeatTimer = window.setInterval(() => {
       if (!this.isOpen) return;
       this.pingSentAt = performance.now();
-      this.ws!.send(JSON.stringify({ t: 'ping' } satisfies ClientMessage));
+      this.ws!.send(JSON.stringify({ t: 'ping' } satisfies OutboundMessage));
 
       // No pong in time means a half-open socket: force a close so the normal
       // reconnect path runs instead of sitting on a dead connection.

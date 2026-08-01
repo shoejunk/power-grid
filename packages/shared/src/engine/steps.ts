@@ -74,8 +74,14 @@ export function applyStep3Transition(
 
   // "Remove the ... lowest-numbered current-market plant. Do not draw replacements."
   removeLowestCurrent(state, now, 'step3Transition');
+  // The Step 3 card itself leaves the game — from the market when it was drawn
+  // in Phase 2, or straight from the stack when it was drawn in Phase 5. Either
+  // way it is recorded, so every card in the game stays accounted for. §14.
   if (marketPlants(state).includes(STEP3_PLANT_ID)) {
     removeFromMarket(state, STEP3_PLANT_ID);
+  }
+  if (!state.plantMarket.removed.includes(STEP3_PLANT_ID)) {
+    state.plantMarket.removed.push(STEP3_PLANT_ID);
   }
   state.pendingStep3 = timing;
   sortMarket(state);

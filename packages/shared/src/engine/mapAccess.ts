@@ -9,7 +9,7 @@
  */
 
 import type { CityId, GameMap, GameState, MapCity, MapId } from '../types.js';
-import { getMap as getDataMap, buildAdjacency, isZoneContiguous } from '../data/maps/index.js';
+import { getMap as getDataMap, buildAdjacency } from '../data/maps/index.js';
 
 const overrides = new Map<string, GameMap>();
 

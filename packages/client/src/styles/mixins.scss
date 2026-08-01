@@ -96,7 +96,11 @@
   position: relative;
   border-radius: #{$radius};
   border: 1px solid var(--pg-line-subtle);
-  background: if($strong, var(--pg-glass-bg-strong), var(--pg-glass-bg));
+  @if $strong {
+    background: var(--pg-glass-bg-strong);
+  } @else {
+    background: var(--pg-glass-bg);
+  }
   backdrop-filter: blur(var(--pg-glass-blur)) saturate(1.35);
   -webkit-backdrop-filter: blur(var(--pg-glass-blur)) saturate(1.35);
   box-shadow: var(--pg-bevel-inner), var(--pg-elev-3);

@@ -7,9 +7,10 @@ import type {
   GameSettings,
   GameState,
   MapId,
+  Phase,
   PlayerId,
 } from '../../types.js';
-import { createGame, applyAction, legalActions } from '../index.js';
+import { createGame, applyAction, deepClone, legalActions } from '../index.js';
 import type { SeatInput } from '../setup.js';
 
 export const NOW = 1_000;
@@ -139,6 +140,19 @@ export function playRound(state: GameState): GameState {
   s = skipResources(s);
   s = skipBuilding(s);
   s = powerEveryone(s);
+  return s;
+}
+
+/**
+ * Drops the game straight into `phase` with `actor` on the clock, everyone else
+ * already done. Lets a test exercise one subphase without replaying a whole game.
+ */
+export function enterPhase(state: GameState, phase: Phase, actor: PlayerId): GameState {
+  const s = deepClone(state);
+  s.phase = phase;
+  for (const id of s.playerOrder) s.players[id]!.phaseStatus = 'acted';
+  s.players[actor]!.phaseStatus = 'acting';
+  s.activePlayerId = actor;
   return s;
 }
 

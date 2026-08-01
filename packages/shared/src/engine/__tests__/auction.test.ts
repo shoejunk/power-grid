@@ -25,7 +25,9 @@ describe('§6 nomination legality', () => {
   });
 
   it('§14 rejects bidding on a future-market plant', () => {
-    const v = validateAction(s, 'p1', { type: 'nominatePlant', plantId: 8, bid: 8 });
+    // Must be the player whose turn it actually is, otherwise the turn-order
+    // check short-circuits first and this stops testing the future-market rule.
+    const v = validateAction(s, s.playerOrder[0]!, { type: 'nominatePlant', plantId: 8, bid: 8 });
     expect(v).toEqual({ ok: false, reason: 'Only plants in the current market may be auctioned' });
   });
 

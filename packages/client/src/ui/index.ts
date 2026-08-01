@@ -16,6 +16,8 @@ export type { CodeInputProps } from './CodeInput';
 
 export { ConnectionPill } from './ConnectionPill';
 
+export { ErrorBoundary } from './ErrorBoundary';
+
 export { IconButton } from './IconButton';
 export type { IconButtonProps } from './IconButton';
 
