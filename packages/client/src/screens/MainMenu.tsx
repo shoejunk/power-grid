@@ -61,7 +61,7 @@ export function MainMenu(): JSX.Element {
             <span className="pg-menu__eyebrow-dot" />
             <span className="pg-overline">2&ndash;6 Players</span>
             <span className="pg-menu__eyebrow-dot" />
-            <span className="pg-overline">Germany &amp; USA</span>
+            <span className="pg-overline">Germany</span>
           </motion.div>
 
           <Wordmark />
@@ -166,25 +166,33 @@ export function MainMenu(): JSX.Element {
             </ol>
           </Panel>
 
-          <Panel tone="glass" title="Maps" subtitle="Both boards ship complete">
+          <Panel tone="glass" title="Maps" subtitle="42 cities across 6 areas">
             <div className="pg-menu__maps">
-              {Object.values(MAP_PRESENTATION).map((map) => (
-                <div key={map.id} className="pg-menu__map">
-                  {/* Fixed letterbox rather than the map's own aspect ratio:
-                      a portrait Germany next to a landscape USA would make the
-                      two rows different heights and break the list rhythm. */}
-                  <div className="pg-menu__mapart">
-                    <MapThumbnail mapId={map.id} />
-                  </div>
-                  <div>
-                    <div className="pg-menu__map-name">{map.name}</div>
-                    <div className="pg-menu__map-meta">
-                      {map.cityCount} cities &middot; {map.areaCount} areas
+              {Object.values(MAP_PRESENTATION).map((map) => {
+                /* The USA board is implemented and tested in the rules engine
+                   but its art is not finished, so it is shown as forthcoming
+                   rather than hidden — players can see what is coming. */
+                const available = map.id === 'germany';
+                return (
+                  <div key={map.id} className="pg-menu__map" data-unavailable={!available}>
+                    {/* Fixed letterbox rather than the map's own aspect ratio:
+                        a portrait Germany next to a landscape USA would make the
+                        two rows different heights and break the list rhythm. */}
+                    <div className="pg-menu__mapart">
+                      <MapThumbnail mapId={map.id} />
                     </div>
-                    <div className="pg-menu__map-rule">{map.specialRules[0]?.title}</div>
+                    <div>
+                      <div className="pg-menu__map-name">{map.name}</div>
+                      <div className="pg-menu__map-meta">
+                        {map.cityCount} cities &middot; {map.areaCount} areas
+                      </div>
+                      <div className="pg-menu__map-rule">
+                        {available ? map.specialRules[0]?.title : 'Coming soon'}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Panel>
 
@@ -201,10 +209,13 @@ export function MainMenu(): JSX.Element {
                   Reserve starting cities before anyone builds.
                 </span>
               </li>
-              <li>
+              {/* Implemented and tested in the rules engine; its faction UI is
+                  not finished, so it is listed as forthcoming rather than
+                  hidden. */}
+              <li data-unavailable="true">
                 <span className="pg-menu__variant-name">Against the Trust</span>
                 <span className="pg-menu__variant-note">
-                  Two-player mode with an automated blocking faction.
+                  Two-player mode with an automated blocking faction. Coming soon.
                 </span>
               </li>
             </ul>

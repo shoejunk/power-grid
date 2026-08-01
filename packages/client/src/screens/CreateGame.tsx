@@ -25,6 +25,18 @@ import {
 } from '../ui';
 import { AmbientBackdrop, Wordmark } from '../ui/Artwork';
 
+/* ------------------------------------------------------------------ *
+ * Release gating.
+ *
+ * The rules engine implements and tests BOTH maps and the full Against the
+ * Trust variant (§13). They are withheld from the first release only because
+ * their board art and faction UI are not finished — this is a deferral, not a
+ * missing feature. Re-enabling either is a one-line change here.
+ * ------------------------------------------------------------------ */
+
+const AVAILABLE_MAPS: readonly MapId[] = ['germany'];
+const TRUST_AVAILABLE = false;
+
 /** Setup form state. `seed` is optional — the server generates one if omitted. */
 type SetupDraft = Omit<GameSettings, 'seed'> & { seed: string };
 
@@ -142,24 +154,32 @@ export function CreateGame(): JSX.Element {
 
           <Panel
             title="Map"
-            subtitle="Both boards are 42 cities across 6 areas"
+            subtitle="42 cities across 6 areas"
             actions={<Badge tone="info">{map.region}</Badge>}
           >
             <div className="pg-mapgrid" role="radiogroup" aria-label="Map">
               {MAP_IDS.map((id) => {
                 const preset = MAP_PRESENTATION[id];
                 const selected = draft.mapId === id;
+                const available = AVAILABLE_MAPS.includes(id as MapId);
                 return (
                   <motion.button
                     key={id}
                     type="button"
                     role="radio"
                     aria-checked={selected}
+                    aria-disabled={!available}
+                    disabled={!available}
+                    title={available ? undefined : 'The USA board is not available yet.'}
                     className="pg-mapcard"
                     data-selected={selected}
-                    onClick={() => setDraft((d) => ({ ...d, mapId: id as MapId }))}
-                    whileHover={{ y: -3 }}
-                    whileTap={{ scale: 0.985 }}
+                    data-unavailable={!available}
+                    onClick={() => {
+                      if (!available) return;
+                      setDraft((d) => ({ ...d, mapId: id as MapId }));
+                    }}
+                    whileHover={available ? { y: -3 } : undefined}
+                    whileTap={available ? { scale: 0.985 } : undefined}
                     transition={springSnappy}
                   >
                     <div
@@ -174,6 +194,9 @@ export function CreateGame(): JSX.Element {
                         {preset.name}
                       </div>
                       <div className="pg-mapcard__blurb">{preset.blurb}</div>
+                      {available ? null : (
+                        <Badge tone="neutral">Coming soon</Badge>
+                      )}
                     </div>
                     {selected ? (
                       <motion.span
@@ -254,14 +277,18 @@ export function CreateGame(): JSX.Element {
 
             <Tooltip
               placement="left"
-              title="Two players only"
-              content="The Trust is defined only for the two-player game. Set the table to 2 players to enable it."
+              title={TRUST_AVAILABLE ? 'Two players only' : 'Not available yet'}
+              content={
+                TRUST_AVAILABLE
+                  ? 'The Trust is defined only for the two-player game. Set the table to 2 players to enable it.'
+                  : 'The Against the Trust variant is fully implemented in the rules engine but is not yet surfaced in the interface. It will be enabled in a later release.'
+              }
               rule="§13 Two-player variant"
             >
               <div>
                 <Toggle
-                  checked={draft.againstTheTrust}
-                  disabled={draft.playerCount !== 2}
+                  checked={TRUST_AVAILABLE && draft.againstTheTrust}
+                  disabled={!TRUST_AVAILABLE || draft.playerCount !== 2}
                   onChange={(againstTheTrust) => setDraft((d) => ({ ...d, againstTheTrust }))}
                   label="Against the Trust"
                   description="An automated third faction blocks cities and takes plants for free — and cannot win."

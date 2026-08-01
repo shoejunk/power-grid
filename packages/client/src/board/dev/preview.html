@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Board preview</title>
+    <link rel="preload" href="/fonts/oswald-latin.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+    <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+    <style>
+      html, body, #root { height: 100%; margin: 0; background: #070b10; }
+
+      /* Mirrors .pg-game__grid from styles/screens.scss so the board cell here
+         is exactly the size the real match screen hands it. */
+      .pgb-dev { display: flex; flex-direction: column; height: 100%; }
+      .pgb-dev__chrome {
+        height: 56px; display: flex; align-items: center; justify-content: space-between;
+        padding: 0 16px; color: #74879c; font: 500 11px/1 'Oswald', sans-serif;
+        letter-spacing: .16em; text-transform: uppercase;
+        border-bottom: 1px solid rgba(148,184,216,.08);
+      }
+      .pgb-dev__grid {
+        flex: 1; min-height: 0; display: grid; gap: 12px; padding: 12px;
+        grid-template-columns: 250px minmax(0, 1fr) 372px;
+        grid-template-rows: auto minmax(0, 1fr) 168px;
+        grid-template-areas: 'hud hud hud' 'rail board phase' 'rail log phase';
+      }
+      @media (max-width: 1599px) {
+        .pgb-dev__grid {
+          grid-template-columns: 208px minmax(0, 1fr) 320px;
+          grid-template-rows: auto minmax(0, 1fr) 140px;
+        }
+      }
+      .pgb-dev__hud { grid-area: hud; min-height: 68px; }
+      .pgb-dev__rail { grid-area: rail; }
+      .pgb-dev__board { grid-area: board; min-height: 0; min-width: 0; display: flex; }
+      .pgb-dev__log { grid-area: log; }
+      .pgb-dev__phase { grid-area: phase; }
+      .pgb-dev__hud, .pgb-dev__rail, .pgb-dev__log, .pgb-dev__phase {
+        border: 1px dashed rgba(148,184,216,.14); border-radius: 12px;
+        display: grid; place-items: center;
+        color: #4d5c6c; font: 500 10px/1 'Oswald', sans-serif; letter-spacing: .2em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./preview.tsx"></script>
+  </body>
+</html>

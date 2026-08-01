@@ -649,6 +649,26 @@
     padding: 6px;
   }
 }
+/* Menu entries for content that exists in the engine but is not yet surfaced.
+   Dimmed and desaturated so it reads as deliberately forthcoming. */
+.pg-menu__map[data-unavailable='true'],
+.pg-menu__variants li[data-unavailable='true'] {
+  filter: saturate(0.3);
+  opacity: 0.45;
+}
+
+/* A board that is implemented in the engine but not yet surfaced. Reads as
+   deliberately withheld rather than broken: dimmed and desaturated, cursor
+   unavailable, but still legible so players can see what is coming. */
+.pg-mapcard[data-unavailable='true'] {
+  cursor: not-allowed;
+  filter: saturate(0.35);
+  opacity: 0.5;
+
+  &:hover {
+    transform: none;
+  }
+}
 .pg-mapcard__body {
   display: flex;
   flex-direction: column;
