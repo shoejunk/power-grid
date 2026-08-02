@@ -113,7 +113,7 @@ function RegionLayerImpl({ layout, model, theme, terrain, hasGrain }: RegionProp
                 className="pgb-outzone-label"
                 x={o.centroid.x}
                 y={o.centroid.y}
-                fontSize={metrics.nameFont * 1.05}
+                fontSize={metrics.nameFont * 0.95}
                 textAnchor="middle"
                 dominantBaseline="central"
                 fill={theme.textFaint}
@@ -263,6 +263,7 @@ function BadgeLayerImpl({ layout, model, theme, highlighted }: BadgeProps): JSX.
               opacity={0.72}
             />
             <rect
+              className="pgb-badge-plate"
               x={x}
               y={y}
               width={b.w}

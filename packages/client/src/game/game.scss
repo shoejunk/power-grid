@@ -50,9 +50,16 @@
   }
 }
 
-@media (max-height: 820px) {
+/* ------------------------------------------------------------------ *
+ * Short viewports (1280x720, 1366x768, laptop 16:10).
+ *
+ * The two market cards and the log are fixed furniture; the phase panel is
+ * where the player acts. Every pixel reclaimed here goes to the phase panel,
+ * so a 720p desktop still gets a usable panel rather than a scroll stub.
+ * ------------------------------------------------------------------ */
+@media (max-height: 860px) {
   .pg-game__grid.pg-gamex__grid {
-    grid-template-rows: auto minmax(0, 1fr) 136px;
+    grid-template-rows: auto minmax(0, 1fr) 108px;
   }
 }
 
@@ -87,7 +94,7 @@
 }
 .pg-grr__phase {
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 168px;
   display: flex;
 }
 .pg-grr__phase > .pg-panel {
@@ -103,14 +110,26 @@
 
 /* Tighten the shared panel header inside the dense match chrome. */
 .pg-game .pg-panel__header {
-  margin-bottom: 7px;
-  padding-bottom: 6px;
+  margin-bottom: 6px;
+  padding-bottom: 5px;
 }
 .pg-game .pg-panel__title {
   font-size: var(--pg-text-sm);
+  line-height: 1.15;
 }
 .pg-game .pg-panel__subtitle {
-  font-size: var(--pg-text-2xs);
+  font-size: var(--pg-text-3xs);
+  line-height: 1.2;
+  margin-top: 1px;
+}
+/* The two market cards are fixed furniture; every pixel they give back goes to
+   the phase panel, which is where the player actually acts. */
+.pg-gcard .pg-panel__header {
+  margin-bottom: 5px;
+  padding-bottom: 4px;
+}
+.pg-gcard.pg-panel--tight {
+  padding: 7px 9px 8px;
 }
 
 /* ==================================================================== *
@@ -311,8 +330,8 @@
   grid-template-rows: auto auto;
   align-content: center;
   justify-items: center;
-  gap: 2px;
-  padding: 6px 4px 5px;
+  gap: 1px;
+  padding: 4px 4px;
   width: 62px;
   border-radius: var(--pg-radius-md);
   border: 1px solid var(--pg-line-subtle);
@@ -487,7 +506,7 @@
   display: flex;
   align-items: stretch;
   gap: 8px;
-  padding: 5px 0;
+  padding: 3px 0;
 
   & + & {
     border-top: 1px dashed var(--pg-line-hairline);
@@ -523,7 +542,7 @@
   gap: 6px;
   flex: 1;
   min-width: 0;
-  min-height: 48px;
+  min-height: 44px;
 }
 .pg-gnote {
   color: var(--pg-text-faint);
@@ -579,7 +598,7 @@
   color: var(--pg-text-bright);
 }
 .pg-gtrack__row {
-  height: 22px;
+  height: 20px;
   border-radius: var(--pg-radius-xs);
 
   &:nth-child(odd) {
@@ -1338,6 +1357,10 @@
 .pg-gbidctrl__quick {
   display: flex;
   gap: 5px;
+}
+.pg-gbidctrl .pg-stepper,
+.pg-gbidbox__ctrl .pg-stepper {
+  width: 148px;
 }
 
 .pg-gladder {
@@ -2203,5 +2226,58 @@
     border-left: 2px solid rgba(255, 85, 99, 0.4);
     font-size: var(--pg-text-xs);
     color: var(--pg-text-secondary);
+  }
+}
+
+/* ==================================================================== *
+ * SHORT-VIEWPORT DENSITY PASS (1280x720, 1366x768, laptop 16:10)
+ * --------------------------------------------------------------------
+ * Last in the file on purpose: these override the component defaults
+ * above at equal specificity. The two market cards and the log are fixed
+ * furniture, so every pixel reclaimed from them goes to the phase panel —
+ * the one region the player actually acts in.
+ * ==================================================================== */
+@media (max-height: 860px) {
+  .pg-ghudcard {
+    padding: 5px 8px 6px;
+    gap: 3px;
+  }
+  .pg-ghudcard__meter {
+    height: 3px;
+  }
+  .pg-gplant {
+    padding: 3px;
+  }
+  .pg-gplant__num {
+    font-size: 18px;
+  }
+  .pg-gplant--xs {
+    width: 42px;
+    padding: 3px;
+  }
+  .pg-gplant--xs .pg-gplant__num {
+    font-size: 14px;
+  }
+  .pg-gplantrow {
+    min-height: 38px;
+  }
+  .pg-gmarketrow {
+    padding: 2px 0;
+  }
+  .pg-gtrack__row {
+    height: 17px;
+  }
+  .pg-gtrack__cell {
+    height: 15px;
+  }
+  .pg-gphase__foot {
+    margin-top: 6px;
+    padding-top: 6px;
+  }
+  .pg-gphase__body {
+    gap: 7px;
+  }
+  .pg-grr__phase {
+    min-height: 258px;
   }
 }

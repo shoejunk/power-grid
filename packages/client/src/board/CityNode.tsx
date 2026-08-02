@@ -38,17 +38,28 @@ interface Props {
   reduced: boolean;
 }
 
-function CityNodeImpl({ node, view, metrics, theme, state, hovered, settled, reduced }: Props): JSX.Element {
+function CityNodeImpl({
+  node,
+  view,
+  metrics,
+  theme,
+  state,
+  hovered,
+  settled,
+  reduced,
+}: Props): JSX.Element {
   const m = metrics;
-  const w = m.plateW;
-  const h = m.plateH;
-  const r = h * 0.42;
+  /** Drawn plate: the slot row only. `node.w` is the larger reserved footprint. */
+  const w = node.plateW;
+  const h = m.slotH;
+  const top = node.slotY - h / 2;
+  const r = h * 0.3;
   const outzone = state === 'outzone';
   const buildable = state === 'buildable';
 
   const px = node.plate.x;
   const py = node.plate.y;
-  const pipY = 0;
+  const pipY = node.slotY;
   const pipX = (i: number): number => (i - 1) * m.pipPitch;
 
   const spring = reduced
@@ -86,61 +97,94 @@ function CityNodeImpl({ node, view, metrics, theme, state, hovered, settled, red
         opacity={outzone ? 0.5 : 0.95}
       />
 
-      <motion.g
-        initial={false}
-        animate={{ scale: hovered ? 1.11 : 1 }}
-        transition={spring}
-        style={{ originX: `${px}px`, originY: `${py}px` }}
-        transform={`translate(${px.toFixed(2)} ${py.toFixed(2)})`}
-      >
-        {/* Buildable halo — a soft cyan bloom under the plate. */}
+      {/*
+        Two nested groups on purpose. framer-motion writes `style.transform`,
+        and a CSS transform *overrides* the SVG `transform` attribute on the
+        same element — putting both on one <g> silently collapses every node
+        onto the viewBox origin. So placement stays a plain attribute on a
+        static outer group, and only the hover scale is animated, on an inner
+        group whose `transform-box: fill-box` makes it scale about its own
+        centre (see `.pgb-node__scale`).
+      */}
+      <g transform={`translate(${px.toFixed(2)} ${py.toFixed(2)})`}>
+        <motion.g
+          className="pgb-node__scale"
+          initial={false}
+          animate={{ scale: hovered ? 1.11 : 1 }}
+          transition={spring}
+        >
+        {/*
+          Buildable affordance. Deliberately quiet and filter-free: in Phase 4
+          most of the zone is usually legal, so a glowing halo on 30 cities at
+          once is noise (and 30 live SVG filters). A cyan keyline plus a lit
+          plate marks the set; the bloom is reserved for the hovered city.
+        */}
         {buildable ? (
-          <motion.rect
-            x={-w / 2 - h * 0.34}
-            y={-h / 2 - h * 0.34}
-            width={w + h * 0.68}
-            height={h + h * 0.68}
-            rx={r + h * 0.3}
+          <rect
+            x={-w / 2 - h * 0.14}
+            y={top - h * 0.14}
+            width={w + h * 0.28}
+            height={h + h * 0.28}
+            rx={r + h * 0.12}
             fill="none"
             stroke={theme.cyan}
-            strokeWidth={h * 0.13}
-            filter={`url(#${DEF.glowNode})`}
-            initial={false}
-            animate={reduced ? { opacity: 0.75 } : { opacity: [0.42, 0.9, 0.42] }}
-            transition={reduced ? { duration: 0.001 } : { duration: 2.1, repeat: Infinity, ease: 'easeInOut' }}
+            strokeOpacity={hovered ? 0.95 : 0.34}
+            strokeWidth={h * 0.055}
           />
         ) : null}
 
         {/* Contact shadow — a duplicated shape, not a filter. */}
         <rect
           x={-w / 2}
-          y={-h / 2 + h * 0.16}
+          y={top + h * 0.17}
           width={w}
           height={h}
           rx={r}
           fill={theme.void}
-          opacity={0.62}
+          opacity={0.66}
         />
 
         <rect
+          className="pgb-plate-rect"
           x={-w / 2}
-          y={-h / 2}
+          y={top}
           width={w}
           height={h}
           rx={r}
-          fill={`url(#${buildable || hovered ? DEF.plateLive : DEF.plate})`}
-          stroke={buildable ? theme.cyan : '#05090e'}
-          strokeWidth={buildable ? h * 0.075 : h * 0.06}
+          fill={`url(#${hovered ? DEF.plateLive : DEF.plate})`}
+          stroke="#05090e"
+          strokeWidth={h * 0.07}
         />
         {/* Top bevel — the light edge that gives the plate thickness (V6). */}
         <path
-          d={`M${-w / 2 + r} ${-h / 2 + h * 0.055}H${w / 2 - r}`}
+          d={`M${-w / 2 + r} ${top + h * 0.06}H${w / 2 - r}`}
           stroke="#ffffff"
-          strokeOpacity={0.16}
+          strokeOpacity={0.17}
           strokeWidth={h * 0.055}
           strokeLinecap="round"
           fill="none"
         />
+
+        {/*
+          City name. Haloed free text rather than a ribbon, so the painted
+          terrain stays visible; the layout solver still reserved a box wide
+          enough for it, so no name is ever dropped or overlapped.
+        */}
+        <text
+          className="pgb-name"
+          x={0}
+          y={node.nameY}
+          fontSize={m.nameFont}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill={outzone ? theme.textFaint : hovered ? theme.cyanBright : theme.text}
+          stroke={theme.void}
+          strokeWidth={m.nameFont * 0.44}
+          strokeOpacity={0.9}
+          style={{ paintOrder: 'stroke' }}
+        >
+          {node.name}
+        </text>
 
         {view.slots.map((slot) => {
           const cx = pipX(slot.index);
@@ -156,6 +200,7 @@ function CityNodeImpl({ node, view, metrics, theme, state, hovered, settled, red
               <g key={slot.index}>
                 <circle cx={cx} cy={pipY + pr * 0.2} r={pr} fill={theme.void} opacity={0.7} />
                 <motion.g
+                  className="pgb-node__scale"
                   initial={settled && !reduced ? { scale: 1.9, opacity: 0 } : false}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={
@@ -163,7 +208,6 @@ function CityNodeImpl({ node, view, metrics, theme, state, hovered, settled, red
                       ? { duration: 0.12 }
                       : { type: 'spring', stiffness: 520, damping: 17, mass: 0.9 }
                   }
-                  style={{ originX: `${cx}px`, originY: `${pipY}px` }}
                 >
                   <circle
                     cx={cx}
@@ -237,24 +281,8 @@ function CityNodeImpl({ node, view, metrics, theme, state, hovered, settled, red
             </g>
           );
         })}
-      </motion.g>
-
-      {/* Name — halo stroked *under* the glyphs so it stays legible on any terrain. */}
-      <text
-        className="pgb-name"
-        x={node.label.x}
-        y={node.label.y}
-        fontSize={m.nameFont}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fill={outzone ? theme.textFaint : hovered || buildable ? theme.cyanBright : theme.text}
-        stroke={theme.void}
-        strokeWidth={m.nameFont * 0.34}
-        strokeOpacity={0.86}
-        style={{ paintOrder: 'stroke' }}
-      >
-        {node.name}
-      </text>
+        </motion.g>
+      </g>
     </g>
   );
 }

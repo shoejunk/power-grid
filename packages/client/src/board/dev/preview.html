@@ -30,6 +30,8 @@
           grid-template-rows: auto minmax(0, 1fr) 140px;
         }
       }
+      /* ?solo — board alone, full viewport, so a 1:1 screenshot shows real pixels. */
+      .pgb-dev__solo { position: fixed; inset: 0; display: flex; }
       .pgb-dev__hud { grid-area: hud; min-height: 68px; }
       .pgb-dev__rail { grid-area: rail; }
       .pgb-dev__board { grid-area: board; min-height: 0; min-width: 0; display: flex; }

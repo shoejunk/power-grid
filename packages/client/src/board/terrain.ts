@@ -279,51 +279,71 @@ export function paintTerrain(map: GameMap): string {
 
       if (area < 0) {
         /* --- sea: deep slate with faint bathymetric rings --- */
-        const depth = smoothstep(0, 130, field.sample(x, y).d1 - field.seaDistance);
-        const ringPhase = ((field.sample(x, y).d1 - field.seaDistance) / 30) % 1;
-        const ring = Math.pow(1 - Math.abs(ringPhase * 2 - 1), 8) * 0.16;
+        const off = field.sample(x, y).d1 - field.seaDistance;
+        const depth = smoothstep(0, 120, off);
+        const ringPhase = (off / 30) % 1;
+        const ring = Math.pow(1 - Math.abs(ringPhase * 2 - 1), 8) * 0.14;
         const churn = fbm(x / 70, y / 70, 133, 4) * 0.5 + 0.5;
-        r = mix(20, 8, depth) + ring * 44 + churn * 7;
-        g = mix(33, 15, depth) + ring * 58 + churn * 9;
-        b = mix(46, 24, depth) + ring * 70 + churn * 12;
+        r = mix(15, 6, depth) + ring * 30 + churn * 5;
+        g = mix(24, 10, depth) + ring * 40 + churn * 7;
+        b = mix(35, 17, depth) + ring * 50 + churn * 9;
       } else {
         const base = areaRgb[area] ?? { r: 120, g: 120, b: 120 };
 
-        // Painterly pigment variation at two scales.
-        const mottleA = fbm(x / 96, y / 96, 3, 4);
-        const mottleB = fbm(x / 24, y / 24, 41, 3);
-        const pigment = 1 + mottleA * 0.17 + mottleB * 0.075;
+        /*
+         * Pigment variation across three scales. The long wavelength is what
+         * actually reads at fit zoom — fine grain alone goes sub-pixel once the
+         * board is scaled into its cell and the regions flatten into vector
+         * fills, which is exactly the failure V2 calls out.
+         */
+        const mottleFar = fbm(x / 260, y / 260, 71, 3);
+        const mottleMid = fbm(x / 88, y / 88, 3, 4);
+        const mottleNear = fbm(x / 22, y / 22, 41, 3);
+        const pigment = 1 + mottleFar * 0.26 + mottleMid * 0.15 + mottleNear * 0.06;
 
         // Regions are lighter in their interior and sink into ink at the seams.
-        const interior = smoothstep(0, 74, edge);
-        const seam = smoothstep(0, 9, edge);
+        const interior = smoothstep(0, 78, edge);
+        const seam = smoothstep(0, 10, edge);
 
         r = base.r * pigment;
         g = base.g * pigment;
         b = base.b * pigment;
 
         // Warm the interior toward parchment, cool the rim toward slate.
-        r = mix(r * 0.62 + 30, r * 0.92 + 42, interior);
-        g = mix(g * 0.62 + 34, g * 0.92 + 44, interior);
-        b = mix(b * 0.62 + 42, b * 0.92 + 48, interior);
+        r = mix(r * 0.66 + 26, r * 0.98 + 34, interior);
+        g = mix(g * 0.66 + 30, g * 0.98 + 36, interior);
+        b = mix(b * 0.66 + 38, b * 0.98 + 40, interior);
 
         // Ink seep along the border.
-        const ink = 0.34 + 0.66 * seam;
+        const ink = 0.42 + 0.58 * seam;
         r *= ink;
         g *= ink;
         b *= ink;
 
         // Coastal sand rim where the land meets the sea.
-        const shore = smoothstep(field.seaDistance - 16, field.seaDistance, field.sample(x, y).d1);
-        r = mix(r, 118, shore * 0.5);
-        g = mix(g, 108, shore * 0.5);
-        b = mix(b, 88, shore * 0.5);
+        const shore = smoothstep(field.seaDistance - 18, field.seaDistance, field.sample(x, y).d1);
+        r = mix(r, 126, shore * 0.55);
+        g = mix(g, 114, shore * 0.55);
+        b = mix(b, 92, shore * 0.55);
 
-        const light = 0.58 + 0.62 * lambert;
+        // Key light. A wide response range is what makes the relief visible.
+        const light = 0.42 + 1.02 * lambert;
         r *= light;
         g *= light;
         b *= light;
       }
+
+      /*
+       * Dissolve the raster's own rectangle into the app background at the
+       * edges, so the board reads as a painted landmass rather than a
+       * photograph pasted onto the panel.
+       */
+      const u = px / W;
+      const v = py / H;
+      const fade = smoothstep(0, 0.052, Math.min(Math.min(u, 1 - u), Math.min(v, 1 - v)));
+      r = mix(7, r, fade);
+      g = mix(11, g, fade);
+      b = mix(16, b, fade);
 
       // Paper grain, deterministic so the board never shimmers.
       const grain = (hash2(px, py, 909) - 0.5) * 13;
@@ -337,9 +357,9 @@ export function paintTerrain(map: GameMap): string {
   ctx.putImageData(img, 0, 0);
 
   // A gentle vignette so the board sits in its frame instead of floating.
-  const vg = ctx.createRadialGradient(W / 2, H * 0.46, Math.min(W, H) * 0.34, W / 2, H / 2, Math.max(W, H) * 0.78);
+  const vg = ctx.createRadialGradient(W / 2, H * 0.44, Math.min(W, H) * 0.42, W / 2, H / 2, Math.max(W, H) * 0.8);
   vg.addColorStop(0, 'rgba(0,0,0,0)');
-  vg.addColorStop(1, 'rgba(2,5,9,0.62)');
+  vg.addColorStop(1, 'rgba(2,5,9,0.34)');
   ctx.fillStyle = vg;
   ctx.fillRect(0, 0, W, H);
 

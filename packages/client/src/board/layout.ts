@@ -12,23 +12,28 @@
  * cost of every one of Germany's 83 connections is placed by an explicit
  * collision solver, not by hoping the midpoint is free:
  *
- *   1. City plates are relaxed apart first (the Ruhr cluster puts four cities
- *      inside 37 board units), each keeping a stem back to its true position so
- *      routes still meet the real coordinate.
- *   2. Plates and their name labels are inserted into a spatial index, so they
- *      own their space outright — a cost badge never covers a city.
- *   3. Each connection is offered ~50 candidate slots: nine arc-length
- *      positions crossed with five signed offsets along the curve *normal*.
- *      Candidates are pre-sorted by desirability (near the midpoint, hugging
- *      the line) and the first collision-free one wins.
- *   4. Edges are solved shortest-first, because a 25-unit edge has almost no
- *      free arc to work with while a 150-unit edge has plenty.
- *   5. If every candidate is occupied the badge takes the least-overlapping
- *      slot and grows a leader line back to its route, so it is still
- *      unambiguous which connection it belongs to.
+ *   1. Each city reserves ONE box covering both its name and its three-slot
+ *      plate. Those boxes are relaxed apart (Germany's Ruhr packs four cities
+ *      into 37 board units), and any plate that had to move keeps a stem back
+ *      to a dot at its true coordinate, which is still where routes meet.
+ *   2. Those boxes go into a spatial index and are never yielded, so a cost
+ *      badge can never cover a city or its name.
+ *   3. Every connection is then offered 121 candidate slots — eleven arc-length
+ *      positions crossed with eleven signed offsets along the curve *normal* —
+ *      scanned offset-major so each badge gets a chance to sit flush against
+ *      its own line before any badge floats away from it. Edges are solved
+ *      shortest-first, because a 25-unit edge has almost no free arc to bargain
+ *      with while a 150-unit edge has plenty.
+ *   4. Whatever stage 3 could not place cleanly is then pushed apart by an
+ *      iterative separation pass against both the city boxes and the other
+ *      badges, with a weak spring home so badges drift back to their line as
+ *      room appears, and a tether keeping each within reach of its own route.
+ *   5. Any badge that ends up off its line grows a leader line back to the
+ *      nearest point of the route it prices, so it is never ambiguous.
  *
- * The result: zero overlapping cost badges on Germany at every container size
- * the game supports.
+ * Widths come from real glyph measurement rather than character counts: at the
+ * smallest supported container size the board packs to ~54% coverage, where a
+ * 10% over-estimate is the difference between zero overlaps and several.
  */
 
 import type { CityId, GameMap, MapConnection } from '@pg/shared';
@@ -40,9 +45,12 @@ import {
   buildRoutePath,
   cityPoint,
   clamp,
+  closestOnPolyline,
   dist,
   frameAt,
+  overlapArea,
   rectFromCenter,
+  separation,
   type BoardSpace,
   type Rect,
   type RoutePath,
@@ -64,8 +72,13 @@ import { areaOutlines, type AreaOutline } from './terrain';
  */
 export interface Metrics {
   pxPerUnit: number;
+  /** Minimum nameplate width — the three slots always fit. */
   plateW: number;
   plateH: number;
+  /** Height of the name ribbon at the top of the nameplate. */
+  nameH: number;
+  /** Height of the slot row beneath it. */
+  slotH: number;
   pipR: number;
   pipPitch: number;
   costFont: number;
@@ -74,8 +87,7 @@ export interface Metrics {
   badgeFont: number;
   anchorR: number;
   routeW: number;
-  hoverR: number;
-  /** Screen-pixel size of connection-cost type; asserted ≥ 10 px. */
+  /** Screen-pixel size of connection-cost type; floored for legibility. */
   badgeFontPx: number;
 }
 
@@ -103,26 +115,74 @@ export function computeMetrics(map: GameMap, containerW: number, containerH: num
   nn.sort((a, b) => a - b);
   const medianNNpx = (nn[Math.floor(nn.length / 2)] ?? 60) * pxPerUnit;
 
-  const plateWpx = clamp(medianNNpx * 0.76, 33, 60);
-  const plateHpx = plateWpx * 0.375;
-  const pipRpx = (plateWpx - 6.5) / 6.7;
-  const badgeHpx = clamp(medianNNpx * 0.33, 15.5, 21);
-  const badgeFontPx = Math.max(MIN_BADGE_FONT_PX, badgeHpx * 0.685);
+  const pipRpx = clamp(medianNNpx * 0.105, 4.6, 8.4);
+  const pipPitchPx = pipRpx * 2 + 1.7;
+  const slotHpx = pipRpx * 2 + 3.4;
+  const nameFontPx = clamp(medianNNpx * 0.145, 8.2, 13);
+  const nameHpx = nameFontPx * 1.34;
+  const badgeHpx = clamp(medianNNpx * 0.32, 13.6, 21);
+  const badgeFontPx = Math.max(MIN_BADGE_FONT_PX, badgeHpx * 0.7);
 
   return {
     pxPerUnit,
-    plateW: plateWpx * U,
-    plateH: plateHpx * U,
+    plateW: (pipPitchPx * 2 + pipRpx * 2 + 5) * U,
+    plateH: (slotHpx + nameHpx) * U,
+    nameH: nameHpx * U,
+    slotH: slotHpx * U,
     pipR: pipRpx * U,
-    pipPitch: (pipRpx * 2 + 1.5) * U,
-    costFont: clamp(pipRpx * 1.24, 6.2, 10.5) * U,
-    nameFont: clamp(plateWpx * 0.24, 8.6, 13.5) * U,
+    pipPitch: pipPitchPx * U,
+    costFont: clamp(pipRpx * 1.2, 6, 10) * U,
+    nameFont: nameFontPx * U,
     badgeH: badgeHpx * U,
     badgeFont: badgeFontPx * U,
-    anchorR: clamp(plateWpx * 0.058, 1.7, 3.2) * U,
+    anchorR: clamp(pipRpx * 0.34, 1.7, 3.2) * U,
     routeW: clamp(medianNNpx * 0.058, 2.5, 4.6) * U,
-    hoverR: Math.max(plateWpx * 0.62, 21) * U,
     badgeFontPx,
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * Text measurement
+ *
+ * Estimating advance widths from character counts over-reserves by ~10% on a
+ * condensed face like Oswald, and at the smallest supported container size the
+ * board is packed tightly enough that 10% is the difference between zero
+ * overlapping cost badges and several. So measure the real thing once per
+ * string, at a reference size, and scale.
+ * ------------------------------------------------------------------ */
+
+const widthRatios = new Map<string, number>();
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+
+function nameWidthRatio(text: string): number {
+  const cached = widthRatios.get(text);
+  if (cached !== undefined) return cached;
+  if (measureCtx === undefined) {
+    measureCtx = typeof document === 'undefined' ? null : document.createElement('canvas').getContext('2d');
+  }
+  let ratio = text.length * 0.485;
+  if (measureCtx) {
+    measureCtx.font = `500 100px "Oswald", "Arial Narrow", sans-serif`;
+    const measured = measureCtx.measureText(text).width;
+    if (measured > 0) ratio = measured / 100;
+  }
+  widthRatios.set(text, ratio);
+  return ratio;
+}
+
+const nameWidth = (name: string, font: number): number => nameWidthRatio(name) * font;
+
+/**
+ * Collision footprint of a city: the slot plate, plus the name that floats
+ * above it. The name is drawn as haloed text rather than on a ribbon — a
+ * nameplate wide enough for "Wilhelmshaven" would be a sixth of the board's
+ * width — but it is reserved as one box with the plate so that every one of the
+ * 42 names is guaranteed a clear spot instead of being solved away.
+ */
+export function footprintFor(name: string, m: Metrics): { w: number; h: number } {
+  return {
+    w: Math.max(m.plateW, nameWidth(name, m.nameFont) + m.nameFont * 0.7),
+    h: m.plateH,
   };
 }
 
@@ -136,13 +196,19 @@ export interface NodeLayout {
   areaId: string;
   /** True map coordinate — where routes meet and where the anchor dot sits. */
   anchor: Vec;
-  /** Where the three-slot plate is drawn after relaxation. */
+  /** Centre of the city's whole footprint (name + slot plate) after relaxation. */
   plate: Vec;
+  /** Footprint used by the collision solver; width varies with the city name. */
+  w: number;
+  h: number;
+  /** Drawn width of the slot plate itself — constant, and much narrower than `w`. */
+  plateW: number;
+  /** Name baseline, relative to the footprint centre. */
+  nameY: number;
+  /** Centre-line of the three house slots, relative to the footprint centre. */
+  slotY: number;
   /** True when the plate had to move far enough to need a stem. */
   stem: boolean;
-  /** Name label centre. */
-  label: Vec;
-  labelAnchor: 'middle';
 }
 
 export interface BadgeLayout {
@@ -188,34 +254,48 @@ export const pairKey = (a: CityId, b: CityId): string => (a < b ? `${a}|${b}` : 
  * ------------------------------------------------------------------ */
 
 /**
- * Pushes overlapping city plates apart while springing each back toward its
- * true coordinate. Germany's Ruhr cluster (Duisburg/Essen/Düsseldorf/Dortmund)
- * is 25-37 board units across, so at any realistic container size the plates
- * would otherwise bury each other.
+ * Pushes overlapping nameplates apart while springing each back toward its true
+ * coordinate. Germany's Ruhr cluster (Duisburg/Essen/Düsseldorf/Dortmund) spans
+ * 25-37 board units, so at any realistic container size the plates would
+ * otherwise bury each other. Displaced plates keep a stem back to a dot at the
+ * real coordinate, which is where routes still meet.
  */
-function relaxPlates(anchors: Vec[], m: Metrics, space: BoardSpace): { pos: Vec[]; moved: boolean[] } {
+function relaxPlates(
+  anchors: Vec[],
+  sizes: { w: number; h: number }[],
+  m: Metrics,
+  space: BoardSpace,
+): { pos: Vec[]; moved: boolean[] } {
   const pos = anchors.map((a) => ({ ...a }));
-  const halfW = m.plateW / 2 + m.plateW * 0.045;
-  const halfH = m.plateH / 2 + m.plateH * 0.16;
-  const maxDisp = Math.max(m.plateW * 0.55, m.plateH * 1.5);
-  const padX = m.plateW / 2 + 2;
-  const padY = m.plateH / 2 + 2;
+  const gap = m.plateH * 0.1;
+  // Generous travel: Germany packs six cities (Duisburg, Essen, Düsseldorf,
+  // Dortmund, Münster, Köln) into a patch narrower than two nameplates, and a
+  // stem back to the true dot makes a displaced plate unambiguous.
+  const maxDisp = Math.max(m.plateW * 1.5, m.plateH * 2.4);
 
-  for (let iter = 0; iter < 90; iter++) {
-    const relax = 0.5;
+  const ITERS = 300;
+  for (let iter = 0; iter < ITERS; iter++) {
+    const relax = 0.62;
+    /*
+     * Anneal the pull back toward the true coordinate. Held constant it fights
+     * separation forever and settles at an equilibrium that still overlaps;
+     * decaying it to zero lets the last third of the pass resolve the Ruhr
+     * cluster outright, having already found the minimal displacement.
+     */
+    const homePull = 0.13 * Math.max(0, 1 - iter / (ITERS * 0.62)) ** 2;
     for (let i = 0; i < pos.length; i++) {
       for (let j = i + 1; j < pos.length; j++) {
         const a = pos[i]!;
         const b = pos[j]!;
+        const needX = (sizes[i]!.w + sizes[j]!.w) / 2 + gap;
+        const needY = (sizes[i]!.h + sizes[j]!.h) / 2 + gap;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
-        const needX = halfW * 2;
-        const needY = halfH * 2;
         const penX = needX - Math.abs(dx);
         const penY = needY - Math.abs(dy);
         if (penX <= 0 || penY <= 0) continue;
 
-        // Separate along the axis that needs the least travel.
+        // Separate along the axis that needs the least proportional travel.
         if (penX / needX < penY / needY) {
           const push = ((penX * relax) / 2) * (dx >= 0 ? 1 : -1);
           a.x -= push;
@@ -231,8 +311,8 @@ function relaxPlates(anchors: Vec[], m: Metrics, space: BoardSpace): { pos: Vec[
     for (let i = 0; i < pos.length; i++) {
       const p = pos[i]!;
       const a = anchors[i]!;
-      p.x += (a.x - p.x) * 0.14;
-      p.y += (a.y - p.y) * 0.14;
+      p.x += (a.x - p.x) * homePull;
+      p.y += (a.y - p.y) * homePull;
       const dx = p.x - a.x;
       const dy = p.y - a.y;
       const d = Math.hypot(dx, dy);
@@ -240,8 +320,8 @@ function relaxPlates(anchors: Vec[], m: Metrics, space: BoardSpace): { pos: Vec[
         p.x = a.x + (dx / d) * maxDisp;
         p.y = a.y + (dy / d) * maxDisp;
       }
-      p.x = clamp(p.x, padX, space.width - padX);
-      p.y = clamp(p.y, padY, space.height - padY);
+      p.x = clamp(p.x, sizes[i]!.w / 2 + 1, space.width - sizes[i]!.w / 2 - 1);
+      p.y = clamp(p.y, sizes[i]!.h / 2 + 1, space.height - sizes[i]!.h / 2 - 1);
     }
   }
 
@@ -250,43 +330,203 @@ function relaxPlates(anchors: Vec[], m: Metrics, space: BoardSpace): { pos: Vec[
 }
 
 /* ------------------------------------------------------------------ *
- * 2. Name labels
+ * 3. Cost badges — QUALITY-BAR U5
  * ------------------------------------------------------------------ */
 
-/** Oswald 500 is condensed; 0.485em is a close average advance width. */
-const nameWidth = (name: string, font: number): number => name.length * font * 0.485 + font * 0.5;
-
-const NAME_SLOTS: { dx: number; dy: number }[] = [
-  { dx: 0, dy: 1 },
-  { dx: 0, dy: -1 },
-  { dx: 0.62, dy: 1 },
-  { dx: -0.62, dy: 1 },
-  { dx: 0.62, dy: -1 },
-  { dx: -0.62, dy: -1 },
-  { dx: 0, dy: 1.85 },
-  { dx: 0, dy: -1.85 },
-];
-
-/* ------------------------------------------------------------------ *
- * 3. Cost badges
- * ------------------------------------------------------------------ */
-
-/** Arc-length positions tried, in order of preference. */
-const BADGE_T = [0.5, 0.44, 0.56, 0.38, 0.62, 0.31, 0.69, 0.25, 0.75];
-/** Signed multiples of the badge height to slide along the curve normal. */
-const BADGE_OFFSET = [0, 1, -1, 1.85, -1.85, 2.7, -2.7, 3.6, -3.6];
+/**
+ * Arc-length positions tried. Sliding along `t` is what makes long edges cheap
+ * to satisfy: a 150-unit route has plenty of clear arc even when its midpoint
+ * is buried under a city.
+ */
+const BADGE_T = [0.5, 0.44, 0.56, 0.38, 0.62, 0.32, 0.68, 0.26, 0.74, 0.2, 0.8];
+/**
+ * Signed multiples of the badge height, along the curve *normal*. Tried
+ * offset-major, so every edge is offered a slot flush against its own line
+ * before any edge is allowed to float away from it.
+ */
+const BADGE_OFFSET = [0, 1, -1, 1.7, -1.7, 2.5, -2.5, 3.4, -3.4, 4.4, -4.4];
 
 function badgeWidth(cost: number, m: Metrics): number {
   const digits = String(cost).length;
-  return Math.max(m.badgeH * 1.22, digits * m.badgeFont * 0.6 + m.badgeH * 0.72);
+  return Math.max(m.badgeH * 1.05, digits * m.badgeFont * 0.6 + m.badgeH * 0.5);
 }
 
-interface Candidate {
-  at: Vec;
-  anchor: Vec;
-  rect: Rect;
-  cost: number;
-  leader: boolean;
+interface PreparedRoute {
+  conn: MapConnection;
+  path: RoutePath;
+}
+
+interface SolvedBadge extends PreparedRoute {
+  badge: BadgeLayout;
+}
+
+/**
+ * Places one cost badge per connection so that no badge overlaps another badge
+ * or any city node.
+ *
+ * Two stages, because neither alone is sufficient on Germany:
+ *
+ *   A. Greedy slotting. Each edge, shortest first, is offered 121 candidate
+ *      slots (11 arc positions x 11 signed normal offsets) scanned
+ *      *offset-major*, so every badge gets a chance to sit flush against its
+ *      own line before any badge is allowed to float away from it. The first
+ *      collision-free slot wins.
+ *   B. Separation relaxation. Whatever stage A could not place cleanly is
+ *      pushed out of its conflicts by simultaneous minimal-translation
+ *      vectors, against both the static city boxes and the other badges,
+ *      with a weak spring back toward the preferred slot so badges drift home
+ *      again as space frees up. Each badge is tethered within a fixed radius
+ *      of its own route and grows a leader line once it leaves the line.
+ *
+ * Stage B is what takes Germany from ~37 unplaced badges to 0.
+ */
+function solveBadges(
+  prepared: PreparedRoute[],
+  cityBoxes: readonly Rect[],
+  m: Metrics,
+  space: BoardSpace,
+  pad: number,
+): SolvedBadge[] {
+  const n = prepared.length;
+  const w: number[] = new Array(n);
+  const h = m.badgeH + pad * 2;
+  const home: Vec[] = new Array(n);
+  const at: Vec[] = new Array(n);
+  const tether = m.badgeH * 7;
+
+  const cell = Math.max(28, m.plateW * 0.8);
+  /** City plates and anchor dots — never movable, never overlappable. */
+  const obstacles = new RectIndex(cell);
+  for (const r of cityBoxes) obstacles.insert(r);
+  /** Obstacles plus the badges placed so far, used only by the greedy stage. */
+  const taken = new RectIndex(cell);
+  for (const r of cityBoxes) taken.insert(r);
+
+  /* --- stage A: greedy slotting --- */
+  for (let i = 0; i < n; i++) {
+    const { conn, path } = prepared[i]!;
+    w[i] = badgeWidth(conn.cost, m) + pad * 2;
+    const boxW = w[i]!;
+
+    let bestAt: Vec | null = null;
+    let bestScore = Infinity;
+    let placed = false;
+
+    for (let oi = 0; oi < BADGE_OFFSET.length && !placed; oi++) {
+      const k = BADGE_OFFSET[oi]!;
+      for (let ti = 0; ti < BADGE_T.length; ti++) {
+        const t = BADGE_T[ti]!;
+        const frame = frameAt(path, t);
+        const off = k * h * 1.02;
+        const cand = {
+          x: frame.point.x + frame.normal.x * off,
+          y: frame.point.y + frame.normal.y * off,
+        };
+        const overlap = taken.overlap(rectFromCenter(cand, boxW, h));
+        const penalty = Math.abs(k) * h * 1.4 + Math.abs(t - 0.5) * m.badgeH * 1.1;
+        const score = overlap * 4 + penalty;
+        if (score < bestScore) {
+          bestScore = score;
+          bestAt = cand;
+        }
+        if (overlap === 0) {
+          placed = true;
+          break;
+        }
+      }
+    }
+
+    const chosen = bestAt ?? frameAt(path, 0.5).point;
+    home[i] = { ...chosen };
+    at[i] = { ...chosen };
+    taken.insert(rectFromCenter(chosen, boxW, h));
+  }
+
+  /* --- stage B: separation relaxation --- */
+  const rectOf = (i: number): Rect => rectFromCenter(at[i]!, w[i]!, h);
+  const push: Vec[] = Array.from({ length: n }, () => ({ x: 0, y: 0 }));
+
+  const ITERS = 900;
+  for (let iter = 0; iter < ITERS; iter++) {
+    let dirty = false;
+    for (let i = 0; i < n; i++) {
+      push[i]!.x = 0;
+      push[i]!.y = 0;
+    }
+
+    for (let i = 0; i < n; i++) {
+      const ri = rectOf(i);
+      for (const obstacle of obstacles.query(ri)) {
+        const s = separation(ri, obstacle);
+        if (s.x !== 0 || s.y !== 0) {
+          push[i]!.x += s.x;
+          push[i]!.y += s.y;
+          dirty = true;
+        }
+      }
+      for (let j = i + 1; j < n; j++) {
+        const s = separation(ri, rectOf(j));
+        if (s.x === 0 && s.y === 0) continue;
+        push[i]!.x += s.x * 0.5;
+        push[i]!.y += s.y * 0.5;
+        push[j]!.x -= s.x * 0.5;
+        push[j]!.y -= s.y * 0.5;
+        dirty = true;
+      }
+    }
+
+    if (!dirty) break;
+
+    const relax = 0.62;
+    // Same annealing as the plate pass: the spring home keeps badges near their
+    // own line early on, then releases so the last third can resolve outright.
+    const homePull = 0.04 * Math.max(0, 1 - iter / (ITERS * 0.62)) ** 2;
+    for (let i = 0; i < n; i++) {
+      const p = at[i]!;
+      p.x += push[i]!.x * relax;
+      p.y += push[i]!.y * relax;
+      const hp = home[i]!;
+      p.x += (hp.x - p.x) * homePull;
+      p.y += (hp.y - p.y) * homePull;
+      // Tether to the route, and stay on the board.
+      const dx = p.x - hp.x;
+      const dy = p.y - hp.y;
+      const d = Math.hypot(dx, dy);
+      if (d > tether) {
+        p.x = hp.x + (dx / d) * tether;
+        p.y = hp.y + (dy / d) * tether;
+      }
+      p.x = clamp(p.x, w[i]! / 2, space.width - w[i]! / 2);
+      p.y = clamp(p.y, h / 2, space.height - h / 2);
+    }
+  }
+
+  /* --- report and finish --- */
+  const out: SolvedBadge[] = [];
+  for (let i = 0; i < n; i++) {
+    const { conn, path } = prepared[i]!;
+    const ri = rectOf(i);
+    let residual = obstacles.overlap(ri);
+    for (let j = 0; j < n; j++) {
+      if (j !== i) residual += overlapArea(ri, rectOf(j));
+    }
+    // The leader points at the nearest point of this badge's OWN route, so an
+    // offset badge is never ambiguous about which connection it prices.
+    const near = closestOnPolyline(path.points, at[i]!);
+    out.push({
+      conn,
+      path,
+      badge: {
+        at: { ...at[i]! },
+        w: w[i]! - pad * 2,
+        h: m.badgeH,
+        anchor: near.point,
+        leader: Math.sqrt(near.d2) > m.badgeH * 1.15,
+        residual,
+      },
+    });
+  }
+  return out;
 }
 
 /* ------------------------------------------------------------------ *
@@ -305,119 +545,65 @@ export function buildLayout(map: GameMap, containerW: number, containerH: number
   const space = boardSpace(map);
   const m = metrics;
   const anchors = map.cities.map((c) => cityPoint(c, space));
-  const { pos, moved } = relaxPlates(anchors, m, space);
 
-  const index = new RectIndex(Math.max(28, m.plateW * 0.8));
+  /*
+   * One box per city carrying both the name ribbon and the three house slots,
+   * exactly as the printed board draws a nameplate. Keeping them in a single
+   * box (rather than a plate plus a floating label) is what makes all 42 names
+   * fit alongside all 83 cost badges at the smallest supported container size.
+   */
+  const sizes = map.cities.map((c) => footprintFor(c.name, m));
+  const { pos, moved } = relaxPlates(anchors, sizes, m, space);
 
-  /* --- city plates own their space first --- */
-  const plateRects = pos.map((p) => rectFromCenter(p, m.plateW * 1.04, m.plateH * 1.3));
-  for (const r of plateRects) index.insert(r);
-  // The true-position dot must stay visible even when the plate moved away.
-  for (const a of anchors) index.insert(rectFromCenter(a, m.anchorR * 4, m.anchorR * 4));
+  // Breathing room around every reserved box, in board units (~1.5 screen px).
+  const pad = 1 / m.pxPerUnit;
 
-  /* --- name labels --- */
-  const nodes: NodeLayout[] = map.cities.map((city, i) => {
-    const plate = pos[i]!;
-    const w = nameWidth(city.name, m.nameFont);
-    const h = m.nameFont * 1.24;
-    let best: { at: Vec; rect: Rect; score: number } | null = null;
+  /* --- nameplates own their space outright: a cost badge never covers one --- */
+  const cityBoxes: Rect[] = [
+    ...pos.map((p, i) => rectFromCenter(p, sizes[i]!.w + pad * 2, sizes[i]!.h + pad * 2)),
+    // The true-position dot must stay visible even when the plate moved away.
+    ...anchors.map((a) => rectFromCenter(a, m.anchorR * 4, m.anchorR * 4)),
+  ];
 
-    for (let s = 0; s < NAME_SLOTS.length; s++) {
-      const slot = NAME_SLOTS[s]!;
-      const at = {
-        x: plate.x + slot.dx * (m.plateW * 0.5 + w * 0.5),
-        y: plate.y + slot.dy * (m.plateH * 0.62 + h * 0.62),
-      };
-      const rect = rectFromCenter(at, w, h);
-      const score = index.overlap(rect) + s * 0.6;
-      if (!best || score < best.score) best = { at, rect, score };
-      if (score <= s * 0.6 + 0.001) break;
-    }
-
-    const chosen = best!;
-    index.insert(chosen.rect);
-    return {
-      id: city.id,
-      name: city.name,
-      areaId: city.area,
-      anchor: anchors[i]!,
-      plate,
-      stem: moved[i]!,
-      label: chosen.at,
-      labelAnchor: 'middle',
-    };
-  });
-
-  /* --- routes, shortest first so the tight ones get first refusal --- */
-  const nodeById = new Map(nodes.map((n) => [n.id, n] as const));
+  const anchorById = new Map(map.cities.map((c, i) => [c.id, anchors[i]!] as const));
   const prepared = map.connections
     .map((conn: MapConnection) => {
-      const a = nodeById.get(conn.a);
-      const b = nodeById.get(conn.b);
+      const a = anchorById.get(conn.a);
+      const b = anchorById.get(conn.b);
       if (!a || !b) return null;
-      const path = buildRoutePath(conn, a.anchor, b.anchor, space);
-      return { conn, path };
+      return { conn, path: buildRoutePath(conn, a, b, space) };
     })
     .filter((x): x is { conn: MapConnection; path: RoutePath } => x !== null)
+    // Shortest first: a 25-unit edge has almost no free arc to bargain with.
     .sort((p, q) => p.path.length - q.path.length);
 
-  let badgeCollisions = 0;
-  const solved: RouteLayout[] = prepared.map(({ conn, path }) => {
-    const w = badgeWidth(conn.cost, m);
-    const h = m.badgeH;
-    let best: Candidate | null = null;
+  const badges = solveBadges(prepared, cityBoxes, m, space, pad);
 
-    outer: for (let ti = 0; ti < BADGE_T.length; ti++) {
-      const t = BADGE_T[ti]!;
-      const frame = frameAt(path, t);
-      for (let oi = 0; oi < BADGE_OFFSET.length; oi++) {
-        const k = BADGE_OFFSET[oi]!;
-        const off = k * h * 1.06;
-        const at = {
-          x: frame.point.x + frame.normal.x * off,
-          y: frame.point.y + frame.normal.y * off,
-        };
-        const rect = rectFromCenter(at, w * 1.06, h * 1.18);
-        const overlap = index.overlap(rect);
-        // Desirability penalty: midpoint and on-the-line are the ideal.
-        const penalty = Math.abs(k) * h * 1.5 + Math.abs(t - 0.5) * 26;
-        const score = overlap * 3 + penalty;
-        const cand: Candidate = {
-          at,
-          anchor: frame.point,
-          rect,
-          cost: score,
-          leader: Math.abs(k) >= 1.85,
-        };
-        if (!best || cand.cost < best.cost) best = cand;
-        if (overlap === 0) {
-          best = cand;
-          break outer;
-        }
-      }
-    }
+  const nodes: NodeLayout[] = map.cities.map((city, i) => ({
+    id: city.id,
+    name: city.name,
+    areaId: city.area,
+    anchor: anchors[i]!,
+    plate: pos[i]!,
+    w: sizes[i]!.w,
+    h: sizes[i]!.h,
+    plateW: m.plateW,
+    // Name above, slot plate beneath, both inside one reserved footprint.
+    nameY: -m.plateH / 2 + m.nameH * 0.46,
+    slotY: -m.plateH / 2 + m.nameH + m.slotH / 2,
+    stem: moved[i]!,
+  }));
 
-    const chosen = best!;
-    const residual = index.overlap(chosen.rect);
-    if (residual > 0.5) badgeCollisions++;
-    index.insert(chosen.rect);
-
-    return {
-      id: pairKey(conn.a, conn.b),
-      a: conn.a,
-      b: conn.b,
-      cost: conn.cost,
-      path,
-      badge: {
-        at: chosen.at,
-        w,
-        h,
-        anchor: chosen.anchor,
-        leader: chosen.leader || residual > 0.5,
-        residual,
-      },
-    };
-  });
+  const nodeById = new Map(nodes.map((n) => [n.id, n] as const));
+  const solved: RouteLayout[] = badges.map((b) => ({
+    id: pairKey(b.conn.a, b.conn.b),
+    a: b.conn.a,
+    b: b.conn.b,
+    cost: b.conn.cost,
+    path: b.path,
+    badge: b.badge,
+  }));
+  const badgeCollisions = badges.filter((b) => b.badge.residual > 0.5).length;
 
   const routesByCity = new Map<CityId, RouteLayout[]>();
   const routeByPair = new Map<string, RouteLayout>();

@@ -87,10 +87,29 @@ export function GameBoard(): JSX.Element {
 
   const theme = useMemo(() => boardTheme(), []);
 
+  /*
+   * The layout solver measures real glyph widths to reserve space for city
+   * names, so it must not run against a fallback face — that would place every
+   * label against the wrong metrics and then reflow when Oswald arrives (V8).
+   */
+  const [fontsReady, setFontsReady] = useState(
+    () => typeof document === 'undefined' || !('fonts' in document),
+  );
+  useEffect(() => {
+    if (fontsReady) return;
+    let live = true;
+    void document.fonts.load('500 100px Oswald').finally(() => {
+      if (live) setFontsReady(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [fontsReady]);
+
   const layout = useMemo<BoardLayout | null>(() => {
-    if (!map || box.w < 40 || box.h < 40) return null;
+    if (!map || !fontsReady || box.w < 40 || box.h < 40) return null;
     return buildLayout(map, box.w, box.h);
-  }, [map, box.w, box.h]);
+  }, [map, fontsReady, box.w, box.h]);
 
   const model = useMemo(
     () => (gameState && map ? buildModel(gameState, map, myPlayerId) : null),
@@ -374,12 +393,6 @@ export function GameBoard(): JSX.Element {
                 hasGrain={grain !== null}
               />
               <RouteLayer layout={layout} model={model} />
-              <BadgeLayer
-                layout={layout}
-                model={model}
-                theme={theme}
-                highlighted={highlighted}
-              />
 
               {/* Preview trace: the exact edges of the cheapest route (U3). */}
               <g className="pgb-preview" pointerEvents="none">
@@ -444,6 +457,19 @@ export function GameBoard(): JSX.Element {
                   );
                 })}
               </g>
+
+              {/*
+                Badges paint above the city layer. The solver already reserved
+                every plate and anchor dot, so a badge can never land on one —
+                this ordering only decides who wins against a *name* label, and
+                the answer is always the cost (U5).
+              */}
+              <BadgeLayer
+                layout={layout}
+                model={model}
+                theme={theme}
+                highlighted={highlighted}
+              />
 
               {/* Hit layer — one transparent target per city, above everything. */}
               <g className="pgb-hits">

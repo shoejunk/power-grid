@@ -228,6 +228,46 @@ export const rectFromCenter = (c: Vec, w: number, h: number): Rect => ({
   h,
 });
 
+/**
+ * Minimal translation that separates `a` from `b`, applied to `a`.
+ * Zero when they do not overlap. Always moves along the axis of least
+ * penetration, which keeps a relaxation pass from spiralling.
+ */
+export function separation(a: Rect, b: Rect): Vec {
+  const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+  if (ox <= 0) return { x: 0, y: 0 };
+  const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+  if (oy <= 0) return { x: 0, y: 0 };
+  const acx = a.x + a.w / 2;
+  const acy = a.y + a.h / 2;
+  const bcx = b.x + b.w / 2;
+  const bcy = b.y + b.h / 2;
+  if (ox < oy) return { x: ox * (acx < bcx ? -1 : 1), y: 0 };
+  return { x: 0, y: oy * (acy < bcy ? -1 : 1) };
+}
+
+/** Closest point on a polyline to `p`, plus the squared distance to it. */
+export function closestOnPolyline(points: Vec[], p: Vec): { point: Vec; d2: number } {
+  let best = points[0] ?? { x: 0, y: 0 };
+  let bestD2 = Infinity;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1]!;
+    const b = points[i]!;
+    const vx = b.x - a.x;
+    const vy = b.y - a.y;
+    const l2 = vx * vx + vy * vy;
+    const t = l2 > 0 ? clamp(((p.x - a.x) * vx + (p.y - a.y) * vy) / l2, 0, 1) : 0;
+    const qx = a.x + vx * t;
+    const qy = a.y + vy * t;
+    const d2 = (p.x - qx) ** 2 + (p.y - qy) ** 2;
+    if (d2 < bestD2) {
+      bestD2 = d2;
+      best = { x: qx, y: qy };
+    }
+  }
+  return { point: best, d2: bestD2 };
+}
+
 export function overlapArea(a: Rect, b: Rect): number {
   const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
   if (ox <= 0) return 0;
@@ -267,6 +307,22 @@ export class RectIndex {
       if (bucket) bucket.push(r);
       else this.buckets.set(k, [r]);
     }
+  }
+
+  /** Every inserted rectangle that intersects `r`. */
+  query(r: Rect): Rect[] {
+    const out: Rect[] = [];
+    const seen = new Set<Rect>();
+    for (const k of this.keys(r)) {
+      const bucket = this.buckets.get(k);
+      if (!bucket) continue;
+      for (const other of bucket) {
+        if (seen.has(other)) continue;
+        seen.add(other);
+        if (overlapArea(r, other) > 0) out.push(other);
+      }
+    }
+    return out;
   }
 
   /** Total overlap area between `r` and everything already inserted. */

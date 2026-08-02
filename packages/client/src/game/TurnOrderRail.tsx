@@ -43,7 +43,11 @@ export function TurnOrderRail(): JSX.Element {
       <div className="pg-grail__list" role="list">
         {sequence.map((player) => {
           const acting = state.activePlayerId === player.id;
-          const status = STATUS_META[player.phaseStatus];
+          // A stale `acting` marker on a seat the engine is not waiting on
+          // would claim two players are up at once.
+          const effective =
+            !acting && player.phaseStatus === 'acting' ? 'eligible' : player.phaseStatus;
+          const status = STATUS_META[effective];
           const acquired = state.acquiredThisRound.includes(player.id);
           const passed = state.passedThisPhase.includes(player.id);
           const label =
@@ -84,7 +88,7 @@ export function TurnOrderRail(): JSX.Element {
                 </span>
               </span>
               <Tooltip placement="right" title={label.label} rule="§4 Player order" content={label.note}>
-                <span className="pg-grail__status" data-status={acting ? 'acting' : player.phaseStatus} tabIndex={0}>
+                <span className="pg-grail__status" data-status={acting ? 'acting' : effective} tabIndex={0}>
                   {acting ? 'Acting' : label.label}
                 </span>
               </Tooltip>

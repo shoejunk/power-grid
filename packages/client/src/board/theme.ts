@@ -57,13 +57,15 @@ export function boardTheme(): BoardTheme {
   const seat = (color: PlayerColor): SeatInk => {
     const found = seatCache.get(color);
     if (found) return found;
-    const fallback = seatPalette(color);
+    // The art module owns seat colour resolution; the board must not have its
+    // own opinion, or the two will drift (QUALITY-BAR V5).
+    const p = seatPalette(color);
     const ink: SeatInk = {
-      base: hex(cssColor(`--pg-player-${color}`, fallback.base)),
-      light: hex(cssColor(`--pg-player-${color}-light`, 0xf2f7fc)),
-      dark: hex(cssColor(`--pg-player-${color}-dark`, 0x0a0f16)),
-      ink: hex(cssColor(`--pg-player-${color}-ink`, 0xffffff)),
-      glow: hex(cssColor(`--pg-player-${color}`, fallback.glow)),
+      base: hex(p.base),
+      light: hex(p.light),
+      dark: hex(p.dark),
+      ink: hex(p.ink),
+      glow: hex(p.glow),
       sigil: seatSigil(color),
     };
     seatCache.set(color, ink);

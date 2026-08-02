@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Power Grid — art harness</title>
+    <style>
+      body {
+        margin: 0;
+        background: #070b10;
+        color: #dfe8f2;
+        font: 13px/1.5 system-ui, sans-serif;
+        padding: 20px 24px 80px;
+      }
+      h1 { font-size: 18px; letter-spacing: 0.06em; text-transform: uppercase; color: #f7a85f; margin: 0 0 4px; }
+      h2 {
+        font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+        color: #8497ab; margin: 30px 0 10px; padding-bottom: 6px;
+        border-bottom: 1px solid rgba(148,184,216,0.14);
+      }
+      .row { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
+      .cell { text-align: center; }
+      .cell span { display: block; margin-top: 5px; font-size: 10px; color: #74879c; letter-spacing: 0.05em; }
+      img { display: block; image-rendering: auto; }
+      .chk {
+        background-image:
+          linear-gradient(45deg, #1b2634 25%, transparent 25%),
+          linear-gradient(-45deg, #1b2634 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #1b2634 75%),
+          linear-gradient(-45deg, transparent 75%, #1b2634 75%);
+        background-size: 16px 16px;
+        background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+      }
+      /* A deliberately noisy, mid-value field: the real legibility test for a
+         20px piece is a busy painted board, not a flat swatch. */
+      .busy { background: #3a4a34 url('/art/board-germany.png') center/300% no-repeat; padding: 10px; border-radius: 6px; }
+      .deut { filter: url(#deuteranopia); }
+      .prot { filter: url(#protanopia); }
+      .tile { width: 220px; height: 120px; background-repeat: repeat; border: 1px solid rgba(148,184,216,0.14); }
+      code { color: #46e2ff; font-size: 11px; }
+      #err { color: #ff5563; white-space: pre-wrap; font-family: ui-monospace, monospace; }
+    </style>
+  </head>
+  <body>
+    <h1>Power Grid — art harness</h1>
+    <div id="err"></div>
+    <div id="out"></div>
+
+    <svg width="0" height="0" style="position: absolute">
+      <filter id="deuteranopia" color-interpolation-filters="linearRGB">
+        <feColorMatrix type="matrix" values="0.625 0.375 0 0 0  0.7 0.3 0 0 0  0 0.3 0.7 0 0  0 0 0 1 0" />
+      </filter>
+      <filter id="protanopia" color-interpolation-filters="linearRGB">
+        <feColorMatrix type="matrix" values="0.567 0.433 0 0 0  0.558 0.442 0 0 0  0 0.242 0.758 0 0  0 0 0 1 0" />
+      </filter>
+    </svg>
+
+    <script type="module">
+      import '/src/styles/index.scss';
+      import { loadArtManifest, plantArt, seatPalette, seatSigil } from '/src/art/index.ts';
+      // This file lives in public/, so Vite serves it raw and does not rewrite
+      // bare specifiers — `@pg/shared` is unresolvable here. Mirrored inline.
+      const PLAYER_COLORS = ['red', 'blue', 'green', 'yellow', 'purple', 'black'];
+      const RESOURCE_TYPES = ['coal', 'oil', 'garbage', 'uranium'];
+
+      const out = document.getElementById('out');
+      const err = document.getElementById('err');
+
+      const el = (tag, props = {}, kids = []) => {
+        const n = Object.assign(document.createElement(tag), props);
+        for (const k of kids) n.append(k);
+        return n;
+      };
+      const section = (title) => {
+        out.append(el('h2', { textContent: title }));
+        const r = el('div', { className: 'row' });
+        out.append(r);
+        return r;
+      };
+      const cell = (node, label) => el('div', { className: 'cell' }, [node, el('span', { textContent: label })]);
+      const img = (src, size, cls = '') => {
+        const i = new Image();
+        i.src = src;
+        i.style.width = size + 'px';
+        if (cls) i.className = cls;
+        return i;
+      };
+
+      try {
+        const art = await loadArtManifest();
+        window.__art = art;
+
+        /* ---- board ---- */
+        let r = section('Board base — germany (aspect 0.78)');
+        r.append(cell(img(art.boardBase.germany, 320), 'board-germany.png @320'));
+        r.append(cell(img(art.boardBase.germany, 620), 'same plate @620 — check texture holds up'));
+        r.append(cell(img(art.boardBase.usa, 260), 'usa (placeholder plate)'));
+
+        /* ---- houses ---- */
+        for (const [label, cls] of [['Houses', ''], ['Houses — deuteranopia', 'deut'], ['Houses — protanopia', 'prot']]) {
+          r = section(label + ' (192 / 44 / 20 px, on the board itself)');
+          for (const c of PLAYER_COLORS) {
+            const box = el('div', { className: 'busy' });
+            box.style.display = 'flex';
+            box.style.alignItems = 'flex-end';
+            box.style.gap = '6px';
+            box.append(img(art.house[c], 192, cls), img(art.house[c], 44, cls), img(art.house[c], 20, cls));
+            r.append(cell(box, c + ' · ' + seatSigil(c)));
+          }
+          const box = el('div', { className: 'busy' });
+          box.style.display = 'flex';
+          box.style.alignItems = 'flex-end';
+          box.style.gap = '6px';
+          box.append(img(art.trustHouse, 192, cls), img(art.trustHouse, 44, cls), img(art.trustHouse, 20, cls));
+          r.append(cell(box, 'trust'));
+        }
+
+        /* ---- tokens ---- */
+        for (const [label, cls] of [['Resource tokens', ''], ['Resource tokens — deuteranopia', 'deut'], ['Resource tokens — protanopia', 'prot']]) {
+          r = section(label + ' (176 / 40 / 16 px)');
+          for (const t of RESOURCE_TYPES) {
+            const box = el('div', { className: 'busy' });
+            box.style.display = 'flex';
+            box.style.alignItems = 'flex-end';
+            box.style.gap = '6px';
+            box.append(img(art.resourceToken[t], 176, cls), img(art.resourceToken[t], 40, cls), img(art.resourceToken[t], 16, cls));
+            r.append(cell(box, t));
+          }
+        }
+
+        /* ---- depth layers ---- */
+        r = section('Depth layers');
+        r.append(cell(img(art.cityPlate, 180), 'cityPlate'));
+        r.append(cell(img(art.cityPlate, 46), 'cityPlate @46'));
+        const glow = el('div', { className: 'chk' });
+        glow.append(img(art.radialGlow, 180));
+        r.append(cell(glow, 'radialGlow (white, tintable)'));
+        const vig = el('div');
+        vig.style.cssText = 'width:180px;height:180px;background:#455c30;position:relative';
+        vig.append(Object.assign(img(art.vignette, 180), { style: 'position:absolute;inset:0' }));
+        r.append(cell(vig, 'vignette over flat green'));
+        const tile = el('div', { className: 'tile' });
+        tile.style.backgroundColor = '#455c30';
+        tile.style.backgroundImage = `url(${art.paperGrain})`;
+        r.append(cell(tile, 'paperGrain — tiling, check seams'));
+
+        /* ---- plants ---- */
+        r = section('Plant illustrations (one per fuel category, 320px)');
+        const samples = [
+          ['coal', { id: 4, accepts: ['coal'], fuel: 2, cities: 1, category: 'plug' }],
+          ['oil', { id: 7, accepts: ['oil'], fuel: 3, cities: 2, category: 'plug' }],
+          ['garbage', { id: 6, accepts: ['garbage'], fuel: 1, cities: 1, category: 'plug' }],
+          ['uranium', { id: 11, accepts: ['uranium'], fuel: 1, cities: 2, category: 'plug' }],
+          ['hybrid', { id: 21, accepts: ['coal', 'oil'], fuel: 2, cities: 4, category: 'plug' }],
+          ['eco', { id: 13, accepts: [], fuel: 0, cities: 1, category: 'socket' }],
+        ];
+        for (const [name, p] of samples) {
+          const a = plantArt(p);
+          const box = el('div');
+          box.style.cssText = `width:320px;border-radius:8px;overflow:hidden;border:2px solid ${a.accent};box-shadow:0 8px 24px rgba(0,0,0,.5)`;
+          box.append(img(a.illustration, 320));
+          r.append(cell(box, `${name} — "${a.title}" ${a.accent}`));
+        }
+
+        /* ---- plant variety ---- */
+        r = section('Plant illustration variety — 12 real plant numbers');
+        for (const id of [3, 4, 5, 8, 10, 15, 18, 21, 25, 29, 36, 42]) {
+          const accepts = id % 6 === 0 ? [] : id % 5 === 0 ? ['coal', 'oil'] : id % 4 === 0 ? ['uranium'] : id % 3 === 0 ? ['garbage'] : id % 2 === 0 ? ['oil'] : ['coal'];
+          const a = plantArt({ id, accepts, fuel: 2, cities: 3, category: 'plug' });
+          r.append(cell(img(a.illustration, 190), `#${id} ${a.title}`));
+        }
+
+        /* ---- seat palette check ---- */
+        r = section('seatPalette() resolved against tokens.scss');
+        for (const c of PLAYER_COLORS) {
+          const p = seatPalette(c);
+          const box = el('div');
+          box.style.cssText = 'width:130px;font-size:10px;text-align:left';
+          for (const k of ['base', 'light', 'dark', 'glow', 'ink']) {
+            const hex = '#' + p[k].toString(16).padStart(6, '0');
+            const line = el('div');
+            line.style.cssText = 'display:flex;gap:6px;align-items:center';
+            const sw = el('i');
+            sw.style.cssText = `width:14px;height:14px;background:${hex};border:1px solid #333;display:block`;
+            line.append(sw, el('code', { textContent: `${k} ${hex}` }));
+            box.append(line);
+          }
+          r.append(cell(box, c));
+        }
+      } catch (e) {
+        err.textContent = 'HARNESS ERROR\n' + (e && e.stack ? e.stack : String(e));
+      }
+    </script>
+  </body>
+</html>

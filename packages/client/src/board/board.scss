@@ -48,7 +48,7 @@
     inset: 0;
     pointer-events: none;
     border-radius: inherit;
-    background: radial-gradient(120% 88% at 50% 42%, rgba(0, 0, 0, 0) 44%, rgba(2, 5, 9, 0.55) 100%);
+    background: radial-gradient(126% 94% at 50% 42%, rgba(0, 0, 0, 0) 58%, rgba(2, 5, 9, 0.34) 100%);
   }
 }
 
@@ -107,6 +107,20 @@
 /* ---------------------------------------------------------------
  * Hit targets — the only pointer-aware SVG in the tree
  * --------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------
+ * Scaled groups
+ * ---------------------------------------------------------------
+ * framer-motion animates SVG scale through `style.transform`, and a CSS
+ * transform overrides the SVG `transform` attribute on the same element.
+ * These groups therefore carry ONLY the scale; placement lives on a static
+ * parent <g>. `fill-box` makes them scale about their own centre, which is
+ * what "the house lands with weight" and "the node lifts on hover" need.
+ * --------------------------------------------------------------- */
+.pgb-node__scale {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
 
 .pgb-hit {
   cursor: default;

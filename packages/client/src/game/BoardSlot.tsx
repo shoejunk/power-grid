@@ -1,4 +1,4 @@
-import { Suspense, lazy, type ComponentType } from 'react';
+import { Component, Suspense, lazy, type ComponentType, type ReactNode } from 'react';
 
 import { LoadingSpinner } from '../ui';
 import { useMatch } from './model';
@@ -25,16 +25,39 @@ const LazyBoard = boardEntry
 export function BoardSlot(): JSX.Element {
   if (!LazyBoard) return <BoardPlaceholder />;
   return (
-    <Suspense
-      fallback={
-        <div className="pg-gboard pg-gboard--loading">
-          <LoadingSpinner size="lg" label="Drawing the grid" />
-        </div>
-      }
-    >
-      <LazyBoard />
-    </Suspense>
+    <BoardBoundary>
+      <Suspense
+        fallback={
+          <div className="pg-gboard pg-gboard--loading">
+            <LoadingSpinner size="lg" label="Drawing the grid" />
+          </div>
+        }
+      >
+        <LazyBoard />
+      </Suspense>
+    </BoardBoundary>
   );
+}
+
+/**
+ * The board is a separate module with its own owner. If it fails to load or
+ * throws while rendering, the match screen must keep working — the HUD, markets,
+ * phase panel and log are all still playable without it (quality bar U9).
+ */
+class BoardBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  override state = { failed: false };
+
+  static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true };
+  }
+
+  override componentDidCatch(error: Error): void {
+    console.error('[power-grid] board renderer failed', error);
+  }
+
+  override render(): ReactNode {
+    return this.state.failed ? <BoardPlaceholder /> : this.props.children;
+  }
 }
 
 /**

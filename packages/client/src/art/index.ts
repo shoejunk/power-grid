@@ -2,24 +2,45 @@
  * Art module — the single source of visual assets for the board and game UI.
  *
  * CONTRACT. The exported names here are depended on by the board renderer
- * (`src/board/`) and the in-game UI (`src/game/`). The art agent owns this
- * directory and should replace the placeholder generators below with real
- * artwork, but MUST keep these signatures stable so consumers never break.
+ * (`src/board/`) and the in-game UI (`src/game/`). Consumers import from
+ * '@/art' only — never reach into sibling files. Signatures are frozen;
+ * additions are fine, changes are not.
  *
- * Consumers import from '@/art' only — never reach into sibling files.
+ * HOW THE ART IS MADE
+ * -------------------
+ * Two pipelines, split on cost:
  *
- * Everything here is functional today: the placeholders are procedurally drawn
- * so the board renderer can be built and run before final art exists.
+ *   offline  The painted terrain plate. A per-pixel relief render — coastal
+ *            distance fields, ridged multifractal elevation, linear-space
+ *            lighting, blurred-elevation ambient occlusion — baked to PNG by
+ *            `src/art/generate/build.mjs` and served from `public/art/`.
+ *            Seconds of CPU: fine on a build machine, not on a game client.
+ *
+ *   runtime  Everything else. Generated into `data:` URIs with layered canvas
+ *            drawing, so sprites can be driven by the live CSS custom
+ *            properties in `tokens.scss` and follow a theme swap.
+ *
+ * Both are deterministic — seeded hashes, never `Math.random` — because art
+ * that changes between reloads reads as a rendering bug.
+ *
+ * A `TextureRef` is a plain image URL or `data:` URI, so it drops straight into
+ * an SVG `<image href>`, an SVG `<pattern>`, or a CSS `background-image`.
  */
 
 import type { MapId, PlayerColor, PowerPlant, ResourceType } from '@pg/shared';
+import { houseTexture, trustHouseTexture } from './houses';
+import {
+  cityPlateTexture,
+  paperGrainTexture,
+  radialGlowTexture,
+  vignetteTexture,
+} from './plates';
+import { plantIllustration } from './plants';
+import { hasDOM, linGrad, makeCanvas, safeTexture, BLANK } from './raster';
+import { resourceTokenTexture } from './tokens';
 
 /* ------------------------------------------------------------------ *
  * Texture handles
- *
- * A TextureRef is anything PixiJS `Assets.load` / `Texture.from` accepts:
- * a URL, or a `data:` URI for procedurally generated art. Keeping it a string
- * means the board renderer never needs to know how the art was produced.
  * ------------------------------------------------------------------ */
 
 export type TextureRef = string;
@@ -27,7 +48,14 @@ export type TextureRef = string;
 export interface ArtManifest {
   /** Painted terrain base for a map, sized to the map's aspect ratio. */
   boardBase: Record<MapId, TextureRef>;
-  /** Tiling grain overlaid on panels and the board to kill flatness. */
+  /**
+   * Tiling grain overlaid on panels and the board to kill flatness.
+   *
+   * Seamless at its native 256 px. It is mid-grey, so composite it with
+   * `mix-blend-mode: overlay` (or SVG `feBlend mode="overlay"`) at low opacity
+   * — drawn with plain alpha it desaturates whatever is underneath instead of
+   * just adding tooth.
+   */
   paperGrain: TextureRef;
   /** Soft vignette multiplied over the board edges. */
   vignette: TextureRef;
@@ -43,138 +71,82 @@ export interface ArtManifest {
   radialGlow: TextureRef;
 }
 
-const canvas = (w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] => {
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  return [c, c.getContext('2d')!];
+/** Intrinsic pixel size of each baked board plate, for `<image>` sizing. */
+export const BOARD_BASE_SIZE: Record<MapId, { width: number; height: number }> = {
+  germany: { width: 1716, height: 2200 },
+  usa: { width: 1024, height: 661 },
 };
 
-/** Deterministic value noise, so placeholder grain does not shimmer per reload. */
-function grainTexture(size = 128): TextureRef {
-  const [c, ctx] = canvas(size, size);
-  const img = ctx.createImageData(size, size);
-  let seed = 0x2f6e2b1;
-  for (let i = 0; i < img.data.length; i += 4) {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    const v = 128 + ((seed >>> 24) - 128) * 0.18;
-    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
-    img.data[i + 3] = 26;
-  }
-  ctx.putImageData(img, 0, 0);
-  return c.toDataURL();
-}
-
-function radialGlowTexture(size = 256): TextureRef {
-  const [c, ctx] = canvas(size, size);
-  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  g.addColorStop(0, 'rgba(255,255,255,1)');
-  g.addColorStop(0.45, 'rgba(255,255,255,0.35)');
-  g.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, size, size);
-  return c.toDataURL();
-}
-
-function vignetteTexture(size = 512): TextureRef {
-  const [c, ctx] = canvas(size, size);
-  const g = ctx.createRadialGradient(size / 2, size / 2, size * 0.3, size / 2, size / 2, size * 0.72);
-  g.addColorStop(0, 'rgba(0,0,0,0)');
-  g.addColorStop(1, 'rgba(0,0,0,0.55)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, size, size);
-  return c.toDataURL();
-}
-
-function flatTexture(fill: string, size = 64): TextureRef {
-  const [c, ctx] = canvas(size, size);
-  ctx.fillStyle = fill;
-  ctx.fillRect(0, 0, size, size);
-  return c.toDataURL();
-}
-
-/** Simple faceted token: a lit dome over a darker rim, readable at small sizes. */
-function tokenTexture(fill: string, rim: string, size = 64): TextureRef {
-  const [c, ctx] = canvas(size, size);
-  const r = size / 2 - 2;
-  ctx.beginPath();
-  ctx.arc(size / 2, size / 2, r, 0, Math.PI * 2);
-  ctx.fillStyle = rim;
-  ctx.fill();
-  const g = ctx.createRadialGradient(size * 0.38, size * 0.34, r * 0.1, size / 2, size / 2, r);
-  g.addColorStop(0, '#ffffff55');
-  g.addColorStop(0.35, fill);
-  g.addColorStop(1, rim);
-  ctx.beginPath();
-  ctx.arc(size / 2, size / 2, r * 0.86, 0, Math.PI * 2);
-  ctx.fillStyle = g;
-  ctx.fill();
-  return c.toDataURL();
-}
-
-/** House silhouette in a seat colour, with a bevel so it reads on a busy board. */
-function houseTexture(fill: string, size = 64): TextureRef {
-  const [c, ctx] = canvas(size, size);
-  const p = new Path2D();
-  p.moveTo(size * 0.5, size * 0.14);
-  p.lineTo(size * 0.86, size * 0.42);
-  p.lineTo(size * 0.86, size * 0.86);
-  p.lineTo(size * 0.14, size * 0.86);
-  p.lineTo(size * 0.14, size * 0.42);
-  p.closePath();
-  ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  ctx.translate(0, 2);
-  ctx.fill(p);
-  ctx.translate(0, -2);
-  ctx.fillStyle = fill;
-  ctx.fill(p);
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke(p);
-  return c.toDataURL();
-}
-
-const RESOURCE_FILL: Record<ResourceType, [string, string]> = {
-  coal: ['#4a4a52', '#1d1d22'],
-  oil: ['#2b2b33', '#0c0c10'],
-  garbage: ['#c8a33a', '#6d551a'],
-  uranium: ['#4ade5f', '#166b25'],
+/** Where the offline pipeline writes its output. */
+const BOARD_BASE_URL: Partial<Record<MapId, TextureRef>> = {
+  germany: '/art/board-germany.png',
 };
 
-const SEAT_HEX: Record<PlayerColor, string> = {
-  red: '#e8414a',
-  blue: '#3d8bff',
-  green: '#2fc46f',
-  yellow: '#ffc93c',
-  purple: '#b06bff',
-  black: '#78889b',
-};
+/**
+ * Stand-in plate for a map whose terrain has not been painted yet (currently
+ * USA). Deliberately a lit, grained substrate rather than a flat fill, so a
+ * missing plate degrades to "unfinished background" instead of "broken".
+ */
+function placeholderBoard(aspect: number, h = 512): TextureRef {
+  const w = Math.round(h * aspect);
+  const [c, ctx] = makeCanvas(w, h);
+  ctx.fillStyle = linGrad(ctx, 0, 0, w, h, [
+    [0, '#101a24'],
+    [0.5, '#0b131c'],
+    [1, '#070c13'],
+  ]);
+  ctx.fillRect(0, 0, w, h);
+  const g = ctx.createRadialGradient(w * 0.3, h * 0.24, 0, w * 0.3, h * 0.24, Math.max(w, h) * 0.8);
+  g.addColorStop(0, 'rgba(70,120,160,0.14)');
+  g.addColorStop(1, 'rgba(70,120,160,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  return c.toDataURL();
+}
 
 let cached: ArtManifest | null = null;
 
 /**
  * Resolves every texture the renderer needs. Called once during board boot;
  * the result is cached here so repeated calls are free.
+ *
+ * Guaranteed total: every field is populated and nothing throws, even without
+ * a DOM. A blank sprite is recoverable; a rejected promise during board boot
+ * is not.
  */
 export async function loadArtManifest(): Promise<ArtManifest> {
   if (cached) return cached;
-  const grain = grainTexture();
+
+  const seatHouse = (color: PlayerColor): TextureRef =>
+    safeTexture(() => {
+      const p = seatPalette(color);
+      return houseTexture({ base: p.base, light: p.light, dark: p.dark, ink: p.ink }, seatSigil(color));
+    });
+
   cached = {
-    boardBase: { germany: flatTexture('#101822'), usa: flatTexture('#101822') },
-    paperGrain: grain,
-    vignette: vignetteTexture(),
-    resourceToken: {
-      coal: tokenTexture(...RESOURCE_FILL.coal),
-      oil: tokenTexture(...RESOURCE_FILL.oil),
-      garbage: tokenTexture(...RESOURCE_FILL.garbage),
-      uranium: tokenTexture(...RESOURCE_FILL.uranium),
+    boardBase: {
+      germany: BOARD_BASE_URL.germany ?? safeTexture(() => placeholderBoard(0.78)),
+      usa: BOARD_BASE_URL.usa ?? safeTexture(() => placeholderBoard(1.55)),
     },
-    house: Object.fromEntries(
-      (Object.keys(SEAT_HEX) as PlayerColor[]).map((c) => [c, houseTexture(SEAT_HEX[c])]),
-    ) as Record<PlayerColor, TextureRef>,
-    trustHouse: houseTexture('#8a94a3'),
-    cityPlate: flatTexture('#1b2634'),
-    radialGlow: radialGlowTexture(),
+    paperGrain: safeTexture(() => paperGrainTexture(256, 0.10)),
+    vignette: safeTexture(() => vignetteTexture(512)),
+    resourceToken: {
+      coal: safeTexture(() => resourceTokenTexture('coal')),
+      oil: safeTexture(() => resourceTokenTexture('oil')),
+      garbage: safeTexture(() => resourceTokenTexture('garbage')),
+      uranium: safeTexture(() => resourceTokenTexture('uranium')),
+    },
+    house: {
+      red: seatHouse('red'),
+      blue: seatHouse('blue'),
+      green: seatHouse('green'),
+      yellow: seatHouse('yellow'),
+      purple: seatHouse('purple'),
+      black: seatHouse('black'),
+    },
+    trustHouse: safeTexture(() => trustHouseTexture()),
+    cityPlate: safeTexture(() => cityPlateTexture(256)),
+    radialGlow: safeTexture(() => radialGlowTexture(512)),
   };
   return cached;
 }
@@ -197,7 +169,7 @@ export interface PlantArt {
   title: string;
 }
 
-const PLANT_ACCENT: Record<string, [string, string]> = {
+const PLANT_ACCENT_FALLBACK: Record<string, [string, string]> = {
   coal: ['#8b6b4a', 'Coal Boiler'],
   oil: ['#5a6b8b', 'Oil Burner'],
   garbage: ['#b3922f', 'Refuse Incinerator'],
@@ -213,27 +185,64 @@ export function plantArt(plant: PowerPlant): PlantArt {
       : plant.accepts.length > 1
         ? 'hybrid'
         : (plant.accepts[0] as string);
-  const [accent, title] = PLANT_ACCENT[key] ?? PLANT_ACCENT.coal!;
-  return { illustration: flatTexture(accent), accent, title };
+  const [accent, title] = PLANT_ACCENT_FALLBACK[key] ?? PLANT_ACCENT_FALLBACK.coal!;
+
+  if (!hasDOM()) return { illustration: BLANK, accent, title };
+  try {
+    return plantIllustration(plant);
+  } catch {
+    return { illustration: BLANK, accent, title };
+  }
 }
 
 /* ------------------------------------------------------------------ *
  * Palette bridge
  *
- * Design tokens live in SCSS. These read the resolved custom properties so
- * PixiJS (which cannot use CSS) draws in exactly the same colours as the DOM UI
- * — a hard requirement of QUALITY-BAR V5 "consistent art direction".
+ * Design tokens live in SCSS. These read the resolved custom properties so the
+ * generated art draws in exactly the same colours as the DOM UI — a hard
+ * requirement of QUALITY-BAR V5 "consistent art direction".
  * ------------------------------------------------------------------ */
 
-/** Reads a CSS custom property off :root and returns it as a 0xRRGGBB number. */
+const SEAT_HEX: Record<PlayerColor, string> = {
+  red: '#e8414a',
+  blue: '#3d8bff',
+  green: '#2fc46f',
+  yellow: '#ffc93c',
+  purple: '#b06bff',
+  black: '#78889b',
+};
+
+/**
+ * Reads a CSS custom property off :root and returns it as a 0xRRGGBB number.
+ *
+ * Handles `#rgb`, `#rrggbb` and `rgb()/rgba()`. The rgba() case matters: the
+ * glow tokens are authored as rgba() so the DOM can use their alpha, and a
+ * hex-only parser silently falls back on every one of them.
+ */
 export function cssColor(varName: string, fallback = 0xffffff): number {
   if (typeof document === 'undefined') return fallback;
   const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  return parseCssColor(raw, fallback);
+}
+
+/** Exported for tests and for callers holding a literal rather than a var name. */
+export function parseCssColor(raw: string, fallback = 0xffffff): number {
   if (!raw) return fallback;
-  const hex = raw.startsWith('#') ? raw.slice(1) : raw;
-  const full = hex.length === 3 ? hex.replace(/./g, (ch) => ch + ch) : hex;
-  const n = Number.parseInt(full, 16);
-  return Number.isNaN(n) ? fallback : n;
+
+  const rgb = raw.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i);
+  if (rgb) {
+    const [r, g, b] = [rgb[1], rgb[2], rgb[3]].map((v) => Math.min(255, Math.round(Number(v))));
+    return ((r! & 255) << 16) | ((g! & 255) << 8) | (b! & 255);
+  }
+
+  if (raw.startsWith('#')) {
+    const hex = raw.slice(1);
+    const full = hex.length === 3 ? hex.replace(/./g, (ch) => ch + ch) : hex.slice(0, 6);
+    const n = Number.parseInt(full, 16);
+    return Number.isNaN(n) ? fallback : n;
+  }
+
+  return fallback;
 }
 
 export interface SeatPalette {
@@ -241,16 +250,29 @@ export interface SeatPalette {
   light: number;
   dark: number;
   glow: number;
+  /** Foreground colour guaranteed legible on top of `base`. */
+  ink: number;
 }
 
+/**
+ * Seat colours resolved from the design tokens, so board and DOM cannot drift.
+ *
+ * The token names are `--pg-player-<colour>`; getting this prefix wrong makes
+ * every lookup fall back silently, which is exactly the kind of bug that ships.
+ */
 export function seatPalette(color: PlayerColor): SeatPalette {
+  const fallback = Number.parseInt(SEAT_HEX[color].slice(1), 16);
   return {
-    base: cssColor(`--seat-${color}`, Number.parseInt(SEAT_HEX[color].slice(1), 16)),
-    light: cssColor(`--seat-${color}-light`, 0xffffff),
-    dark: cssColor(`--seat-${color}-dark`, 0x000000),
-    glow: cssColor(`--seat-${color}-glow`, Number.parseInt(SEAT_HEX[color].slice(1), 16)),
+    base: cssColor(`--pg-player-${color}`, fallback),
+    light: cssColor(`--pg-player-${color}-light`, 0xffffff),
+    dark: cssColor(`--pg-player-${color}-dark`, 0x000000),
+    glow: cssColor(`--pg-player-${color}-glow`, fallback),
+    ink: cssColor(`--pg-player-${color}-ink`, 0xffffff),
   };
 }
+
+/** `#rrggbb` form of a resolved colour number, for canvas and SVG fills. */
+export const toHex = (n: number): string => `#${(n >>> 0).toString(16).padStart(6, '0').slice(-6)}`;
 
 /**
  * Distinct sigil shape per seat, so colour is never the only channel carrying
@@ -270,3 +292,39 @@ const SEAT_SIGIL: Record<PlayerColor, SeatSigil> = {
 export function seatSigil(color: PlayerColor): SeatSigil {
   return SEAT_SIGIL[color];
 }
+
+/**
+ * The seat sigil as an SVG path `d` string on a unit circle centred at (0,0).
+ * Lets the SVG board draw the same glyph the house sprite carries, at vector
+ * resolution, without importing the canvas code.
+ */
+export function seatSigilPath(sigil: SeatSigil, r = 1): string {
+  if (sigil === 'circle') {
+    return `M ${-r} 0 a ${r} ${r} 0 1 0 ${r * 2} 0 a ${r} ${r} 0 1 0 ${-r * 2} 0 Z`;
+  }
+  const pts: [number, number][] =
+    sigil === 'star'
+      ? Array.from({ length: 10 }, (_, i) => {
+          const a = -Math.PI / 2 + (i / 10) * Math.PI * 2;
+          const rr = i % 2 === 0 ? r : r * 0.45;
+          return [Math.cos(a) * rr, Math.sin(a) * rr];
+        })
+      : (() => {
+          const n = sigil === 'triangle' ? 3 : sigil === 'hexagon' ? 6 : 4;
+          const rot = sigil === 'square' ? -Math.PI / 4 : -Math.PI / 2;
+          return Array.from({ length: n }, (_, i) => {
+            const a = rot + (i / n) * Math.PI * 2;
+            return [Math.cos(a) * r, Math.sin(a) * r] as [number, number];
+          });
+        })();
+  return `M ${pts.map(([x, y]) => `${x.toFixed(4)} ${y.toFixed(4)}`).join(' L ')} Z`;
+}
+
+/* ------------------------------------------------------------------ *
+ * Additive exports for the SVG board renderer
+ * ------------------------------------------------------------------ */
+
+export { boardDefs, BOARD_DEF_IDS } from './svg';
+export { resourceAccent } from './tokens';
+export { fuelKey, plantAccent } from './plants';
+export type { FuelKey } from './plants';

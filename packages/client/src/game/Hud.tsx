@@ -51,7 +51,10 @@ function HudCard({
   const count = state.settings.playerCount;
   const step2At = STEP2_THRESHOLD[count] ?? 7;
   const endAt = END_GAME_THRESHOLD[count] ?? 17;
-  const status = STATUS_META[player.phaseStatus];
+  // Only one seat is ever "acting": the one the engine is actually waiting on.
+  // A stale `acting` marker on anyone else reads as Eligible.
+  const effective = !isActing && player.phaseStatus === 'acting' ? 'eligible' : player.phaseStatus;
+  const status = STATUS_META[effective];
   const cities = player.cities.length;
 
   return (
@@ -88,7 +91,7 @@ function HudCard({
           </Badge>
         ) : null}
         <Tooltip placement="bottom" title={status.label} rule="§4 Player order" content={status.note}>
-          <span className="pg-ghudcard__status" data-status={player.phaseStatus} tabIndex={0}>
+          <span className="pg-ghudcard__status" data-status={isActing ? 'acting' : effective} tabIndex={0}>
             {isActing ? 'Acting' : status.label}
           </span>
         </Tooltip>
