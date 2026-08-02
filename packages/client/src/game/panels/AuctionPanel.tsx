@@ -57,11 +57,9 @@ function waitingNote(scrapPending: boolean): string {
  * Nominating
  * ------------------------------------------------------------------ */
 
-function NominatePanel({
-  selectedPlantId,
-  onSelectPlant,
-}: AuctionPanelProps): JSX.Element {
+function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): JSX.Element {
   const { me, legal } = useMatch();
+  const money = me?.money ?? 0;
   const options = legal.nominatablePlants;
   const chosen = options.find((o) => o.plantId === selectedPlantId) ?? null;
   const [bid, setBid] = useState(0);
@@ -70,7 +68,6 @@ function NominatePanel({
     if (chosen) setBid(chosen.minimumBid);
   }, [chosen?.plantId, chosen?.minimumBid, chosen]);
 
-  const money = me?.money ?? 0;
   const uncontested = chosen?.uncontested === true;
   const maxBid = uncontested ? (chosen?.minimumBid ?? 0) : money;
   const canNominate = chosen !== null && chosen.affordable && bid >= chosen.minimumBid && bid <= money;
@@ -133,23 +130,45 @@ function NominatePanel({
 
       <div className="pg-gpicker">
         {options.map((option) => (
-          <button
+          <Tooltip
             key={option.plantId}
-            type="button"
-            className="pg-gpicker__opt"
-            data-selected={option.plantId === selectedPlantId}
-            disabled={!option.affordable}
-            onClick={() => onSelectPlant(option.plantId)}
+            placement="left"
+            title={`Plant ${option.plantId}`}
+            rule={option.affordable ? '§6 Auction Power Plants' : '§6, §14 Legal-action validation'}
+            content={
+              option.affordable
+                ? option.discounted
+                  ? 'The discount token is on this plant, so it opens at 1₤ instead of its printed number.'
+                  : `Opens at its printed number, ${option.minimumBid}₤. Raising is up to the other bidders.`
+                : `The minimum bid is ${option.minimumBid}₤ and you hold ${money}₤, so you cannot open this auction.`
+            }
           >
-            <span className="pg-gpicker__num pg-numeral">{option.plantId}</span>
-            <span className="pg-gpicker__meta">
-              {option.discounted ? <Badge tone="accent">discount 1₤</Badge> : null}
-              <span className="pg-gpicker__min">
-                min <b className="pg-numeral">{option.minimumBid}</b>₤
-              </span>
+            {/*
+             * A wrapper, not the control itself: a disabled <button> receives no
+             * pointer events in Chrome, and the rule behind the block has to stay
+             * reachable by hover and by keyboard (quality bar U2).
+             */}
+            <span className="pg-gpicker__slot" tabIndex={option.affordable ? -1 : 0}>
+              <button
+                type="button"
+                className="pg-gpicker__opt"
+                data-selected={option.plantId === selectedPlantId}
+                disabled={!option.affordable}
+                onClick={() => onSelectPlant(option.plantId)}
+              >
+                <span className="pg-gpicker__num pg-numeral">{option.plantId}</span>
+                <span className="pg-gpicker__meta">
+                  {option.discounted ? <Badge tone="accent">discount 1₤</Badge> : null}
+                  <span className="pg-gpicker__min">
+                    min <b className="pg-numeral">{option.minimumBid}</b>₤
+                  </span>
+                </span>
+                {!option.affordable ? (
+                  <span className="pg-gpicker__block">too expensive</span>
+                ) : null}
+              </button>
             </span>
-            {!option.affordable ? <span className="pg-gpicker__block">too expensive</span> : null}
-          </button>
+          </Tooltip>
         ))}
       </div>
 

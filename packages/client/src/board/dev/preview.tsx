@@ -13,6 +13,29 @@
 
 import { createRoot } from 'react-dom/client';
 
+/*
+ * `?reduced` forces the reduced-motion branch so M5 can be verified without
+ * changing an OS setting. Patched before React mounts, because the board reads
+ * the media query once on mount. Harness-only — the board itself has no such
+ * override and always asks the real media query.
+ */
+if (new URLSearchParams(window.location.search).has('reduced')) {
+  const real = window.matchMedia.bind(window);
+  window.matchMedia = ((query: string) =>
+    query.includes('prefers-reduced-motion')
+      ? {
+          matches: true,
+          media: query,
+          onchange: null,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+          addListener: () => undefined,
+          removeListener: () => undefined,
+          dispatchEvent: () => false,
+        }
+      : real(query)) as typeof window.matchMedia;
+}
+
 import { useGameStore } from '@/net';
 import '@/styles/index.scss';
 

@@ -132,6 +132,29 @@
   padding: 7px 9px 8px;
 }
 
+/* ------------------------------------------------------------------ *
+ * Pointer targets (quality bar U4)
+ *
+ * Every control that performs an action is >= 32px tall on its own. The few
+ * affordances that only reveal detail — the "?" hint glyph, the turn-order
+ * ordinal — stay visually small so the layout keeps its density, and gain an
+ * invisible 32px hit area instead. Nothing is inflated to touch size.
+ * ------------------------------------------------------------------ */
+.pg-game .pg-hint,
+.pg-ghudcard__pos {
+  position: relative;
+}
+.pg-game .pg-hint::after,
+.pg-ghudcard__pos::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: var(--pg-radius-sm);
+}
+.pg-ghudcard__pos::after {
+  inset: -7px;
+}
+
 /* ==================================================================== *
  * CHROME — the end-of-game clock
  * ==================================================================== */
@@ -399,6 +422,37 @@
   inset: 0 0 auto 0;
   height: 3px;
   opacity: 0.9;
+}
+/* The illustration from @/art. Texture, never information: a scrim keeps the
+   number and the fuel tokens at full contrast on top of it (§1, V4). */
+.pg-gplant__art {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.3;
+  filter: saturate(0.9) contrast(1.05);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(8, 12, 18, 0.5) 0%, rgba(8, 12, 18, 0.88) 68%);
+  }
+
+  .pg-gplant--md & {
+    opacity: 0.5;
+  }
+  .pg-gplant--xs & {
+    opacity: 0.22;
+  }
+  .pg-gplant.is-muted & {
+    opacity: 0.14;
+  }
+}
+.pg-gplant__num,
+.pg-gplant__mid {
+  position: relative;
 }
 .pg-gplant__num {
   font-family: var(--pg-font-display);
@@ -1260,7 +1314,18 @@
   grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
   gap: 5px;
 }
+.pg-gpicker__slot {
+  display: block;
+  min-width: 0;
+
+  &:focus-visible {
+    outline: 2px solid var(--pg-cyan);
+    outline-offset: 2px;
+    border-radius: var(--pg-radius-sm);
+  }
+}
 .pg-gpicker__opt {
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -1358,8 +1423,12 @@
   display: flex;
   gap: 5px;
 }
+/* Steppers are desktop-proportioned, never stretched across the panel: a
+   control the width of its content reads as a machined part, a full-width one
+   reads as a phone widget (quality bar U4). */
 .pg-gbidctrl .pg-stepper,
-.pg-gbidbox__ctrl .pg-stepper {
+.pg-gbidbox__ctrl .pg-stepper,
+.pg-gsupply .pg-stepper {
   width: 148px;
 }
 
@@ -1501,7 +1570,7 @@
   min-width: 0;
 
   .pg-stepper {
-    width: 100%;
+    width: 116px;
   }
 }
 .pg-gbuy__cost {
@@ -2073,7 +2142,13 @@
   gap: 18px;
   max-height: 62vh;
   overflow-y: auto;
-  padding-right: 6px;
+  /* The dialog surface is frosted; over a painted board that is not enough for
+     a wall of reference text, so the sheet carries its own opaque plate. V4. */
+  padding: 12px 14px;
+  margin: -2px -4px 0;
+  border-radius: var(--pg-radius-md);
+  background: linear-gradient(180deg, rgba(9, 14, 21, 0.94), rgba(7, 11, 16, 0.97));
+  border: 1px solid var(--pg-line-hairline);
 }
 .pg-gsheet__h {
   margin: 0 0 7px;

@@ -91,6 +91,17 @@ export function PlantCard({
 
   const body = (
     <>
+      {/*
+       * §1: "The illustration on a plant card has no gameplay effect." It sits
+       * behind a scrim as texture only — the fuel tokens and the city count
+       * below carry every load-bearing fact, so the card stays readable at
+       * 42px wide and for a player with no colour perception.
+       */}
+      <span
+        className="pg-gplant__art"
+        style={{ backgroundImage: `url(${art.illustration})` }}
+        aria-hidden="true"
+      />
       <span className="pg-gplant__accent" style={{ background: art.accent }} aria-hidden="true" />
       <span className="pg-gplant__num pg-numeral">{plantId}</span>
       <span className="pg-gplant__mid">
@@ -149,20 +160,36 @@ export function PlantCard({
         </>
       }
     >
-      {interactive ? (
+      {interactive && !disabled ? (
         <motion.button
           type="button"
           className={classes}
           data-kind={plantKind(def)}
-          disabled={disabled}
           aria-pressed={selected}
           onClick={onSelect}
-          whileHover={disabled ? undefined : { y: -2 }}
-          whileTap={disabled ? undefined : { scale: 0.97 }}
+          whileHover={{ y: -2 }}
+          whileTap={{ scale: 0.97 }}
           transition={springSnappy}
         >
           {body}
         </motion.button>
+      ) : interactive ? (
+        /*
+         * Deliberately NOT a `<button disabled>`: Chrome suppresses pointer
+         * events and focus on disabled controls, which would make the tooltip
+         * stating the rule unreachable. Quality bar U2 requires the player to
+         * be able to find out *why* a choice is closed to them, so the card
+         * stays hoverable and keyboard-focusable and announces itself disabled.
+         */
+        <div
+          className={classes}
+          data-kind={plantKind(def)}
+          role="button"
+          aria-disabled="true"
+          tabIndex={0}
+        >
+          {body}
+        </div>
       ) : (
         <div className={classes} data-kind={plantKind(def)} tabIndex={0}>
           {body}

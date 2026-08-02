@@ -17,6 +17,19 @@
  *                          shoal band and a broad specular sheen
  *   6. finishing         — region wash, coastline ink, warm/cool grade, canvas
  *                          tooth, edge falloff
+ *   7. plate levels      — the whole render squeezed into a narrow, light
+ *                          value band with its chroma pulled back
+ *
+ * Step 7 is the one to read first if you are here to change how the board
+ * looks. Steps 1-6 are about what the terrain IS; step 7 is about what the
+ * plate is FOR. It is a supporting surface: six saturated seat colours, three
+ * house slots per city and ~83 connection-cost badges sit on top of it, and
+ * the plate's only real job is that none of them can get lost in it. Every
+ * time this file has drifted, it has drifted by letting steps 1-6 spend value
+ * and chroma that step 7 then has to claw back.
+ *
+ * `build.mjs` prints the numbers that decide it — land value mean, its
+ * p10..p90 spread, and the Alpine shadow colour. Tune against those.
  *
  * Everything is seeded. Two runs produce identical bytes.
  */
@@ -34,10 +47,9 @@ for (let i = 0; i < 256; i++) {
   const c = i / 255;
   S2L[i] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
-const l2s = (v) => {
-  const c = v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(Math.max(v, 0), 1 / 2.4) - 0.055;
-  return clamp(c) * 255;
-};
+/** linear -> sRGB, as 0..1. Perceptual space: where value decisions belong. */
+const l2s01 = (v) =>
+  v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(Math.max(v, 0), 1 / 2.4) - 0.055;
 
 /** '#rrggbb' -> linear [r,g,b] */
 function hexLin(hex) {
@@ -253,46 +265,84 @@ function blur(src, w, h, r, passes = 3) {
 }
 
 /* ------------------------------------------------------------------ *
- * palettes — deliberately low-key. The UI substrate is #070b10 with
- * copper/cyan accents; a bright atlas-green map would fight it. This is a
- * relief map lit at dusk: desaturated moss, umber, gunmetal rock.
+ * palettes
+ *
+ * THIS PLATE IS A SUPPORTING SURFACE, NOT A HERO IMAGE. Six saturated seat
+ * colours, three house slots per city and ~83 connection-cost badges sit on
+ * top of it. Everything below is chosen so that nothing placed on the board
+ * can sink into it:
+ *
+ *   - held in a narrow, LIGHT mid band. The dark seats — black #78889b and
+ *     purple #b06bff — are the ones at risk, and they are only at risk over a
+ *     dark ground. An understated board beats a board where a player cannot
+ *     find their house.
+ *   - low chroma. The old ramps were a muddy green-brown; these are a
+ *     desaturated sage/oatmeal that reads as ground without competing with
+ *     any seat hue.
+ *   - the value SPREAD inside the ramp is small. Hue and texture carry the
+ *     terrain story; value is reserved for the pieces on top.
  * ------------------------------------------------------------------ */
 
 const WET_RAMP = [
-  [0.00, hexLin('#22392d')], // marsh / river plain — cool, slightly blue green
-  [0.09, hexLin('#2c4830')], // lowland pasture
-  [0.20, hexLin('#3a5333')], // rolling farmland — the dominant board colour
-  [0.34, hexLin('#425433')], // mixed arable
-  [0.50, hexLin('#454e34')], // hill country, olive
-  [0.64, hexLin('#4b4a38')], // upland heath
-  [0.76, hexLin('#565040')], // treeline
-  [0.87, hexLin('#67614f')], // bare rock
-  [0.95, hexLin('#8d8578')], // scree
-  [1.00, hexLin('#c8cac6')], // snow
+  [0.00, hexLin('#5d6b5d')], // marsh / river plain — cool, slightly blue green
+  [0.09, hexLin('#65735c')], // lowland pasture
+  [0.20, hexLin('#6e7a5f')], // rolling farmland — the dominant board colour
+  [0.34, hexLin('#747d61')], // mixed arable
+  [0.50, hexLin('#787d64')], // hill country, olive
+  [0.64, hexLin('#7c7d69')], // upland heath
+  [0.76, hexLin('#828071')], // treeline
+  [0.87, hexLin('#8d897c')], // bare rock
+  [0.95, hexLin('#a5a096')], // scree
+  [1.00, hexLin('#d6d8d4')], // snow
 ];
 
 const DRY_RAMP = [
-  [0.00, hexLin('#3b3526')],
-  [0.14, hexLin('#4a3f2a')],
-  [0.32, hexLin('#57472c')],
-  [0.50, hexLin('#654f31')],
-  [0.68, hexLin('#6f5942')],
-  [0.82, hexLin('#7a6a5a')],
-  [0.92, hexLin('#8e8880')],
-  [1.00, hexLin('#c3c6c4')],
+  [0.00, hexLin('#6f6a5b')],
+  [0.14, hexLin('#787059')],
+  [0.32, hexLin('#7f755d')],
+  [0.50, hexLin('#867a62')],
+  [0.68, hexLin('#8a8069')],
+  [0.82, hexLin('#8f8877')],
+  [0.92, hexLin('#9c968c')],
+  [1.00, hexLin('#d2d4d2')],
 ];
 
-const ROCK = hexLin('#6b6459');
-const FOREST = hexLin('#1b2c22');
-const SEA_SHELF = hexLin('#14303c');
-const SEA_MID = hexLin('#0d2430');
-const SEA_DEEP = hexLin('#071722');
-const FOAM = hexLin('#38646e');
-const RIVER = hexLin('#1a3742');
+const ROCK = hexLin('#8d877c');
+// Forest is the single biggest darkener on the plate — it covers most of the
+// south. Kept as a HUE shift with only a little value drop, not a black hole.
+const FOREST = hexLin('#4c5b4c');
+const SEA_SHELF = hexLin('#2b4756');
+const SEA_MID = hexLin('#233c49');
+const SEA_DEEP = hexLin('#1a2f3a');
+const FOAM = hexLin('#4f7481');
+/*
+ * Rivers are blended in as a fixed colour, NOT multiplied by the key light, so
+ * their value has to be set against the lit land rather than against the
+ * ramps. Lifting this with the rest of the palette made the Rhine and the
+ * Danube read brighter than their banks — ice, not water. Held ~20 levels
+ * under the land median so they stay legibly incised.
+ */
+const RIVER = hexLin('#2a4450');
 
-const KEY_LIGHT = hexLin('#ffe6c2'); // warm, low sun from the north-west
-const SKY_LIGHT = hexLin('#4e7f92'); // cool hemispheric fill
-const BOUNCE = hexLin('#332e28'); // warm dark bounce off the ground
+/* ---- plate levels (see the PLATE LEVELS block at the end of the paint) ----
+ * Every one of these is a readability control, not a taste control. The
+ * numbers the build prints — value mean / p10 / p90 — are the acceptance
+ * signal: land wants a mean near 115 and a p10..p90 spread under ~55. */
+const IN_LO = 0.04; // raw render's black point ...
+const IN_HI = 0.55; // ... and its white point, in perceptual 0..1
+const LAND_FLOOR = 0.285; // darkest a land pixel may go
+const LAND_CEIL = 0.675; // lightest, snow included
+const SEA_FLOOR = 0.130;
+const SEA_CEIL = 0.375;
+const BAND_GAMMA = 0.80; // <1 lifts the mids and rolls the highlights off
+const CHROMA = 0.82; // pull toward neutral; the seat colours own saturation
+
+const KEY_LIGHT = hexLin('#fff0dc'); // warm, low sun from the north-west
+const SKY_LIGHT = hexLin('#7d9aa8'); // cool hemispheric fill
+// Neutral, a touch cyan. The old bounce was a warm brown (#332e28); mixed with
+// the sky fill it tipped deep valleys toward magenta once the (purple) south
+// region wash was on top of them.
+const BOUNCE = hexLin('#3c4448');
 
 /* ------------------------------------------------------------------ *
  * main
@@ -315,7 +365,11 @@ export function paintTerrain(geo, opts) {
   const inv = (x, y) => [proj.lat0 - (y - proj.y0) / proj.sy, proj.lon0 + (x - proj.x0) / proj.sx];
 
   const sx = makeSimplex(seed + 1);
-  const fbmDetail = makeFbm(seed + 2, 7, 2.04, 0.52);
+  // 5 octaves, not 7. With lacunarity 2.04 and gain 0.52 each octave adds
+  // roughly the SAME amount of slope, so the top two octaves were pure
+  // per-pixel hillshade noise — they read as grit, not as terrain, and they
+  // were most of what made the plate incompressible.
+  const fbmDetail = makeFbm(seed + 2, 5, 2.04, 0.52);
   const fbmMacro = makeFbm(seed + 3, 4, 2.11, 0.55);
   const fbmWarp = makeFbm(seed + 4, 3, 2.0, 0.5);
   const ridged = makeRidged(seed + 5, 7, 2.09, 0.52);
@@ -433,9 +487,25 @@ export function paintTerrain(geo, opts) {
       const nx = (x + 0.5) / W;
       const [lat, lon] = inv(nx, ny);
 
-      // Domain warp keeps the noise from looking like a uniform blanket.
-      const wx = nx + fbmWarp(nx * 2.1, ny * 2.1) * 0.09;
-      const wy = ny + fbmWarp(nx * 2.1 + 7.7, ny * 2.1 - 3.3) * 0.09;
+      /*
+       * Domain warp, applied at THREE strengths rather than one.
+       *
+       * A single 0.09 warp is ~150 px at plate resolution. On the ridge chains
+       * that is exactly right — it is what stops the ranges reading as a
+       * uniform noise blanket. On the detail octaves it is far wider than the
+       * features it is displacing, so it drags them into long smears, and
+       * those smears are the streaky, blotchy mid-frequency passages that show
+       * up at 1:1. The fix is to keep the warp where the features are big and
+       * damp it to almost nothing where they are small.
+       */
+      const wu = fbmWarp(nx * 2.1, ny * 2.1);
+      const wv = fbmWarp(nx * 2.1 + 7.7, ny * 2.1 - 3.3);
+      const wx = nx + wu * 0.09; // ridge chains
+      const wy = ny + wv * 0.09;
+      const mx = nx + wu * 0.030; // secondary dissection
+      const my = ny + wv * 0.030;
+      const dx = nx + wu * 0.008; // fine detail — effectively unwarped
+      const dy = ny + wv * 0.008;
 
       const envH = sampleEnv(env, nx, ny);
       const envRough = sampleEnv(envR, nx, ny);
@@ -451,12 +521,15 @@ export function paintTerrain(geo, opts) {
       // must not grow the same crest amplitude as the Alps.
       const rough = (0.05 + envRough * 0.45) * (0.22 + envH * 1.05);
       e += (ridged(wx * 7.0, wy * 7.0) - 0.30) * rough * 1.45;
-      e += (ridged(wx * 17.0 + 4.4, wy * 17.0 - 1.9) - 0.30) * rough * 0.46;
-      e += (ridged(wx * 40.0 - 9.1, wy * 40.0 + 6.7) - 0.30) * rough * 0.13;
+      e += (ridged(mx * 17.0 + 4.4, my * 17.0 - 1.9) - 0.30) * rough * 0.46;
+      e += (ridged(dx * 40.0 - 9.1, dy * 40.0 + 6.7) - 0.30) * rough * 0.13;
       // Mid-frequency dissection scales with relief. Kept low on purpose: the
       // board carries 42 city plates and 80-odd connection lines on top, so
       // the terrain has to read as a calm, lit surface, not as a busy DEM.
-      e += fbmDetail(wx * 6.0, wy * 6.0) * (0.004 + rel * 0.052);
+      // Amplitude x frequency is what a hillshade actually responds to, so
+      // this term is the loudest thing on the plate for its size — it is the
+      // one to hold down, not the tooth above it.
+      e += fbmDetail(dx * 6.0, dy * 6.0) * (0.003 + rel * 0.034);
       // A slow, always-present undulation so the plain breathes without
       // turning into hills.
       e += fbmMacro(nx * 1.9 + 5.1, ny * 1.9 - 2.3) * 0.022;
@@ -582,7 +655,7 @@ export function paintTerrain(geo, opts) {
         const forestN =
           fbmMacro(nx * 6.4 - 40, ny * 6.4 + 13) * 0.62 + fbmDetail(nx * 17, ny * 17) * 0.38;
         const forest = smoothstep(0.02, 0.30, forestN + rel * 0.30 + smoothstep(0.10, 0.55, eN) * 0.22);
-        alb = mix3(alb, FOREST, forest * (0.46 + rel * 0.22));
+        alb = mix3(alb, FOREST, forest * (0.34 + rel * 0.16));
 
         // Steep faces expose rock — but ONLY at altitude. Gating on elevation
         // as well as slope is what stops every coastal cliff and river bank in
@@ -603,8 +676,10 @@ export function paintTerrain(geo, opts) {
           alb[2] * (1 + macro * 0.07 - macro2 * 0.02),
         ];
 
-        // Brushwork: fine value break-up, oriented by the warp field.
-        const brush = fbmBrush(nx * 62, ny * 62) * 0.055 + fbmBrush(nx * 190 + 5, ny * 190 - 9) * 0.028;
+        // Brushwork: fine value break-up, oriented by the warp field. This is
+        // the tooth the plate keeps — high frequency, low contrast. It is the
+        // CONTRAST that was making it read as grit, not the frequency.
+        const brush = fbmBrush(nx * 62, ny * 62) * 0.038 + fbmBrush(nx * 190 + 5, ny * 190 - 9) * 0.014;
         const bf = 1 + brush;
         alb = [alb[0] * bf, alb[1] * bf, alb[2] * bf];
 
@@ -614,17 +689,24 @@ export function paintTerrain(geo, opts) {
         const wrap = Math.max(0, (Nx * Lx + Ny * Ly + Nz * Lz + 0.35) / 1.35);
         const key = diff * 0.72 + wrap * 0.34;
         const sky = 0.30 + 0.30 * (Nz * 0.5 + 0.5);
-        // Cavity / AO from the difference against blurred elevation.
-        const cav = smootherstep(-0.030, 0.030, e - elevBlurNear[i]) * 0.5 + 0.5;
-        const ao = smootherstep(-0.10, 0.10, e - elevBlurFar[i]) * 0.55 + 0.45;
-        const occl = clamp(cav * 0.45 + ao * 0.55, 0.18, 1.15);
+        /*
+         * Cavity / AO from the difference against blurred elevation. Both are
+         * now shallow: AO is what carries V6 depth, but every stop of it is a
+         * stop of the value budget spent on ground the pieces have to be read
+         * against. Shape, not darkness.
+         */
+        const cav = smootherstep(-0.030, 0.030, e - elevBlurNear[i]) * 0.30 + 0.70;
+        const ao = smootherstep(-0.10, 0.10, e - elevBlurFar[i]) * 0.34 + 0.66;
+        const occl = clamp(cav * 0.45 + ao * 0.55, 0.55, 1.10);
 
-        r = alb[0] * (KEY_LIGHT[0] * key * 1.70 + SKY_LIGHT[0] * sky * 1.00 + BOUNCE[0] * 0.22) * occl;
-        g = alb[1] * (KEY_LIGHT[1] * key * 1.70 + SKY_LIGHT[1] * sky * 1.00 + BOUNCE[1] * 0.22) * occl;
-        b = alb[2] * (KEY_LIGHT[2] * key * 1.70 + SKY_LIGHT[2] * sky * 1.00 + BOUNCE[2] * 0.22) * occl;
+        // Key down, sky up: a flatter, more ambient key is what holds the
+        // hillshade inside a narrow band without deleting it.
+        r = alb[0] * (KEY_LIGHT[0] * key * 1.16 + SKY_LIGHT[0] * sky * 1.05 + BOUNCE[0] * 0.26) * occl;
+        g = alb[1] * (KEY_LIGHT[1] * key * 1.16 + SKY_LIGHT[1] * sky * 1.05 + BOUNCE[1] * 0.26) * occl;
+        b = alb[2] * (KEY_LIGHT[2] * key * 1.16 + SKY_LIGHT[2] * sky * 1.05 + BOUNCE[2] * 0.26) * occl;
 
         // Rim: cool bounce on slopes facing away from the key, keeps shadows alive.
-        const rim = Math.pow(Math.max(0, -(Nx * Lx + Ny * Ly)), 2) * 0.12;
+        const rim = Math.pow(Math.max(0, -(Nx * Lx + Ny * Ly)), 2) * 0.10;
         r += SKY_LIGHT[0] * rim; g += SKY_LIGHT[1] * rim; b += SKY_LIGHT[2] * rim;
 
         // Snow. Gated on ABSOLUTE elevation, so only the Alps get it — the
@@ -644,14 +726,17 @@ export function paintTerrain(geo, opts) {
           b = lerp(b, RIVER[2] + spec * 1.5, rm * 0.82);
         }
 
-        /* --- region wash: a whisper of the six area colours --- */
+        /* --- region wash: a whisper of the six area colours ---
+         * A pure multiplier at unit luminance (see makeRegionField): it can
+         * shift hue but it cannot change value, so no region ends up a darker
+         * or busier place to put a house than any other. */
         if (regions) {
           const reg = regions(nx, ny);
           if (reg) {
-            const [rr, rg, rb, ra] = reg;
-            r = lerp(r, r * 0.55 + rr * 0.85, ra);
-            g = lerp(g, g * 0.55 + rg * 0.85, ra);
-            b = lerp(b, b * 0.55 + rb * 0.85, ra);
+            const [tr, tg, tb, ra] = reg;
+            r *= lerp(1, tr, ra);
+            g *= lerp(1, tg, ra);
+            b *= lerp(1, tb, ra);
           }
         }
       } else {
@@ -703,44 +788,82 @@ export function paintTerrain(geo, opts) {
         r *= 1 - k * 0.85; g *= 1 - k * 0.85; b *= 1 - k * 0.72;
       }
 
-      /* ---- canvas tooth: high-frequency value break-up over everything ---- */
-      const tooth = fbmTooth(nx * 520, ny * 520) * 0.030 + (((x * 7 + y * 13) % 3) - 1) * 0.0022;
+      /* ---- canvas tooth: high-frequency value break-up over everything ----
+       * Kept, but at less than half its old contrast, and without the ordered
+       * ±1 dither that used to ride on top of it. Two reasons: at 1:1 that
+       * dither read as a screen door rather than as tooth, and per-pixel noise
+       * is the single most expensive thing you can put in a PNG.
+       * `ArtManifest.paperGrain` composites real tooth over this at runtime,
+       * at native device resolution, which is where it belongs. */
+      const tooth = fbmTooth(nx * 520, ny * 520) * 0.013;
       r *= 1 + tooth; g *= 1 + tooth; b *= 1 + tooth;
 
       /* ---- atmosphere: a slow warm-to-cool sweep along the light axis.
        * Unifies the plate the way a glaze pass unifies a painting, and
-       * reinforces where the key light is coming from. ---- */
+       * reinforces where the key light is coming from. Halved: as a value
+       * gradient across the whole plate it directly widens the band, and the
+       * board's corners are as likely to hold a house as its centre. ---- */
       const atmo = clamp((nx * 0.55 + ny * 0.45) * 1.15 - 0.08);
       const warm = 1 - atmo;
-      r *= 1 + warm * 0.085 - atmo * 0.055;
-      g *= 1 + warm * 0.030 - atmo * 0.020;
-      b *= 1 - warm * 0.045 + atmo * 0.070;
+      r *= 1 + warm * 0.042 - atmo * 0.026;
+      g *= 1 + warm * 0.016 - atmo * 0.010;
+      b *= 1 - warm * 0.022 + atmo * 0.034;
 
-      /* ---- grade: warm highlights, cool shadows ---- */
+      /* ---- grade: warm highlights, neutral-cool shadows ----
+       * The shadow lift is deliberately G ~= B with R below both: neutral
+       * tipped a little cyan. The old lift was blue-heavy and, under the
+       * purple south wash, showed as magenta in the valleys. */
       const lum = r * 0.2126 + g * 0.7152 + b * 0.0722;
       const t = clamp(lum * 3.2);
-      r = r * (1 + 0.10 * t) + 0.004 * (1 - t);
-      g = g * (1 + 0.03 * t) + 0.006 * (1 - t);
-      b = b * (1 - 0.02 * t) + 0.011 * (1 - t);
-
-      /* ---- highlight shoulder ----
-       * A soft knee above mid-grey. Raw Lambert blows sunlit ridges into flat
-       * cream; rolling them off is what separates "rendered heightmap" from
-       * "painted plate", and it costs nothing in shadow detail. */
-      r = r < 0.42 ? r : 0.42 + (r - 0.42) / (1 + (r - 0.42) * 1.75);
-      g = g < 0.42 ? g : 0.42 + (g - 0.42) / (1 + (g - 0.42) * 1.75);
-      b = b < 0.42 ? b : 0.42 + (b - 0.42) / (1 + (b - 0.42) * 1.75);
+      r = r * (1 + 0.07 * t) + 0.0030 * (1 - t);
+      g = g * (1 + 0.02 * t) + 0.0052 * (1 - t);
+      b = b * (1 - 0.01 * t) + 0.0056 * (1 - t);
 
       /* ---- board edge falloff ---- */
       const vx2 = (nx - 0.5) * 2;
       const vy2 = (ny - 0.5) * 2;
-      const vig = 1 - smootherstep(0.72, 1.55, Math.hypot(vx2, vy2 * 0.96)) * 0.42;
+      const vig = 1 - smootherstep(0.72, 1.55, Math.hypot(vx2, vy2 * 0.96)) * 0.24;
       r *= vig; g *= vig; b *= vig;
 
+      /* ================= PLATE LEVELS =================
+       *
+       * The last word on readability, and the reason it is a single explicit
+       * remap rather than a dozen scattered multipliers: everything above is
+       * about what the terrain IS, this is about what the plate is FOR.
+       *
+       * Perceptual value is squeezed into [floor, ceil] — a band roughly a
+       * third as wide as the raw render, sitting high enough that the two dark
+       * seats (black #78889b, purple #b06bff) sit clearly *below* their
+       * surroundings instead of dissolving into them. Chroma is pulled back at
+       * the same time, because the muddy green-brown was competing with the
+       * seat hues, and a supporting surface must not.
+       *
+       * Water keeps a lower band so land and sea stay unmistakable, but is
+       * lifted well clear of black so the coast still reads as a lit edge.
+       */
+      let R = l2s01(r); let G = l2s01(g); let B = l2s01(b);
+      const v = R * 0.2126 + G * 0.7152 + B * 0.0722;
+      const floorV = lerp(SEA_FLOOR, LAND_FLOOR, c);
+      const ceilV = lerp(SEA_CEIL, LAND_CEIL, c);
+      const vN = clamp((v - IN_LO) / (IN_HI - IN_LO));
+      const v2 = floorV + (ceilV - floorV) * Math.pow(vN, BAND_GAMMA);
+      if (v > 1e-4) {
+        // Rescale to the target value, then pull the result toward that same
+        // value to take chroma out. One knob for lightness, one for saturation.
+        const k = v2 / v;
+        R = lerp(v2, R * k, CHROMA);
+        G = lerp(v2, G * k, CHROMA);
+        B = lerp(v2, B * k, CHROMA);
+      } else {
+        R = G = B = v2;
+      }
+
       const o = i * 3;
-      out[o] = l2s(r);
-      out[o + 1] = l2s(g);
-      out[o + 2] = l2s(b);
+      // Round, not truncate: Uint8Array assignment truncates, which is a
+      // systematic half-level darkening across the whole plate.
+      out[o] = Math.round(clamp(R) * 255);
+      out[o + 1] = Math.round(clamp(G) * 255);
+      out[o + 2] = Math.round(clamp(B) * 255);
     }
   }
 

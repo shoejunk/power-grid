@@ -1,0 +1,138 @@
+/**
+ * Default action resolution — the anti-deadlock contract.
+ *
+ * Regression origin: every one of the server's fallback actions was pass-like,
+ * but §6 makes passing illegal during the first round's mandatory purchase, so
+ * any game containing a bot or a dropped player deadlocked on the very first
+ * auction turn. These tests pin the invariant that broke.
+ */
+
+import { describe, expect, it } from 'vitest';
+import type { GameState } from '../../types.js';
+import { applyAction, defaultActionFor, legalActions, validateAction } from '../index.js';
+import { NOW, fresh } from './helpers.js';
+import { randomZone } from '../setup.js';
+
+/**
+ * Drives a game entirely by default actions.
+ *
+ * Note what this does NOT assert: that the game ends. Default actions are
+ * deliberately conservative — they decline to build (§8 permits deferring a
+ * network indefinitely) — so a table of nothing but defaults never connects a
+ * city and never reaches the end-game threshold. That is correct behaviour for
+ * a disconnected player and useless behaviour for an opponent, which is why
+ * bots need a real policy rather than this. What we assert here is the safety
+ * property: every reachable state offers a legal action, so nothing ever hangs.
+ */
+function autoplay(state: GameState, maxTurns = 600) {
+  let s = state;
+  let turns = 0;
+
+  for (; turns < maxTurns; turns++) {
+    if (s.phase === 'gameOver') break;
+    const actor = s.activePlayerId;
+    if (!actor) throw new Error(`No active player in phase '${s.phase}' round ${s.round}`);
+
+    const action = defaultActionFor(s, actor);
+    if (!action) {
+      throw new Error(
+        `Deadlock: no default action for ${actor} in phase '${s.phase}', round ${s.round}, step ${s.step}`,
+      );
+    }
+
+    const verdict = validateAction(s, actor, action);
+    if (!verdict.ok) {
+      throw new Error(
+        `Default action ${action.type} was illegal for ${actor} in phase '${s.phase}': ${verdict.reason}`,
+      );
+    }
+
+    s = applyAction(s, actor, action, NOW + turns);
+  }
+
+  return { state: s, turns };
+}
+
+function started(opts: Parameters<typeof fresh>[0] = {}): GameState {
+  const s = fresh(opts);
+  return applyAction(s, s.hostId, { type: 'selectZone', areas: randomZone(s) }, NOW);
+}
+
+describe('defaultActionFor — never deadlocks', () => {
+  it('§6 supplies a legal action during the first-round mandatory purchase', () => {
+    const s = started({ playerCount: 3, seed: 'AUTOPLAY-R1' });
+    expect(s.phase).toBe('auction');
+    expect(s.round).toBe(1);
+
+    const actor = s.activePlayerId!;
+    const legal = legalActions(s, actor);
+
+    // The precondition that caused the original bug: passing is NOT available.
+    expect(legal.canPassNomination).toBe(false);
+
+    const action = defaultActionFor(s, actor);
+    expect(action).not.toBeNull();
+    expect(action!.type).toBe('nominatePlant');
+    expect(validateAction(s, actor, action!).ok).toBe(true);
+  });
+
+  it('nominates the cheapest affordable plant rather than an arbitrary one', () => {
+    const s = started({ playerCount: 4, seed: 'AUTOPLAY-CHEAP' });
+    const actor = s.activePlayerId!;
+    const legal = legalActions(s, actor);
+    const cheapest = Math.min(...legal.nominatablePlants.filter((p) => p.affordable).map((p) => p.minimumBid));
+
+    const action = defaultActionFor(s, actor);
+    expect(action).toMatchObject({ type: 'nominatePlant', bid: cheapest });
+  });
+
+  it('never bids up a plant on a player behalf mid-auction', () => {
+    let s = started({ playerCount: 3, seed: 'AUTOPLAY-BID' });
+    const opener = s.activePlayerId!;
+    const first = defaultActionFor(s, opener)!;
+    s = applyAction(s, opener, first, NOW);
+
+    // Someone else is now on the clock inside a live auction.
+    expect(s.auction).not.toBeNull();
+    const responder = s.activePlayerId!;
+    expect(defaultActionFor(s, responder)).toEqual({ type: 'passBid' });
+  });
+
+  it('returns null for a player the engine is not waiting on', () => {
+    const s = started({ playerCount: 3, seed: 'AUTOPLAY-IDLE' });
+    const idle = s.playerOrder.find((id) => id !== s.activePlayerId)!;
+    expect(defaultActionFor(s, idle)).toBeNull();
+  });
+});
+
+describe('defaultActionFor — no reachable state can deadlock', () => {
+  /* The real regression test. `autoplay` throws the moment any state offers no
+     legal default, naming the phase that stalled. Running many rounds across
+     every player count sweeps setup, all five phases, and Step transitions. */
+  for (const playerCount of [2, 3, 4, 5, 6]) {
+    it(`sustains a ${playerCount}-player game indefinitely with no human input`, () => {
+      const { state, turns } = autoplay(started({ playerCount, seed: `AUTO-${playerCount}` }));
+      expect(turns).toBeGreaterThan(50);
+      expect(['order', 'auction', 'resources', 'building', 'bureaucracy', 'gameOver']).toContain(
+        state.phase,
+      );
+      // Rounds really advanced — this is not one phase spinning in place.
+      expect(state.round).toBeGreaterThan(3);
+    });
+  }
+
+  it('handles the extra setup decision in an experienced-start game', () => {
+    const { state } = autoplay(
+      started({ playerCount: 3, seed: 'AUTO-EXP', experiencedStart: true }),
+      200,
+    );
+    expect(state.round).toBeGreaterThan(2);
+  });
+
+  it('is deterministic — identical seeds produce identical states', () => {
+    const a = autoplay(started({ playerCount: 4, seed: 'AUTO-DET' }), 200);
+    const b = autoplay(started({ playerCount: 4, seed: 'AUTO-DET' }), 200);
+    expect(a.turns).toBe(b.turns);
+    expect(JSON.stringify(a.state)).toBe(JSON.stringify(b.state));
+  });
+});

@@ -29,8 +29,16 @@ export function RulesSheet(): JSX.Element {
       <Button variant="ghost" size="sm" icon={<IconBook />} onClick={() => setOpen(true)}>
         Rules
       </Button>
+      {/*
+       * Mounted only while open, rather than left mounted with `open={false}`.
+       * `ui/Modal` closes through an AnimatePresence exit, and under
+       * StrictMode's double-mount that exit can hang — leaving a dialog the
+       * player cannot dismiss. Unmounting the whole subtree makes closing
+       * unconditional; the entrance spring is unaffected.
+       */}
+      {open ? (
       <Modal
-        open={open}
+        open
         onClose={() => setOpen(false)}
         title="Rules reference"
         description={`${state.settings.playerCount} players · ${state.settings.mapId === 'usa' ? 'USA' : 'Germany'} · Step ${state.step}`}
@@ -120,6 +128,7 @@ export function RulesSheet(): JSX.Element {
           </section>
         </div>
       </Modal>
+      ) : null}
     </>
   );
 }

@@ -71,9 +71,17 @@ export interface ArtManifest {
   radialGlow: TextureRef;
 }
 
-/** Intrinsic pixel size of each baked board plate, for `<image>` sizing. */
+/**
+ * Intrinsic pixel size of each baked board plate, for `<image>` sizing.
+ *
+ * Germany is baked at 1092x1400 (aspect 0.78, matching the map data). The plate
+ * is deliberately smaller than display resolution — device-resolution tooth
+ * comes from the runtime `paperGrain` overlay instead, which keeps the largest
+ * asset in the build under 600 KB. Consumers should size from these values
+ * rather than hard-coding dimensions.
+ */
 export const BOARD_BASE_SIZE: Record<MapId, { width: number; height: number }> = {
-  germany: { width: 1716, height: 2200 },
+  germany: { width: 1092, height: 1400 },
   usa: { width: 1024, height: 661 },
 };
 

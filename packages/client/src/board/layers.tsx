@@ -10,6 +10,7 @@
 import { memo } from 'react';
 
 import type { BoardLayout } from './layout';
+import type { RegionRaster } from './terrain';
 import type { BoardModel } from './selectors';
 import { DEF } from './Defs';
 import type { BoardTheme } from './theme';
@@ -22,13 +23,38 @@ interface RegionProps {
   layout: BoardLayout;
   model: BoardModel;
   theme: BoardTheme;
+  /** Painted plate from the art module — the board's base artwork. */
   terrain: string | null;
+  /** Intrinsic size of that plate, so a mismatched aspect covers rather than skews. */
+  plateSize: { width: number; height: number } | undefined;
+  /** Region tint + out-of-play scrim, rasterised from the map's area field. */
+  regions: RegionRaster;
   hasGrain: boolean;
 }
 
-function RegionLayerImpl({ layout, model, theme, terrain, hasGrain }: RegionProps): JSX.Element {
-  const { space, outlines, map, metrics } = layout;
-  const ink = metrics.routeW * 0.62;
+function RegionLayerImpl({
+  layout,
+  model,
+  theme,
+  terrain,
+  plateSize,
+  regions,
+  hasGrain,
+}: RegionProps): JSX.Element {
+  const { space, map, metrics } = layout;
+
+  /*
+   * The plate is authored to the map's own aspect ratio, so it normally maps
+   * 1:1 onto the board box. If a plate is ever swapped in at a different
+   * aspect, cover the box rather than stretching the artwork.
+   */
+  const plateAspect = plateSize ? plateSize.width / plateSize.height : null;
+  const boxAspect = space.width / space.height;
+  const skewFree =
+    plateAspect === null || Math.abs(plateAspect - boxAspect) / boxAspect < 0.01;
+
+  const fadeW = space.width * 0.05;
+  const fadeH = space.height * 0.04;
 
   return (
     <g className="pgb-regions">
@@ -37,14 +63,48 @@ function RegionLayerImpl({ layout, model, theme, terrain, hasGrain }: RegionProp
 
       {terrain ? (
         <image
+          className="pgb-plate-art"
           href={terrain}
           x={0}
           y={0}
           width={space.width}
           height={space.height}
-          preserveAspectRatio="none"
+          preserveAspectRatio={skewFree ? 'none' : 'xMidYMid slice'}
         />
       ) : null}
+
+      {/*
+        Region identity (§1, MapArea.color). The plate supplies painted relief
+        and brushwork; the hue is washed over it here.
+
+        `color` takes hue and saturation from the wash and luminance from the
+        plate, so a region reads in its own colour at any plate brightness
+        while every stroke underneath survives. `overlay` would have been the
+        obvious choice, but against a dark plate it behaves like multiply and
+        the hue never appears at all.
+      */}
+      <image
+        className="pgb-tint"
+        href={regions.tint}
+        x={0}
+        y={0}
+        width={space.width}
+        height={space.height}
+        preserveAspectRatio="none"
+        opacity={0.62}
+        style={{ mixBlendMode: 'color' }}
+      />
+      {/* A restrained lift, so regions separate without flattening (V2). */}
+      <image
+        href={regions.tint}
+        x={0}
+        y={0}
+        width={space.width}
+        height={space.height}
+        preserveAspectRatio="none"
+        opacity={0.16}
+        style={{ mixBlendMode: 'soft-light' }}
+      />
 
       {hasGrain ? (
         <rect
@@ -53,80 +113,72 @@ function RegionLayerImpl({ layout, model, theme, terrain, hasGrain }: RegionProp
           width={space.width}
           height={space.height}
           fill={`url(#${DEF.grain})`}
-          opacity={0.7}
+          opacity={0.55}
           style={{ mixBlendMode: 'overlay' }}
         />
       ) : null}
 
-      {/* Painted seams: a heavy ink line with a lighter inner rim. */}
-      {outlines.map((o) =>
-        o.d ? (
-          <path
-            key={`ink-${o.areaId}`}
-            d={o.d}
-            fill="none"
-            stroke="#050a0f"
-            strokeOpacity={0.62}
-            strokeWidth={ink * 2.1}
-            strokeLinejoin="round"
-          />
-        ) : null,
-      )}
-      {outlines.map((o) => {
-        const area = map.areas.find((a) => a.id === o.areaId);
-        return o.d ? (
-          <path
-            key={`rim-${o.areaId}`}
-            d={o.d}
-            fill="none"
-            stroke={area?.color ?? theme.line}
-            strokeOpacity={0.5}
-            strokeWidth={ink * 0.75}
-            strokeLinejoin="round"
-          />
-        ) : null;
-      })}
+      {/* Dissolve the plate's rectangle into the board surface on all four sides. */}
+      {(
+        [
+          ['l', 0, 0, fadeW, space.height],
+          ['r', space.width - fadeW, 0, fadeW, space.height],
+          ['t', 0, 0, space.width, fadeH],
+          ['b', 0, space.height - fadeH, space.width, fadeH],
+        ] as const
+      ).map(([side, x, y, w, h]) => (
+        <rect
+          key={side}
+          x={x}
+          y={y}
+          width={w}
+          height={h}
+          fill={`url(#${DEF.edgeFade}-${side})`}
+        />
+      ))}
 
       {/*
         §1: areas outside the playing zone are unusable for the entire game, so
-        they are drained of colour, dimmed, hatched and dashed off. There is no
-        way to mistake them for live territory.
+        they are drained of colour, dimmed and hatched. There is no way to
+        mistake them for live territory.
       */}
-      <g className="pgb-outzone" pointerEvents="none">
-        {outlines
-          .filter((o) => !model.zone.has(o.areaId))
-          .map((o) => (
-            <g key={o.areaId}>
-              <path d={o.d} fill="#8d9aab" style={{ mixBlendMode: 'saturation' }} />
-              <path d={o.d} fill={theme.void} opacity={0.66} />
-              <path d={o.d} fill={`url(#${DEF.hatch})`} opacity={0.34} />
-              <path
-                d={o.d}
-                fill="none"
-                stroke={theme.textFaint}
-                strokeOpacity={0.55}
-                strokeWidth={ink * 1.1}
-                strokeDasharray={`${ink * 5} ${ink * 3.4}`}
-                strokeLinejoin="round"
-              />
-              <text
-                className="pgb-outzone-label"
-                x={o.centroid.x}
-                y={o.centroid.y}
-                fontSize={metrics.nameFont * 0.95}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fill={theme.textFaint}
-                stroke={theme.void}
-                strokeWidth={metrics.nameFont * 0.4}
-                strokeOpacity={0.8}
-                style={{ paintOrder: 'stroke' }}
-              >
-                OUT OF PLAY
-              </text>
-            </g>
-          ))}
-      </g>
+      {regions.hasScrim ? (
+        <>
+          <image
+            className="pgb-outzone"
+            href={regions.scrim}
+            x={0}
+            y={0}
+            width={space.width}
+            height={space.height}
+            preserveAspectRatio="none"
+          />
+          {map.areas
+            .filter((a) => !model.zone.has(a.id))
+            .map((a) => {
+              const c = regions.centroids[a.id];
+              if (!c) return null;
+              return (
+                <text
+                  key={a.id}
+                  className="pgb-outzone-label"
+                  x={c.x}
+                  y={c.y}
+                  fontSize={metrics.nameFont * 0.92}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fill={theme.textFaint}
+                  stroke={theme.void}
+                  strokeWidth={metrics.nameFont * 0.42}
+                  strokeOpacity={0.85}
+                  style={{ paintOrder: 'stroke' }}
+                >
+                  OUT OF PLAY
+                </text>
+              );
+            })}
+        </>
+      ) : null}
     </g>
   );
 }

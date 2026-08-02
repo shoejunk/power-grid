@@ -24,6 +24,7 @@ export const DEF = {
   badge: 'pgb-badge',
   badgeHot: 'pgb-badge-hot',
   hover: 'pgb-hover',
+  edgeFade: 'pgb-edge-fade',
   seaEdge: 'pgb-sea-edge',
   house: (c: string): string => `pgb-house-${c}`,
 } as const;
@@ -115,6 +116,32 @@ export function BoardDefs({ theme, metrics, grain }: Props): JSX.Element {
         <stop offset="55%" stopColor="#0a3d4b" />
         <stop offset="100%" stopColor="#06232c" />
       </linearGradient>
+
+      {/*
+        Edge fade. The painted plate is a rectangle with its own sea colour, so
+        without this it reads as a photograph pasted onto the panel. Four
+        gradients dissolve its border into the board surface instead.
+      */}
+      {(
+        [
+          ['l', 0, 0, 1, 0],
+          ['r', 1, 0, 0, 0],
+          ['t', 0, 0, 0, 1],
+          ['b', 0, 1, 0, 0],
+        ] as const
+      ).map(([side, x1, y1, x2, y2]) => (
+        <linearGradient
+          key={side}
+          id={`${DEF.edgeFade}-${side}`}
+          x1={x1}
+          y1={y1}
+          x2={x2}
+          y2={y2}
+        >
+          <stop offset="0%" stopColor={theme.void} stopOpacity={0.95} />
+          <stop offset="100%" stopColor={theme.void} stopOpacity={0} />
+        </linearGradient>
+      ))}
 
       <radialGradient id={DEF.hover} cx="0.5" cy="0.5" r="0.5">
         <stop offset="0%" stopColor={theme.cyan} stopOpacity={0.42} />

@@ -56,7 +56,6 @@ import {
   type RoutePath,
   type Vec,
 } from './geometry';
-import { areaOutlines, type AreaOutline } from './terrain';
 
 /* ------------------------------------------------------------------ *
  * Metrics
@@ -115,12 +114,48 @@ export function computeMetrics(map: GameMap, containerW: number, containerH: num
   nn.sort((a, b) => a - b);
   const medianNNpx = (nn[Math.floor(nn.length / 2)] ?? 60) * pxPerUnit;
 
-  const pipRpx = clamp(medianNNpx * 0.105, 4.6, 8.4);
+  let pipRpx = clamp(medianNNpx * 0.105, 4.6, 8.4);
+  let nameFontPx = clamp(medianNNpx * 0.145, 8.2, 13);
+  let badgeHpx = clamp(medianNNpx * 0.32, 13.6, 21);
+
+  /*
+   * Auto-fit. Below roughly a 640x386 cell, 42 nameplates and 83 cost badges
+   * stop fitting at these sizes and the solver is forced to accept overlaps.
+   * Rather than let that happen, estimate the coverage the layout is about to
+   * demand and shrink the *optional* type — city names and slot pips — until
+   * it is back inside what can be packed.
+   *
+   * Connection-cost type is deliberately exempt and keeps its own hard floor:
+   * it is the one thing U5 will not trade away, and shrinking it to buy room
+   * for city names would be the wrong bargain.
+   */
+  const boardWpx = space.width * pxPerUnit;
+  const boardHpx = space.height * pxPerUnit;
+  const avgNameRatio =
+    map.cities.reduce((sum, c) => sum + nameWidthRatio(c.name), 0) / Math.max(1, map.cities.length);
+  const estimate = (pip: number, nameFont: number, badgeH: number): number => {
+    const plateW = (pip * 2 + 1.7) * 2 + pip * 2 + 5;
+    const cityW = Math.max(plateW, avgNameRatio * nameFont + nameFont * 0.7);
+    const cityH = pip * 2 + 3.4 + nameFont * 1.34;
+    const badgeW = Math.max(badgeH * 1.05, 2 * Math.max(MIN_BADGE_FONT_PX, badgeH * 0.7) * 0.6 + badgeH * 0.5);
+    return (
+      (map.cities.length * cityW * cityH + map.connections.length * badgeW * badgeH) /
+      Math.max(1, boardWpx * boardHpx)
+    );
+  };
+
+  const TARGET_COVERAGE = 0.46;
+  const coverage = estimate(pipRpx, nameFontPx, badgeHpx);
+  if (coverage > TARGET_COVERAGE) {
+    const squeeze = clamp(Math.sqrt(TARGET_COVERAGE / coverage), 0.62, 1);
+    pipRpx = Math.max(3.4, pipRpx * squeeze);
+    nameFontPx = Math.max(6.6, nameFontPx * squeeze);
+    badgeHpx = Math.max(MIN_BADGE_FONT_PX / 0.7, badgeHpx * squeeze);
+  }
+
   const pipPitchPx = pipRpx * 2 + 1.7;
   const slotHpx = pipRpx * 2 + 3.4;
-  const nameFontPx = clamp(medianNNpx * 0.145, 8.2, 13);
   const nameHpx = nameFontPx * 1.34;
-  const badgeHpx = clamp(medianNNpx * 0.32, 13.6, 21);
   const badgeFontPx = Math.max(MIN_BADGE_FONT_PX, badgeHpx * 0.7);
 
   return {
@@ -242,7 +277,6 @@ export interface BoardLayout {
   routes: RouteLayout[];
   routesByCity: Map<CityId, RouteLayout[]>;
   routeByPair: Map<string, RouteLayout>;
-  outlines: AreaOutline[];
   /** Number of badges that could not find a fully clear slot. */
   badgeCollisions: number;
 }
@@ -485,31 +519,124 @@ function solveBadges(
       const p = at[i]!;
       p.x += push[i]!.x * relax;
       p.y += push[i]!.y * relax;
-      const hp = home[i]!;
-      p.x += (hp.x - p.x) * homePull;
-      p.y += (hp.y - p.y) * homePull;
-      // Tether to the route, and stay on the board.
-      const dx = p.x - hp.x;
-      const dy = p.y - hp.y;
-      const d = Math.hypot(dx, dy);
+      /*
+       * Tether to the whole route rather than to the slot the greedy pass
+       * picked. That is the badge's second degree of freedom: it can slide
+       * anywhere along its own edge as well as out along the normal. Most
+       * residual conflicts are two badges pinned near t=0.5 on edges meeting at
+       * a hub city, and freeing t is what dissolves them.
+       */
+      const near = closestOnPolyline(prepared[i]!.path.points, p);
+      const d = Math.sqrt(near.d2);
       if (d > tether) {
-        p.x = hp.x + (dx / d) * tether;
-        p.y = hp.y + (dy / d) * tether;
+        p.x = near.point.x + ((p.x - near.point.x) / d) * tether;
+        p.y = near.point.y + ((p.y - near.point.y) / d) * tether;
       }
+      // Hug the line, with a mild bias back toward the preferred slot.
+      p.x += (near.point.x - p.x) * homePull * 0.6 + (home[i]!.x - p.x) * homePull * 0.25;
+      p.y += (near.point.y - p.y) * homePull * 0.6 + (home[i]!.y - p.y) * homePull * 0.25;
       p.x = clamp(p.x, w[i]! / 2, space.width - w[i]! / 2);
       p.y = clamp(p.y, h / 2, space.height - h / 2);
     }
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Stage C: escalate the stragglers.
+   *
+   * Separation moves along the axis of least penetration, so a badge boxed
+   * into a corridor narrower than itself oscillates forever instead of
+   * escaping. There are only ever a handful; each is offered a wide spiral of
+   * positions out along its own normal — far further than the relaxation's
+   * tether allows — and takes the first that is completely clear. It then
+   * carries a leader line back to its route, which is the right trade:
+   * an always-legible badge with a leader beats a well-placed badge that
+   * overlaps something.
+   * ------------------------------------------------------------------ */
+  const residualOf = (i: number): number => {
+    const ri = rectOf(i);
+    let sum = obstacles.overlap(ri);
+    for (let j = 0; j < n; j++) if (j !== i) sum += overlapArea(ri, rectOf(j));
+    return sum;
+  };
+
+  const ESCALATE_OFFSETS = [2, -2, 3, -3, 4, -4, 5, -5, 6.5, -6.5, 8, -8, 9.5, -9.5];
+  const ESCALATE_T: number[] = [];
+  for (let k = 0; k <= 20; k++) ESCALATE_T.push(0.06 + (k / 20) * 0.88);
+
+  for (let i = 0; i < n; i++) {
+    if (residualOf(i) <= 0.5) continue;
+    const path = prepared[i]!.path;
+    const others: Rect[] = [];
+    for (const r of cityBoxes) others.push(r);
+    for (let j = 0; j < n; j++) if (j !== i) others.push(rectOf(j));
+
+    let best: Vec | null = null;
+    let bestScore = Infinity;
+
+    const consider = (cand: Vec, penalty: number): boolean => {
+      if (
+        cand.x < w[i]! / 2 ||
+        cand.x > space.width - w[i]! / 2 ||
+        cand.y < h / 2 ||
+        cand.y > space.height - h / 2
+      ) {
+        return false;
+      }
+      const rect = rectFromCenter(cand, w[i]!, h);
+      let sum = 0;
+      for (const o of others) {
+        sum += overlapArea(rect, o);
+        if (sum * 8 > bestScore) break;
+      }
+      const score = sum * 8 + penalty;
+      if (score < bestScore) {
+        bestScore = score;
+        best = cand;
+      }
+      return sum === 0;
+    };
+
+    /* First choice: still on the badge's own line, just further out. */
+    search: for (const k of ESCALATE_OFFSETS) {
+      for (const t of ESCALATE_T) {
+        const frame = frameAt(path, t);
+        const cand = {
+          x: frame.point.x + frame.normal.x * k * h,
+          y: frame.point.y + frame.normal.y * k * h,
+        };
+        if (consider(cand, Math.abs(k) * h)) break search;
+      }
+    }
+
+    /*
+     * Last resort: a ring search in free 2D around the edge's midpoint. The
+     * normal search can only probe two directions, so a badge whose route runs
+     * through a dense corridor may have no clear slot on either side while
+     * there is plenty of room just off-axis. The leader line keeps it
+     * unambiguous wherever it lands.
+     */
+    if (bestScore > 0) {
+      const mid = frameAt(path, 0.5).point;
+      const GOLDEN = 2.39996;
+      rings: for (let ring = 1; ring <= 10; ring++) {
+        const radius = h * (1.4 + ring * 1.25);
+        const steps = 12 + ring * 4;
+        for (let s = 0; s < steps; s++) {
+          const a = s * GOLDEN + ring * 0.7;
+          const cand = { x: mid.x + Math.cos(a) * radius, y: mid.y + Math.sin(a) * radius };
+          if (consider(cand, radius * 1.6)) break rings;
+        }
+      }
+    }
+
+    if (best) at[i] = best;
   }
 
   /* --- report and finish --- */
   const out: SolvedBadge[] = [];
   for (let i = 0; i < n; i++) {
     const { conn, path } = prepared[i]!;
-    const ri = rectOf(i);
-    let residual = obstacles.overlap(ri);
-    for (let j = 0; j < n; j++) {
-      if (j !== i) residual += overlapArea(ri, rectOf(j));
-    }
+    const residual = residualOf(i);
     // The leader points at the nearest point of this badge's OWN route, so an
     // offset badge is never ambiguous about which connection it prices.
     const near = closestOnPolyline(path.points, at[i]!);
@@ -603,7 +730,24 @@ export function buildLayout(map: GameMap, containerW: number, containerH: number
     path: b.path,
     badge: b.badge,
   }));
-  const badgeCollisions = badges.filter((b) => b.badge.residual > 0.5).length;
+  /*
+   * Honest verification, on the geometry that is actually drawn — no solver
+   * padding, no internal bookkeeping. This is the number U5 lives or dies by,
+   * so it is measured the same way an inspector measuring the DOM would.
+   */
+  const drawnBadges = badges.map((b) => rectFromCenter(b.badge.at, b.badge.w, b.badge.h));
+  const drawnPlates = pos.map((p, i) => rectFromCenter(p, sizes[i]!.w, sizes[i]!.h));
+  let badgeCollisions = 0;
+  for (let i = 0; i < drawnBadges.length; i++) {
+    let hit = false;
+    for (let j = 0; j < drawnBadges.length && !hit; j++) {
+      if (j !== i && overlapArea(drawnBadges[i]!, drawnBadges[j]!) > 0.5) hit = true;
+    }
+    for (let j = 0; j < drawnPlates.length && !hit; j++) {
+      if (overlapArea(drawnBadges[i]!, drawnPlates[j]!) > 0.5) hit = true;
+    }
+    if (hit) badgeCollisions++;
+  }
 
   const routesByCity = new Map<CityId, RouteLayout[]>();
   const routeByPair = new Map<string, RouteLayout>();
@@ -625,7 +769,6 @@ export function buildLayout(map: GameMap, containerW: number, containerH: number
     routes: solved,
     routesByCity,
     routeByPair,
-    outlines: areaOutlines(map),
     badgeCollisions,
   };
 

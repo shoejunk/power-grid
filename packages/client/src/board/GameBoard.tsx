@@ -28,7 +28,7 @@ import {
   useState,
 } from 'react';
 
-import { loadArtManifest } from '@/art';
+import { BOARD_BASE_SIZE, loadArtManifest, type ArtManifest } from '@/art';
 import { net, useGameStore } from '@/net';
 import { SLOTS_OPEN_AT_STEP, getMap, type CityId } from '@pg/shared';
 
@@ -37,8 +37,8 @@ import { CityNode, type NodeState } from './CityNode';
 import { BadgeLayer, RegionLayer, RouteLayer } from './layers';
 import { buildLayout, type BoardLayout } from './layout';
 import { buildModel, winningRouteEdges } from './selectors';
+import { regionRasters } from './terrain';
 import { boardTheme } from './theme';
-import { paintTerrain } from './terrain';
 import { usePrefersReducedMotion, useViewport } from './useBoardMotion';
 import './board.scss';
 
@@ -116,15 +116,14 @@ export function GameBoard(): JSX.Element {
     [gameState, map, myPlayerId],
   );
 
-  /* --- art assets: painted raster + grain ------------------------- */
-  const [terrain, setTerrain] = useState<string | null>(null);
-  const [grain, setGrain] = useState<string | null>(null);
+  /* --- art assets: the painted plate + grain ----------------------- */
+  const [art, setArt] = useState<ArtManifest | null>(null);
 
   useEffect(() => {
     let live = true;
     loadArtManifest()
-      .then((art) => {
-        if (live) setGrain(art.paperGrain);
+      .then((manifest) => {
+        if (live) setArt(manifest);
       })
       .catch(() => undefined);
     return () => {
@@ -132,20 +131,18 @@ export function GameBoard(): JSX.Element {
     };
   }, []);
 
-  useEffect(() => {
-    if (!map) return;
-    let live = true;
-    setTerrain(null);
-    // Off the first paint: the raster costs ~150 ms and must not block mount.
-    const id = window.setTimeout(() => {
-      const url = paintTerrain(map);
-      if (live) setTerrain(url);
-    }, 16);
-    return () => {
-      live = false;
-      window.clearTimeout(id);
-    };
-  }, [map]);
+  const terrain = art && map ? art.boardBase[map.id] : null;
+  const grain = art?.paperGrain ?? null;
+
+  /*
+   * Region tint and out-of-play scrim. Keyed on the zone rather than folded
+   * into the layout, because the zone is game state that can change at setup
+   * while every position on the board stays exactly where it was.
+   */
+  const regions = useMemo(
+    () => (map && gameState ? regionRasters(map, gameState.zone) : null),
+    [map, gameState],
+  );
 
   /* --- viewport --------------------------------------------------- */
   const space = layout?.space ?? { width: 780, height: 1000 };
@@ -226,7 +223,13 @@ export function GameBoard(): JSX.Element {
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return;
     drag.current = { active: true, moved: 0, x: e.clientX, y: e.clientY };
-    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    // Capture is an optimisation, not a requirement: it throws if the pointer
+    // has already been released, and a drag must never break the board.
+    try {
+      (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    } catch {
+      /* no capture available — pointermove on the element still works */
+    }
   }, []);
 
   const onPointerMove = useCallback(
@@ -247,7 +250,11 @@ export function GameBoard(): JSX.Element {
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
     const el = e.currentTarget as Element;
-    if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+    try {
+      if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+    } catch {
+      /* already released */
+    }
     drag.current.active = false;
   }, []);
 
@@ -366,7 +373,7 @@ export function GameBoard(): JSX.Element {
         aria-label={`${map.name} game board`}
         onKeyDown={onKeyDown}
       >
-        {layout && model ? (
+        {layout && model && regions ? (
           <svg
             ref={svgRef}
             className="pgb-svg"
@@ -390,6 +397,8 @@ export function GameBoard(): JSX.Element {
                 model={model}
                 theme={theme}
                 terrain={terrain}
+                plateSize={BOARD_BASE_SIZE[map.id]}
+                regions={regions}
                 hasGrain={grain !== null}
               />
               <RouteLayer layout={layout} model={model} />
@@ -574,6 +583,12 @@ export function GameBoard(): JSX.Element {
         )}
 
         <AnimatePresence>
+          {/*
+            Only opacity is animated here. Giving framer-motion a `y` as well
+            would make it write `style.transform`, silently dropping the
+            `translate(-50%, -100%)` that flips the tooltip above the city —
+            the same attribute-vs-style collision the city nodes hit.
+          */}
           {hoveredNode && hoveredView ? (
             <motion.div
               className="pgb-tip"
@@ -586,8 +601,8 @@ export function GameBoard(): JSX.Element {
                     : 'info'
               }
               style={tipStyle}
-              initial={{ opacity: 0, y: tipSide === 'above' ? 4 : -4 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
             >

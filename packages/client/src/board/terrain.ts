@@ -1,32 +1,26 @@
 /**
- * Painted terrain generation.
+ * Region geometry for the board.
  *
- * QUALITY-BAR V2 requires the board to read as painted artwork with texture,
- * depth and lighting — "not flat fills". Two artefacts come out of this module,
- * and the board uses both:
+ * The *painted* artwork is not made here — that is the art module's job, and
+ * the board draws its plate (`loadArtManifest().boardBase[mapId]`) as a single
+ * image. What this module produces is the vector counterpart: crisp region
+ * outlines traced with marching squares over a deterministic scalar field, so
  *
- *  1. `paintTerrain()` — a raster, embedded as a single `<image>`. It carries
- *     everything that *should* be soft: pigment mottling, hill-shading from a
- *     real height field, coastline, sea contours, paper grain. Rasterising it
- *     once means pan/zoom is a single image transform rather than thousands of
- *     filtered vector ops, which is what keeps M6 (60 fps) achievable.
- *  2. `areaOutlines()` — crisp vector borders for the same regions, traced with
- *     marching squares off the identical scalar field, so the ink lines stay
- *     razor sharp at every zoom level and the out-of-zone scrim (§1) has an
- *     exact shape to clip to.
+ *   · the ink seams between regions stay razor sharp at every zoom level
+ *     instead of blurring along with the raster, and
+ *   · the out-of-play scrim (§1) has an exact shape to clip to.
  *
- * Both are derived from one deterministic field: nearest-city assignment in a
- * domain-warped space. Warping is what stops the regions looking like a Voronoi
- * debug diagram — the borders wander like coastlines instead of running in
- * straight bisectors.
+ * The field is nearest-city assignment in a domain-warped space. Warping is
+ * what stops the regions reading as a Voronoi debug diagram — the borders
+ * wander like coastlines instead of running along straight bisectors.
  *
- * Nothing here touches `Math.random`; identical input gives identical art on
- * every client.
+ * Nothing here touches `Math.random`; identical input gives identical geometry
+ * on every client.
  */
 
 import type { GameMap } from '@pg/shared';
 
-import { BOARD_H, boardSpace, clamp, smoothstep } from './geometry';
+import { BOARD_H, boardSpace, clamp } from './geometry';
 
 /* ------------------------------------------------------------------ *
  * Deterministic value noise
@@ -68,25 +62,6 @@ function fbm(x: number, y: number, seed: number, octaves = 4): number {
   }
   return (sum / norm) * 2 - 1;
 }
-
-/* ------------------------------------------------------------------ *
- * Colour helpers
- * ------------------------------------------------------------------ */
-
-interface Rgb {
-  r: number;
-  g: number;
-  b: number;
-}
-
-function hexToRgb(hex: string): Rgb {
-  const h = hex.replace('#', '');
-  const full = h.length === 3 ? h.replace(/./g, (c) => c + c) : h;
-  const n = Number.parseInt(full, 16);
-  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-}
-
-const mix = (a: number, b: number, t: number): number => a + (b - a) * t;
 
 /* ------------------------------------------------------------------ *
  * The scalar field
@@ -190,364 +165,169 @@ export function buildField(map: GameMap): TerrainField {
 }
 
 /* ------------------------------------------------------------------ *
- * Raster: the painted backdrop
+ * Region rasters
+ *
+ * The regions are rasterised rather than traced as polygons. Marching squares
+ * looked attractive — crisp vector seams at any zoom — but an area that wraps
+ * around another produces nested loops whose winding cancels under either fill
+ * rule, and Germany's six areas ended up covering barely a third of the board
+ * as a result. A raster of the field cannot have that class of bug: every
+ * pixel is assigned exactly once, so coverage is total by construction.
+ *
+ * It also looks better. A washed raster gives the regions soft, painterly
+ * edges that sit *in* the plate's brushwork, where a hard vector boundary sat
+ * on top of it. The crisp structure on this board comes from the routes, the
+ * cost badges and the nameplates — the regions are meant to read as pigment.
  * ------------------------------------------------------------------ */
 
-/** Longest edge of the generated raster, in device pixels. */
-const RASTER_MAX = 1280;
+export interface RegionRaster {
+  /** Region hues, composited over the painted plate. */
+  tint: string;
+  /** Out-of-play treatment: drained, darkened and hatched (§1). */
+  scrim: string;
+  /** Visual centre of each area, in board units, for region labels. */
+  centroids: Record<string, { x: number; y: number }>;
+  /** True when at least one area is out of play. */
+  hasScrim: boolean;
+}
 
-const rasterCache = new Map<string, string>();
+/** Longest edge of the generated rasters, in pixels. */
+const REGION_RASTER_MAX = 640;
 
-/**
- * Paints the board backdrop and returns it as a `data:` URI.
- *
- * Deliberately synchronous and cached: it costs ~120-220 ms once per map, and
- * the caller runs it off the first paint so nothing blocks.
- */
-export function paintTerrain(map: GameMap): string {
-  const cached = rasterCache.get(map.id);
+const regionCache = new Map<string, RegionRaster>();
+
+export function regionRasters(map: GameMap, zone: readonly string[]): RegionRaster {
+  const cacheKey = `${map.id}|${[...zone].sort().join(',')}`;
+  const cached = regionCache.get(cacheKey);
   if (cached) return cached;
 
   const field = buildField(map);
   const aspect = map.aspectRatio;
-  const W = Math.round(aspect >= 1 ? RASTER_MAX : RASTER_MAX * aspect);
-  const H = Math.round(aspect >= 1 ? RASTER_MAX / aspect : RASTER_MAX);
+  const W = Math.max(2, Math.round(aspect >= 1 ? REGION_RASTER_MAX : REGION_RASTER_MAX * aspect));
+  const H = Math.max(2, Math.round(aspect >= 1 ? REGION_RASTER_MAX / aspect : REGION_RASTER_MAX));
   const sx = field.width / W;
   const sy = field.height / H;
 
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return '';
+  const rgb = map.areas.map((a) => {
+    const raw = a.color.replace('#', '');
+    const full = raw.length === 3 ? raw.replace(/./g, (c) => c + c) : raw;
+    const n = Number.parseInt(full, 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  });
+  const inZone = map.areas.map((a) => zone.includes(a.id));
 
-  const areaRgb = map.areas.map((a) => hexToRgb(a.color));
+  const make = (): [HTMLCanvasElement, CanvasRenderingContext2D] | null => {
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const ctx = c.getContext('2d');
+    return ctx ? [c, ctx] : null;
+  };
+  const tintPair = make();
+  const scrimPair = make();
+  if (!tintPair || !scrimPair) {
+    return { tint: '', scrim: '', centroids: {}, hasScrim: false };
+  }
 
-  /* --- pass 1: height field, so lighting has real normals to work with --- */
-  const height = new Float32Array(W * H);
   const areaAt = new Int8Array(W * H);
-  const edgeAt = new Float32Array(W * H);
+  const coastAt = new Float32Array(W * H);
+  const sums = map.areas.map(() => ({ x: 0, y: 0, n: 0 }));
 
   for (let py = 0; py < H; py++) {
     for (let px = 0; px < W; px++) {
-      const x = px * sx;
-      const y = py * sy;
-      const s = field.sample(x, y);
+      const s = field.sample(px * sx, py * sy);
       const i = py * W + px;
       areaAt[i] = s.area;
-      edgeAt[i] = s.edge;
-
-      const coast = smoothstep(field.seaDistance, field.seaDistance - 34, s.d1);
-      const ridge = smoothstep(0, 58, s.edge);
-      const detail = fbm(x / 46, y / 46, 7, 5) * 0.5 + fbm(x / 13, y / 13, 61, 3) * 0.16;
-      height[i] =
-        s.area < 0
-          ? -0.55 + detail * 0.1
-          : coast * (0.55 + 0.45 * ridge) + detail * 0.34;
+      // Feather the last stretch before the coast so the wash fades out
+      // rather than ending on a hard rim.
+      coastAt[i] = s.area < 0 ? 0 : clamp((field.seaDistance - s.d1) / 44, 0, 1);
+      if (s.area >= 0) {
+        const acc = sums[s.area];
+        if (acc) {
+          acc.x += px * sx;
+          acc.y += py * sy;
+          acc.n++;
+        }
+      }
     }
   }
 
-  /* --- pass 2: shade and paint --- */
-  const img = ctx.createImageData(W, H);
-  const data = img.data;
-  // Key light from the upper left, the convention every painted board uses.
-  const LX = -0.62;
-  const LY = -0.72;
-  const LZ = 0.52;
-  const shadeScale = 210 / RASTER_MAX;
+  const tintImg = tintPair[1].createImageData(W, H);
+  const scrimImg = scrimPair[1].createImageData(W, H);
+  const t = tintImg.data;
+  const k = scrimImg.data;
+
+  /*
+   * Region identity is carried by a tinted RIM, not by flooding the fill.
+   *
+   * A full-chroma wash over the whole region is a direct QUALITY-BAR V3
+   * failure: it puts a red ground under the red seat's houses, a blue ground
+   * under blue's, and so on, and no keyline or sigil fully recovers a fill
+   * colour that has been neutralised by an identically-hued background. So the
+   * area colour runs at full strength only in a band along each border, and
+   * decays to a near-neutral whisper across the interior — which is where the
+   * houses actually sit.
+   */
+  const RIM_UNITS = 34;
+  const INTERIOR_ALPHA = 0.17;
+  const RIM_ALPHA = 0.66;
+  const INTERIOR_DESAT = 0.62;
 
   for (let py = 0; py < H; py++) {
     for (let px = 0; px < W; px++) {
       const i = py * W + px;
-      const xm = px > 0 ? i - 1 : i;
-      const xp = px < W - 1 ? i + 1 : i;
-      const ym = py > 0 ? i - W : i;
-      const yp = py < H - 1 ? i + W : i;
-      const dhx = (height[xp]! - height[xm]!) / shadeScale;
-      const dhy = (height[yp]! - height[ym]!) / shadeScale;
-      const nl = Math.hypot(dhx, dhy, 1) || 1;
-      const lambert = clamp((-dhx * LX + -dhy * LY + LZ) / nl, 0, 1.35);
-
       const area = areaAt[i]!;
-      const edge = edgeAt[i]!;
-      const x = px * sx;
-      const y = py * sy;
+      if (area < 0) continue;
+      const o = i * 4;
 
-      let r: number;
-      let g: number;
-      let b: number;
+      const colour = rgb[area] ?? { r: 128, g: 128, b: 128 };
+      const feather = coastAt[i]!;
+      // `edge` is already the distance from the border with the nearest other
+      // area, so the rim ramp comes for free.
+      const rim = 1 - smoothstep(0, RIM_UNITS, edgeAt[i]!);
 
-      if (area < 0) {
-        /* --- sea: deep slate with faint bathymetric rings --- */
-        const off = field.sample(x, y).d1 - field.seaDistance;
-        const depth = smoothstep(0, 120, off);
-        const ringPhase = (off / 30) % 1;
-        const ring = Math.pow(1 - Math.abs(ringPhase * 2 - 1), 8) * 0.14;
-        const churn = fbm(x / 70, y / 70, 133, 4) * 0.5 + 0.5;
-        r = mix(15, 6, depth) + ring * 30 + churn * 5;
-        g = mix(24, 10, depth) + ring * 40 + churn * 7;
-        b = mix(35, 17, depth) + ring * 50 + churn * 9;
-      } else {
-        const base = areaRgb[area] ?? { r: 120, g: 120, b: 120 };
+      const lum = colour.r * 0.299 + colour.g * 0.587 + colour.b * 0.114;
+      const desat = INTERIOR_DESAT * (1 - rim);
+      const r = colour.r + (lum - colour.r) * desat;
+      const g = colour.g + (lum - colour.g) * desat;
+      const b = colour.b + (lum - colour.b) * desat;
 
-        /*
-         * Pigment variation across three scales. The long wavelength is what
-         * actually reads at fit zoom — fine grain alone goes sub-pixel once the
-         * board is scaled into its cell and the regions flatten into vector
-         * fills, which is exactly the failure V2 calls out.
-         */
-        const mottleFar = fbm(x / 260, y / 260, 71, 3);
-        const mottleMid = fbm(x / 88, y / 88, 3, 4);
-        const mottleNear = fbm(x / 22, y / 22, 41, 3);
-        const pigment = 1 + mottleFar * 0.26 + mottleMid * 0.15 + mottleNear * 0.06;
+      t[o] = r;
+      t[o + 1] = g;
+      t[o + 2] = b;
+      t[o + 3] = 255 * feather * (INTERIOR_ALPHA + (RIM_ALPHA - INTERIOR_ALPHA) * rim);
 
-        // Regions are lighter in their interior and sink into ink at the seams.
-        const interior = smoothstep(0, 78, edge);
-        const seam = smoothstep(0, 10, edge);
-
-        r = base.r * pigment;
-        g = base.g * pigment;
-        b = base.b * pigment;
-
-        // Warm the interior toward parchment, cool the rim toward slate.
-        r = mix(r * 0.66 + 26, r * 0.98 + 34, interior);
-        g = mix(g * 0.66 + 30, g * 0.98 + 36, interior);
-        b = mix(b * 0.66 + 38, b * 0.98 + 40, interior);
-
-        // Ink seep along the border.
-        const ink = 0.42 + 0.58 * seam;
-        r *= ink;
-        g *= ink;
-        b *= ink;
-
-        // Coastal sand rim where the land meets the sea.
-        const shore = smoothstep(field.seaDistance - 18, field.seaDistance, field.sample(x, y).d1);
-        r = mix(r, 126, shore * 0.55);
-        g = mix(g, 114, shore * 0.55);
-        b = mix(b, 92, shore * 0.55);
-
-        // Key light. A wide response range is what makes the relief visible.
-        const light = 0.42 + 1.02 * lambert;
-        r *= light;
-        g *= light;
-        b *= light;
-      }
-
-      /*
-       * Dissolve the raster's own rectangle into the app background at the
-       * edges, so the board reads as a painted landmass rather than a
-       * photograph pasted onto the panel.
-       */
-      const u = px / W;
-      const v = py / H;
-      const fade = smoothstep(0, 0.052, Math.min(Math.min(u, 1 - u), Math.min(v, 1 - v)));
-      r = mix(7, r, fade);
-      g = mix(11, g, fade);
-      b = mix(16, b, fade);
-
-      // Paper grain, deterministic so the board never shimmers.
-      const grain = (hash2(px, py, 909) - 0.5) * 13;
-      data[i * 4] = clamp(r + grain, 0, 255);
-      data[i * 4 + 1] = clamp(g + grain, 0, 255);
-      data[i * 4 + 2] = clamp(b + grain, 0, 255);
-      data[i * 4 + 3] = 255;
-    }
-  }
-
-  ctx.putImageData(img, 0, 0);
-
-  // A gentle vignette so the board sits in its frame instead of floating.
-  const vg = ctx.createRadialGradient(W / 2, H * 0.44, Math.min(W, H) * 0.42, W / 2, H / 2, Math.max(W, H) * 0.8);
-  vg.addColorStop(0, 'rgba(0,0,0,0)');
-  vg.addColorStop(1, 'rgba(2,5,9,0.34)');
-  ctx.fillStyle = vg;
-  ctx.fillRect(0, 0, W, H);
-
-  const url = canvas.toDataURL('image/jpeg', 0.9);
-  rasterCache.set(map.id, url);
-  return url;
-}
-
-/* ------------------------------------------------------------------ *
- * Vector: region outlines via marching squares
- * ------------------------------------------------------------------ */
-
-type Loop = { x: number; y: number }[];
-
-const key = (x: number, y: number): string => `${Math.round(x * 4)}:${Math.round(y * 4)}`;
-
-/**
- * Marching squares over a boolean grid, producing closed loops in board units.
- * The standard 16-case table, with the two ambiguous saddles resolved
- * consistently (case 5 / 10) so loops always close.
- */
-function marchingSquares(
-  inside: Uint8Array,
-  cols: number,
-  rows: number,
-  cell: number,
-): Loop[] {
-  const segs: [number, number, number, number][] = [];
-  const at = (x: number, y: number): number => (x < 0 || y < 0 || x >= cols || y >= rows ? 0 : inside[y * cols + x]!);
-
-  for (let y = -1; y < rows; y++) {
-    for (let x = -1; x < cols; x++) {
-      const tl = at(x, y);
-      const tr = at(x + 1, y);
-      const br = at(x + 1, y + 1);
-      const bl = at(x, y + 1);
-      const code = (tl << 3) | (tr << 2) | (br << 1) | bl;
-      if (code === 0 || code === 15) continue;
-
-      const cx = (x + 0.5) * cell;
-      const cy = (y + 0.5) * cell;
-      const N: [number, number] = [cx + cell / 2, cy];
-      const E: [number, number] = [cx + cell, cy + cell / 2];
-      const S: [number, number] = [cx + cell / 2, cy + cell];
-      const Wp: [number, number] = [cx, cy + cell / 2];
-      const push = (a: [number, number], b: [number, number]): void => {
-        segs.push([a[0], a[1], b[0], b[1]]);
-      };
-
-      switch (code) {
-        case 1: push(Wp, S); break;
-        case 2: push(S, E); break;
-        case 3: push(Wp, E); break;
-        case 4: push(N, E); break;
-        case 5: push(Wp, N); push(S, E); break;
-        case 6: push(N, S); break;
-        case 7: push(Wp, N); break;
-        case 8: push(N, Wp); break;
-        case 9: push(N, S); break;
-        case 10: push(N, E); push(S, Wp); break;
-        case 11: push(N, E); break;
-        case 12: push(E, Wp); break;
-        case 13: push(E, S); break;
-        case 14: push(S, Wp); break;
-        default: break;
+      if (!inZone[area]) {
+        // §1: unusable for the entire game. Drained, dimmed and hatched.
+        const hatch = (px + py) % 9 < 3 ? 1 : 0;
+        k[o] = 24 + hatch * 8;
+        k[o + 1] = 30 + hatch * 9;
+        k[o + 2] = 39 + hatch * 11;
+        k[o + 3] = (192 + hatch * 44) * feather;
       }
     }
   }
 
-  /* Chain the segments into loops by matching endpoints. */
-  const starts = new Map<string, number[]>();
-  segs.forEach((s, i) => {
-    const k = key(s[0], s[1]);
-    const list = starts.get(k);
-    if (list) list.push(i);
-    else starts.set(k, [i]);
+  tintPair[1].putImageData(tintImg, 0, 0);
+  scrimPair[1].putImageData(scrimImg, 0, 0);
+
+  const centroids: Record<string, { x: number; y: number }> = {};
+  map.areas.forEach((a, i) => {
+    const acc = sums[i];
+    centroids[a.id] =
+      acc && acc.n > 0
+        ? { x: acc.x / acc.n, y: acc.y / acc.n }
+        : { x: field.width / 2, y: BOARD_H / 2 };
   });
 
-  const used = new Array<boolean>(segs.length).fill(false);
-  const loops: Loop[] = [];
-
-  for (let i = 0; i < segs.length; i++) {
-    if (used[i]) continue;
-    used[i] = true;
-    const first = segs[i]!;
-    const loop: Loop = [{ x: first[0], y: first[1] }, { x: first[2], y: first[3] }];
-    let cursor = key(first[2], first[3]);
-
-    for (let guard = 0; guard < segs.length + 4; guard++) {
-      const candidates = starts.get(cursor);
-      let next = -1;
-      if (candidates) {
-        for (const c of candidates) {
-          if (!used[c]) {
-            next = c;
-            break;
-          }
-        }
-      }
-      if (next < 0) break;
-      used[next] = true;
-      const s = segs[next]!;
-      loop.push({ x: s[2], y: s[3] });
-      cursor = key(s[2], s[3]);
-    }
-    if (loop.length > 6) loops.push(loop);
-  }
-
-  return loops;
-}
-
-/** Chaikin corner-cutting: turns the stair-stepped march into a smooth curve. */
-function chaikin(loop: Loop, iterations: number): Loop {
-  let pts = loop;
-  for (let n = 0; n < iterations; n++) {
-    const out: Loop = [];
-    for (let i = 0; i < pts.length; i++) {
-      const a = pts[i]!;
-      const b = pts[(i + 1) % pts.length]!;
-      out.push({ x: a.x * 0.75 + b.x * 0.25, y: a.y * 0.75 + b.y * 0.25 });
-      out.push({ x: a.x * 0.25 + b.x * 0.75, y: a.y * 0.25 + b.y * 0.75 });
-    }
-    pts = out;
-  }
-  return pts;
-}
-
-function loopToPath(loop: Loop): string {
-  if (loop.length < 3) return '';
-  let d = `M${loop[0]!.x.toFixed(1)} ${loop[0]!.y.toFixed(1)}`;
-  for (let i = 1; i < loop.length; i++) d += `L${loop[i]!.x.toFixed(1)} ${loop[i]!.y.toFixed(1)}`;
-  return `${d}Z`;
-}
-
-export interface AreaOutline {
-  areaId: string;
-  /** One `d` string covering every loop belonging to the area. */
-  d: string;
-  /** Visual centre, for the region nameplate. */
-  centroid: { x: number; y: number };
-}
-
-const outlineCache = new Map<string, AreaOutline[]>();
-
-/**
- * Traces every region boundary off the same field the raster uses, so the ink
- * lines land exactly on the painted seams.
- */
-export function areaOutlines(map: GameMap): AreaOutline[] {
-  const cached = outlineCache.get(map.id);
-  if (cached) return cached;
-
-  const field = buildField(map);
-  const CELL = 7;
-  const cols = Math.ceil(field.width / CELL) + 2;
-  const rows = Math.ceil(field.height / CELL) + 2;
-
-  const grid = new Int8Array(cols * rows);
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
-      grid[y * cols + x] = field.sample((x + 0.5) * CELL, (y + 0.5) * CELL).area;
-    }
-  }
-
-  const inside = new Uint8Array(cols * rows);
-  const out: AreaOutline[] = map.areas.map((area, index) => {
-    for (let i = 0; i < grid.length; i++) inside[i] = grid[i] === index ? 1 : 0;
-    const loops = marchingSquares(inside, cols, rows, CELL)
-      .map((l) => chaikin(l, 2))
-      .filter((l) => l.length > 20);
-
-    let sx = 0;
-    let sy = 0;
-    let n = 0;
-    for (const l of loops) {
-      for (const p of l) {
-        sx += p.x;
-        sy += p.y;
-        n++;
-      }
-    }
-    return {
-      areaId: area.id,
-      d: loops.map(loopToPath).join(' '),
-      centroid: n > 0 ? { x: sx / n, y: sy / n } : { x: field.width / 2, y: BOARD_H / 2 },
-    };
-  });
-
-  outlineCache.set(map.id, out);
+  const out: RegionRaster = {
+    tint: tintPair[0].toDataURL(),
+    scrim: scrimPair[0].toDataURL(),
+    centroids,
+    hasScrim: inZone.some((v) => !v),
+  };
+  if (regionCache.size > 8) regionCache.clear();
+  regionCache.set(cacheKey, out);
   return out;
 }
+
