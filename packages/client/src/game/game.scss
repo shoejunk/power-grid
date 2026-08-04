@@ -32,40 +32,72 @@
  * LAYOUT — the match grid
  * ==================================================================== */
 
+/*
+ * Germany is a PORTRAIT board (aspect 0.78), so it is given a portrait cell.
+ *
+ * The old frame stacked the rules log under the board in the centre column and
+ * let that column take all the leftover width: the board got a 1218x701 cell on
+ * a 1920 screen, `preserveAspectRatio: meet` letterboxed a 547x701 map into it,
+ * and 48-55% of the cell was dead. That also starved the label solver, because
+ * every type size on the board is derived from how many screen pixels one board
+ * unit is worth — city names bottomed out on their 8.2 px floor.
+ *
+ * Two changes, together:
+ *   · the log moves under the turn-order rail, into the LEFT column, so the
+ *     board owns the full height of the frame;
+ *   · the centre column is sized to the map's aspect. `--pg-board-w` is written
+ *     by the board renderer from its own measured cell height (see
+ *     board/GameBoard.tsx); the value here is only the pre-mount fallback.
+ *
+ * The rails then split the remainder as `fr`, so a larger monitor buys a wider
+ * log and wider markets instead of a wider empty margin — the benchmark's
+ * documented weakness, which we are not going to reproduce.
+ */
 .pg-game__grid.pg-gamex__grid {
-  grid-template-columns: 264px minmax(0, 1fr) 398px;
-  grid-template-rows: auto minmax(0, 1fr) 178px;
+  /* Read back by the board renderer so its clamp and this grid agree. */
+  --pg-rail-min: 264px;
+  --pg-phase-min: 398px;
+  --pg-board-w: minmax(0, 1.5fr);
+
+  grid-template-columns:
+    minmax(var(--pg-rail-min), 1fr)
+    var(--pg-board-w)
+    minmax(var(--pg-phase-min), 1.32fr);
+  grid-template-rows: auto auto minmax(150px, 1fr);
   grid-template-areas:
-    'hud hud hud'
+    'hud  hud   hud'
     'rail board phase'
-    'rail log phase';
+    'log  board phase';
   gap: 10px;
   padding: 10px;
 }
 
 @media (max-width: 1599.98px) {
   .pg-game__grid.pg-gamex__grid {
-    grid-template-columns: 236px minmax(0, 1fr) 364px;
-    grid-template-rows: auto minmax(0, 1fr) 158px;
+    --pg-rail-min: 236px;
+    --pg-phase-min: 364px;
   }
 }
 
 /* ------------------------------------------------------------------ *
  * Short viewports (1280x720, 1366x768, laptop 16:10).
  *
- * The two market cards and the log are fixed furniture; the phase panel is
- * where the player acts. Every pixel reclaimed here goes to the phase panel,
- * so a 720p desktop still gets a usable panel rather than a scroll stub.
+ * Height is the scarce axis here, and the rules log is the panel that rewards
+ * it, so the turn-order rail gives up its slack rather than the log.
  * ------------------------------------------------------------------ */
 @media (max-height: 860px) {
   .pg-game__grid.pg-gamex__grid {
-    grid-template-rows: auto minmax(0, 1fr) 108px;
+    grid-template-rows: auto auto minmax(132px, 1fr);
+  }
+  .pg-game .pg-game__rail {
+    max-height: clamp(150px, 30vh, 300px);
   }
 }
 
 /* Below the supported desktop floor we stack rather than clip. */
 @media (max-width: 1023.98px) {
   .pg-game__grid.pg-gamex__grid {
+    --pg-board-w: minmax(0, 1fr);
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(280px, 1fr) auto auto;
     grid-template-areas:
@@ -75,6 +107,9 @@
       'log';
     overflow-y: auto;
   }
+  .pg-game .pg-game__log {
+    min-height: 220px;
+  }
 }
 
 .pg-mount--phase,
@@ -83,18 +118,61 @@
   min-width: 0;
 }
 
-/* The right rail: two markets that never move, then the phase panel. */
+/*
+ * The left column carries the turn-order rail on top of the rules log. The
+ * rail is bounded so the log — the panel that explains every automatic
+ * transition, and the one a player actually reads — always gets a usable share
+ * of the column instead of the 30 px stub it had at 720p.
+ */
+.pg-game .pg-game__rail {
+  max-height: clamp(168px, 32vh, 420px);
+}
+.pg-game .pg-game__log {
+  min-height: 0;
+}
+
+/*
+ * The right rail: two markets that never move, then the phase panel.
+ *
+ * The phase panel is the only region the player ACTS in, so its action bar is
+ * the one thing on this screen that may never leave the viewport. The rail is
+ * therefore a hard-bounded flex column:
+ *
+ *   · `--pg-phase-floor` of it is reserved for the phase panel, always;
+ *   · the two market cards take what is left and scroll internally if the
+ *     frame is too short for them — a market you have to scroll two lines to
+ *     read is a nuisance, a bid button below the fold is unplayable;
+ *   · the rail itself never overflows, so `.pg-gphase__foot` is always inside
+ *     the frame without needing sticky positioning.
+ *
+ * This replaces a `min-height: 258px` on the phase block that, combined with
+ * two unshrinkable market cards, forced 607 px of content into a 539 px track
+ * at 1280x720 and pushed PASS/BID to y=713 in a 720 px viewport.
+ */
 .pg-grr {
+  --pg-phase-floor: 236px;
   flex: 1;
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
   gap: var(--pg-gcard-gap);
+  overflow: hidden;
+}
+/* The market decks: they yield height before the phase panel does. */
+.pg-grr__decks {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-gcard-gap);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
 }
 .pg-grr__phase {
   flex: 1 1 auto;
-  min-height: 168px;
+  min-height: min(var(--pg-phase-floor), 100%);
   display: flex;
 }
 .pg-grr__phase > .pg-panel {
@@ -2352,7 +2430,12 @@
   .pg-gphase__body {
     gap: 7px;
   }
-  .pg-grr__phase {
-    min-height: 258px;
+  /*
+   * Short frames get a SMALLER floor, not a bigger one. The old 258 px here
+   * was the ship blocker: it was the tallest reservation in the file and it
+   * applied exactly where there was least room.
+   */
+  .pg-grr {
+    --pg-phase-floor: 210px;
   }
 }

@@ -184,6 +184,28 @@ describe('§10 Step 3 drawn during Phase 5', () => {
     expect(order.indexOf('marketRefilled')).toBeLessThan(order.indexOf('step3CardDrawn'));
   });
 
+  it('uses the Step 2 refill column when Step 3 forces Step 2 from Step 1', () => {
+    /*
+     * Regression, found by audit. §10: "Use Step 2 refill values one final time
+     * for the current bureaucracy." The Step 3 card surfaces during the
+     * plant-market update, which §9 resolves AFTER the resupply — so the refill
+     * was running against the Step 1 column and under-supplying the market,
+     * once and permanently.
+     *
+     * The neighbouring test above starts already in Step 2, which is precisely
+     * why it never caught this; this one starts in Step 1.
+     */
+    const t = bureaucracyDraw(1);
+    const refills = findLog(t, 'marketRefilled');
+    expect(refills).toHaveLength(1);
+    expect(refills[0]!.data).toMatchObject({ step: 2 });
+
+    // §9 subphase order is still respected: resupply is logged before the
+    // plant-market update that reveals the card.
+    const order = t.log.map((l) => (l.data as { event?: string } | undefined)?.event);
+    expect(order.indexOf('marketRefilled')).toBeLessThan(order.indexOf('step3CardDrawn'));
+  });
+
   it('applies the Step 2 changes first when Step 3 arrives before Step 2', () => {
     const t = bureaucracyDraw(1);
     expect(t.step2Triggered).toBe(true);

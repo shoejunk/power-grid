@@ -85,6 +85,54 @@ export function GameBoard(): JSX.Element {
     [gameState],
   );
 
+  /* --- the board asks the match grid for a cell of its own shape ---
+   *
+   * Germany is portrait (aspect 0.78). Handed a landscape cell, `meet` draws
+   * the map into a letterbox and throws away roughly half the pixels it was
+   * given — which is exactly the criticism levelled at the benchmark, and it
+   * also starves the label solver, because every type size on the board is
+   * derived from how many screen pixels one board unit is worth.
+   *
+   * So the centre column is sized to the map instead. The cell HEIGHT is set
+   * by the grid's rows and is independent of the column widths, so writing the
+   * width back from the measured height is not circular: it converges on the
+   * first pass and then reports the same value forever. The two rails absorb
+   * whatever is left as `fr`, so extra monitor width becomes a wider log and
+   * wider markets rather than a wider empty margin.
+   */
+  const aspect = map?.aspectRatio ?? null;
+  useLayoutEffect(() => {
+    const el = hostRef.current;
+    if (!el || aspect === null) return;
+    const grid = el.closest<HTMLElement>('.pg-game__grid');
+    if (!grid) return;
+
+    // Below the single-column breakpoint the grid stacks and owns its own
+    // track sizing; an inline width there would fight the stylesheet.
+    if (box.h < 40 || window.innerWidth < 1024) {
+      grid.style.removeProperty('--pg-board-w');
+      return;
+    }
+
+    const cs = getComputedStyle(grid);
+    const px = (v: string, fallback: number): number => {
+      const n = Number.parseFloat(v);
+      return Number.isFinite(n) ? n : fallback;
+    };
+    const railMin = px(cs.getPropertyValue('--pg-rail-min'), 244);
+    const phaseMin = px(cs.getPropertyValue('--pg-phase-min'), 356);
+    const gap = px(cs.columnGap, 12);
+    const inner =
+      grid.clientWidth - px(cs.paddingLeft, 0) - px(cs.paddingRight, 0) - gap * 2;
+
+    // +2 px of slack absorbs sub-pixel rounding so the fit stays height-bound
+    // (the map keeps its full height) rather than flipping to width-bound.
+    const ideal = box.h * aspect + 2;
+    const widest = Math.max(320, inner - railMin - phaseMin);
+    const w = Math.round(Math.min(Math.max(ideal, 320), widest));
+    grid.style.setProperty('--pg-board-w', `${w}px`);
+  }, [aspect, box.h, box.w]);
+
   const theme = useMemo(() => boardTheme(), []);
 
   /*

@@ -123,6 +123,17 @@ function setupDefault(
   state: GameState,
   legal: ReturnType<typeof legalActions>,
 ): GameAction | null {
+  /*
+   * Zone selection MUST have a default. If the host drops between starting the
+   * game and picking the zone, nobody else is permitted to choose (§2 gives it
+   * to the host) and the table is stranded forever — the stale state is then
+   * faithfully persisted, so even a server restart cannot recover it.
+   *
+   * An empty `areas` array is a legal request for the engine to grow a random
+   * contiguous zone from the seeded stream, which keeps this deterministic.
+   */
+  if (legal.zoneRequired) return { type: 'selectZone', areas: [] };
+
   if (legal.startCityChoices.length > 0) {
     return { type: 'markStartCity', cityId: pickCity(state, legal.startCityChoices) };
   }

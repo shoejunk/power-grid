@@ -42,15 +42,22 @@ export function PhaseRail(): JSX.Element {
 
   return (
     <div className="pg-grr">
-      <PlantMarket
-        {...(nominating
-          ? { nominatable: legal.nominatablePlants, onSelect: (id: number) => setNominee(id) }
-          : {})}
-        selectedPlantId={nominee}
-        auctionPlantId={state.auction?.plantId ?? null}
-        money={me?.money ?? 0}
-      />
-      <ResourceMarket draft={buying ? draft : null} />
+      {/*
+        The two market cards share one scroll container. They are reference
+        material: if the frame is too short for everything, they give up height
+        (and scroll) so the phase panel below keeps its action bar on screen.
+      */}
+      <div className="pg-grr__decks">
+        <PlantMarket
+          {...(nominating
+            ? { nominatable: legal.nominatablePlants, onSelect: (id: number) => setNominee(id) }
+            : {})}
+          selectedPlantId={nominee}
+          auctionPlantId={state.auction?.plantId ?? null}
+          money={me?.money ?? 0}
+        />
+        <ResourceMarket draft={buying ? draft : null} />
+      </div>
       <div className="pg-grr__phase">
         <PhaseBody nominee={nominee} setNominee={setNominee} draft={draft} setDraft={setDraft} />
       </div>

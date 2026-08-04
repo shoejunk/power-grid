@@ -58,6 +58,48 @@ function started(opts: Parameters<typeof fresh>[0] = {}): GameState {
   return applyAction(s, s.hostId, { type: 'selectZone', areas: randomZone(s) }, NOW);
 }
 
+describe('defaultActionFor — setup stages', () => {
+  /*
+   * Regression: an audit found that a host dropping between "start game" and
+   * "choose zone" stranded the table permanently — nobody else may choose
+   * (§2 gives it to the host), no default action was offered, and the stale
+   * state persisted across a server restart.
+   *
+   * The original version of this suite could not have caught it: its `started`
+   * helper applied `selectZone` BEFORE handing the state to `autoplay`, so the
+   * one setup stage with no default was never reached. These tests start from
+   * a genuinely fresh game instead.
+   */
+  it('offers a legal zone selection when the host must choose', () => {
+    const s = fresh({ playerCount: 3, seed: 'AUTO-ZONE' });
+    expect(s.phase).toBe('setup');
+    expect(s.setupStage).toBe('zoneSelection');
+    expect(legalActions(s, s.hostId).zoneRequired).toBe(true);
+
+    const action = defaultActionFor(s, s.hostId);
+    expect(action).toEqual({ type: 'selectZone', areas: [] });
+    expect(validateAction(s, s.hostId, action!).ok).toBe(true);
+  });
+
+  it('drives a game from creation through setup with no human input at all', () => {
+    const { state, turns } = autoplay(fresh({ playerCount: 4, seed: 'AUTO-FULLSETUP' }), 200);
+    expect(state.zone.length).toBeGreaterThan(0);
+    expect(state.phase).not.toBe('setup');
+    expect(turns).toBeGreaterThan(10);
+  });
+
+  it('covers the experienced-start setup stage from creation', () => {
+    const { state } = autoplay(
+      fresh({ playerCount: 3, seed: 'AUTO-EXPSETUP', experiencedStart: true }),
+      200,
+    );
+    expect(state.phase).not.toBe('setup');
+    for (const p of Object.values(state.players)) {
+      if (!p.isTrust) expect(p.markedStartCity).toBeTruthy();
+    }
+  });
+});
+
 describe('defaultActionFor — never deadlocks', () => {
   it('§6 supplies a legal action during the first-round mandatory purchase', () => {
     const s = started({ playerCount: 3, seed: 'AUTOPLAY-R1' });

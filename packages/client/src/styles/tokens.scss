@@ -151,48 +151,74 @@ $pg-player-colors: ('red', 'blue', 'green', 'yellow', 'purple', 'black');
   /* ---------------------------------------------------------------
    * 6. PLAYER COLOURS  (PlayerColor union from @pg/shared)
    * ---------------------------------------------------------------
-   * Chosen for colour-vision-deficiency separation: the six hues are
-   * additionally staggered in lightness (L* ≈ 52 / 60 / 70 / 84 / 58 /
-   * 46) so a deuteranope or protanope still gets an unambiguous
-   * ordering. Every surface that encodes ownership by colour ALSO
-   * carries the player's sigil glyph, so colour is never the only cue.
+   * Solved, not asserted. The six seats were optimised against the
+   * Machado (2009) severity-1.0 simulations for deuteranopia,
+   * protanopia and tritanopia; the objective was to maximise the
+   * SMALLEST pairwise CIE76 ΔE across all 15 pairs in all three
+   * simulations, then to spread L*.
+   *
+   * Result — worst pair of 45 is blue/purple under protanopia at
+   * ΔE 26.1, against a floor of 20. Measured L* under simulation:
+   *
+   *   seat     hex      L* normal  deut  prot  trit
+   *   blue     #1f4cd0     37.9    38.4  43.5  42.9
+   *   red      #d3232d     46.0    51.0  36.1  48.9
+   *   purple   #bf61c9     55.9    57.7  53.4  56.6
+   *   black    #929ca7     63.9    63.7  64.4  63.9
+   *   green    #3bc872     71.9    69.9  74.3  71.7
+   *   yellow   #ffca46     83.9    85.7  80.8  81.1
+   *
+   * Smallest L* gap between any two seats, in any simulation, is 5.9 —
+   * so lightness alone orders the seats even with no hue perception.
+   * The previous palette failed this badly: blue #3d8bff vs purple
+   * #b06bff were ΔE 6.5 (deut) / 7.5 (prot) with L* 56 / 59, i.e. one
+   * seat to a deuteranope. Re-run the check with
+   * src/art/generate/harness.html before touching any value here.
+   *
+   * `-ink` is the foreground for text drawn ON the seat colour (avatar
+   * initials, player-chip glyphs). Each was picked to clear 4.5:1
+   * against the whole avatar ramp (base +8% white → base −6% black);
+   * worst is purple at 4.73:1.
+   *
+   * Every surface that encodes ownership by colour ALSO carries the
+   * player's sigil glyph, so colour is never the only cue.
    * --------------------------------------------------------------- */
-  --pg-player-red: #e8414a;
-  --pg-player-red-light: #ff8087;
-  --pg-player-red-dark: #7d1319;
-  --pg-player-red-glow: rgba(232, 65, 74, 0.5);
+  --pg-player-red: #d3232d;
+  --pg-player-red-light: #f5808a;
+  --pg-player-red-dark: #7a1017;
+  --pg-player-red-glow: rgba(211, 35, 45, 0.5);
   --pg-player-red-ink: #ffffff;
 
-  --pg-player-blue: #3d8bff;
-  --pg-player-blue-light: #8fbcff;
-  --pg-player-blue-dark: #14396f;
-  --pg-player-blue-glow: rgba(61, 139, 255, 0.5);
+  --pg-player-blue: #1f4cd0;
+  --pg-player-blue-light: #7f9bf0;
+  --pg-player-blue-dark: #10276e;
+  --pg-player-blue-glow: rgba(31, 76, 208, 0.5);
   --pg-player-blue-ink: #ffffff;
 
-  --pg-player-green: #2fc46f;
-  --pg-player-green-light: #78e6a5;
-  --pg-player-green-dark: #12592f;
-  --pg-player-green-glow: rgba(47, 196, 111, 0.5);
-  --pg-player-green-ink: #052112;
+  --pg-player-green: #3bc872;
+  --pg-player-green-light: #7ee3a0;
+  --pg-player-green-dark: #10613a;
+  --pg-player-green-glow: rgba(59, 200, 114, 0.5);
+  --pg-player-green-ink: #0b0f14;
 
-  --pg-player-yellow: #ffc93c;
-  --pg-player-yellow-light: #ffe391;
-  --pg-player-yellow-dark: #8a6208;
-  --pg-player-yellow-glow: rgba(255, 201, 60, 0.5);
-  --pg-player-yellow-ink: #2a1c00;
+  --pg-player-yellow: #ffca46;
+  --pg-player-yellow-light: #ffe395;
+  --pg-player-yellow-dark: #8a6a12;
+  --pg-player-yellow-glow: rgba(255, 202, 70, 0.5);
+  --pg-player-yellow-ink: #0b0f14;
 
-  --pg-player-purple: #b06bff;
-  --pg-player-purple-light: #d5aeff;
-  --pg-player-purple-dark: #52208f;
-  --pg-player-purple-glow: rgba(176, 107, 255, 0.5);
-  --pg-player-purple-ink: #ffffff;
+  --pg-player-purple: #bf61c9;
+  --pg-player-purple-light: #e0a3e8;
+  --pg-player-purple-dark: #5a2262;
+  --pg-player-purple-glow: rgba(191, 97, 201, 0.5);
+  --pg-player-purple-ink: #0b0f14;
 
-  /* "Black" reads as gunmetal so it stays visible on a dark board. */
-  --pg-player-black: #78889b;
-  --pg-player-black-light: #b3c0cf;
-  --pg-player-black-dark: #262d36;
-  --pg-player-black-glow: rgba(120, 136, 155, 0.5);
-  --pg-player-black-ink: #0a0e13;
+  /* "Black" reads as pewter so it stays visible on a dark board. */
+  --pg-player-black: #929ca7;
+  --pg-player-black-light: #c3ccd6;
+  --pg-player-black-dark: #3a4048;
+  --pg-player-black-glow: rgba(146, 156, 167, 0.5);
+  --pg-player-black-ink: #0b0f14;
 
   /* The Trust (2p variant) is deliberately outside the player palette. */
   --pg-trust: #93a2b5;

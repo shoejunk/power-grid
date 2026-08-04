@@ -1246,24 +1246,57 @@
   font-size: var(--pg-text-2xs);
 }
 
+/*
+ * The match grid.
+ *
+ * Germany is a PORTRAIT board (aspect 0.78). The previous layout handed it a
+ * landscape cell — a full-width centre column with the rules log stacked under
+ * it — and `preserveAspectRatio: meet` then letterboxed the map into roughly
+ * half of that cell, which in turn starved the label solver of pixels and drove
+ * city names down to 8.2 px. Two changes fix it together:
+ *
+ *   1. The rules log moves under the turn-order rail, into the LEFT column, so
+ *      the board owns the full height of the frame instead of two thirds of it.
+ *   2. The centre column is sized to the map's own aspect ratio. `--pg-board-w`
+ *      is written every layout pass by the board renderer (it already measures
+ *      its own cell) as `round(cellHeight * mapAspect)`, so the map fills its
+ *      cell rather than sitting in a letterbox. The value below is only the
+ *      fallback used before the renderer has mounted.
+ *
+ * The two rails split whatever is left over as `fr`, so a bigger monitor buys
+ * information density — the log gets wider, the markets get wider — rather than
+ * a bigger empty margin around a fixed-size map. That is the benchmark's
+ * documented weakness and we do not want to reproduce it.
+ */
 .pg-game__grid {
   position: relative;
   z-index: var(--pg-z-content);
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr) 372px;
-  grid-template-rows: auto minmax(0, 1fr) 168px;
+
+  /* Rail minimums. The board renderer reads these back so its clamp and this
+     grid can never disagree about how narrow a rail may get. */
+  --pg-rail-min: 244px;
+  --pg-phase-min: 356px;
+  /* Overwritten with a px length by the board renderer. */
+  --pg-board-w: minmax(0, 1.5fr);
+
+  grid-template-columns:
+    minmax(var(--pg-rail-min), 1fr)
+    var(--pg-board-w)
+    minmax(var(--pg-phase-min), 1.32fr);
+  grid-template-rows: auto auto minmax(150px, 1fr);
   grid-template-areas:
-    'hud hud hud'
+    'hud  hud   hud'
     'rail board phase'
-    'rail log phase';
+    'log  board phase';
   gap: var(--pg-space-3);
   padding: var(--pg-space-3);
 
   @include down('xl') {
-    grid-template-columns: 208px minmax(0, 1fr) 320px;
-    grid-template-rows: auto minmax(0, 1fr) 140px;
+    --pg-rail-min: 212px;
+    --pg-phase-min: 320px;
   }
 }
 
@@ -1275,6 +1308,11 @@
   grid-area: rail;
   min-height: 0;
   display: flex;
+  /*
+   * Bounded, so the rules log underneath always gets a usable share of the
+   * column whatever the seat count. The rail scrolls internally past this.
+   */
+  max-height: clamp(168px, 32vh, 420px);
 }
 .pg-game__railpanel {
   flex: 1;
@@ -1466,7 +1504,12 @@
     max-height: 118px;
   }
   .pg-game__grid {
-    grid-template-rows: auto minmax(0, 1fr) 132px;
+    /* Shorter frames give the turn-order rail less room and the rules log
+       proportionally more — the log is the panel that rewards height. */
+    grid-template-rows: auto auto minmax(132px, 1fr);
+  }
+  .pg-game__rail {
+    max-height: clamp(150px, 30vh, 300px);
   }
 }
 
@@ -1485,8 +1528,9 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .pg-game__grid {
+    --pg-board-w: minmax(0, 1fr);
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: auto minmax(320px, 1fr) auto auto;
     grid-template-areas:
       'hud'
       'board'
@@ -1496,5 +1540,8 @@
   }
   .pg-game__rail {
     display: none;
+  }
+  .pg-game__log {
+    min-height: 220px;
   }
 }

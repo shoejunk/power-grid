@@ -460,6 +460,25 @@ export class GameRoom {
     if (!chosen) return null;
     this.hostId = chosen.playerId;
     if (this.state) this.state.hostId = chosen.playerId;
+
+    /*
+     * Setup decisions belong to the host by rule (§2), so the crown and the
+     * clock must move together. Promoting the host without moving
+     * `activePlayerId` strands the table permanently: the new host is refused
+     * because it is not their turn, the departing host is refused because they
+     * are no longer the host, and no default action can rescue it. That stale
+     * state is then persisted, so not even a server restart recovers it.
+     */
+    if (this.state && this.state.phase === 'setup' && this.state.activePlayerId === departingId) {
+      this.state.activePlayerId = chosen.playerId;
+      this.deps.logger.info('Setup turn moved with the host', {
+        gameId: this.gameId,
+        stage: this.state.setupStage,
+        from: departingId,
+        to: chosen.playerId,
+      });
+    }
+
     this.deps.logger.info('Host promoted', {
       gameId: this.gameId,
       from: departingId,
@@ -639,10 +658,25 @@ export class GameRoom {
   private findSafeAction(playerId: PlayerId): GameAction | null {
     const state = this.state;
     if (!state) return null;
-    const suggested = this.deps.engine.defaultActionFor?.(state, playerId);
-    if (suggested) return suggested;
-    for (const candidate of SAFE_DEFAULT_CANDIDATES) {
-      if (this.deps.engine.validateAction(state, playerId, candidate).ok) return candidate;
+    /*
+     * Guarded: this runs inside a timer callback, and the engine's lookups
+     * throw on an unknown player id. An escaped throw would kill the timer
+     * chain silently — `rescheduleAutoAction` would never run again — turning
+     * a transient inconsistency into a permanently stalled table.
+     */
+    try {
+      const suggested = this.deps.engine.defaultActionFor?.(state, playerId);
+      if (suggested) return suggested;
+      for (const candidate of SAFE_DEFAULT_CANDIDATES) {
+        if (this.deps.engine.validateAction(state, playerId, candidate).ok) return candidate;
+      }
+    } catch (err) {
+      this.deps.logger.warn('Default-action resolution threw; treating as no safe action', {
+        gameId: this.gameId,
+        playerId,
+        phase: state.phase,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
     return null;
   }

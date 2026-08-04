@@ -211,13 +211,19 @@ export function plantArt(plant: PowerPlant): PlantArt {
  * requirement of QUALITY-BAR V5 "consistent art direction".
  * ------------------------------------------------------------------ */
 
+/**
+ * Fallback mirror of --pg-player-* in styles/tokens.scss, used when there is no
+ * DOM to read the resolved custom properties from (SSR, unit tests, the asset
+ * generator). Keep in lockstep with tokens.scss — those values are the output
+ * of a CVD separation solve and must not drift.
+ */
 const SEAT_HEX: Record<PlayerColor, string> = {
-  red: '#e8414a',
-  blue: '#3d8bff',
-  green: '#2fc46f',
-  yellow: '#ffc93c',
-  purple: '#b06bff',
-  black: '#78889b',
+  red: '#d3232d',
+  blue: '#1f4cd0',
+  green: '#3bc872',
+  yellow: '#ffca46',
+  purple: '#bf61c9',
+  black: '#929ca7',
 };
 
 /**

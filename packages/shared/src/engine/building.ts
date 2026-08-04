@@ -69,8 +69,19 @@ export function buildBlockReason(
   if (player.cities.includes(cityId)) return 'You already have a house in that city';
   if (player.housesRemaining <= 0) return 'You have no houses left';
 
-  // §8: metropolis — at most one house from the same player across the pair.
-  if (city.metropolisPartner && player.cities.includes(city.metropolisPartner)) {
+  /*
+   * §8: metropolis — at most one house from the same player across the pair.
+   *
+   * The pairing is derived symmetrically rather than read from this city alone.
+   * `metropolisPartner` is authored data, and a map that declares the link on
+   * only one of the two halves would silently enforce the rule in one build
+   * order and not the other. Checking both directions makes the rule depend on
+   * the relationship, not on how carefully the map file was written.
+   */
+  const partnerId =
+    city.metropolisPartner ??
+    map.cities.find((c) => c.metropolisPartner === cityId)?.id;
+  if (partnerId && player.cities.includes(partnerId)) {
     return 'You already have a house in the other half of that metropolis';
   }
 

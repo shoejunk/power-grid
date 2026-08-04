@@ -10,9 +10,10 @@ import type {
   PlayerId,
   PowerDecision,
   ResourceType,
+  Step,
   ValidationResult,
 } from '../types.js';
-import { RESOURCE_TYPES, emptyResources } from '../types.js';
+import { RESOURCE_TYPES, STEP3_PLANT_ID, emptyResources } from '../types.js';
 import { getPlant } from '../data/plants.js';
 import { payoutFor, refillFor } from './constants.js';
 import { fail, getPlayer, ok, pushLog, setAllPhaseStatus, trustPlayer } from './state.js';
@@ -156,8 +157,19 @@ function drawFromSource(state: GameState, type: ResourceType, n: number): void {
  * spaces. If the supply has fewer tokens than the required refill amount, place
  * all available tokens and leave the market partially empty."
  */
-export function refillMarket(state: GameState, now: number): void {
-  const row = refillFor(state.settings.mapId, state.settings.playerCount, state.step);
+/**
+ * §9.2 resupply.
+ *
+ * `stepOverride` exists for one case only: §10 requires "Step 2 refill values
+ * one final time for the current bureaucracy" when the Step 3 card surfaces
+ * while the game is still in Step 1. That card surfaces during the plant-market
+ * update, which §9 resolves *after* this — so the caller resolves the Step the
+ * refill should use and passes it in, rather than this reading a `state.step`
+ * that is about to change.
+ */
+export function refillMarket(state: GameState, now: number, stepOverride?: Step): void {
+  const usedStep: Step = stepOverride ?? state.step;
+  const row = refillFor(state.settings.mapId, state.settings.playerCount, usedStep);
   const added: Record<string, number> = {};
   const shortfall: Record<string, number> = {};
 
@@ -188,10 +200,12 @@ export function refillMarket(state: GameState, now: number): void {
 
   pushLog(state, now, {
     category: 'resource',
-    message: `The resource market is resupplied (Step ${state.step}).`,
+    message: `The resource market is resupplied (Step ${usedStep}).`,
     data: {
       event: 'marketRefilled',
-      step: state.step,
+      // The Step whose column was actually used, which is not always
+      // `state.step` — see `stepOverride` above (§10).
+      step: usedStep,
       mapId: state.settings.mapId,
       playerCount: state.settings.playerCount,
       required: { ...row },
@@ -242,7 +256,23 @@ export function finishBureaucracy(state: GameState, now: number): void {
   // §13: the Trust hands its free tokens back once production is resolved.
   if (trustPlayer(state)) trustReturnResources(state, now);
 
-  refillMarket(state, now);
+  /*
+   * §10's Phase-5 Step 3 branch: "Use Step 2 refill values one final time for
+   * the current bureaucracy", reinforced by "If Step 3 begins before Step 2,
+   * apply all Step 2 changes first".
+   *
+   * The Step 3 card surfaces during the plant-market update, which §9 resolves
+   * *after* the resupply — so at refill time `state.step` is still 1 and the
+   * market was being under-supplied by four tokens at four players, once and
+   * permanently. Rather than reordering the two subphases (§9 fixes their
+   * order, and the rules log should reflect it), we look ahead: the update
+   * draws from the top of the stack, so the Step 3 card being there means
+   * Step 2 is about to be forced.
+   */
+  const step3AboutToSurface = state.plantMarket.stack[0] === STEP3_PLANT_ID;
+  const refillStep: Step = !state.step2Triggered && step3AboutToSurface ? 2 : state.step;
+
+  refillMarket(state, now, refillStep);
   updatePlantMarket(state, now);
 
   pushLog(state, now, {
