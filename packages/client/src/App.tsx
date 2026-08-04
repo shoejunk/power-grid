@@ -1,8 +1,7 @@
-import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
+import { MotionConfig } from 'framer-motion';
 import { useEffect } from 'react';
 
 import { net, useGameStore } from './net';
-import { DUR, springSoft } from './styles/motion';
 import { CreateGame } from './screens/CreateGame';
 import { GameScreen } from './screens/GameScreen';
 import { JoinGame } from './screens/JoinGame';
@@ -56,33 +55,28 @@ export function App(): JSX.Element {
       </a>
 
       {/*
-        Cross-fade, not `mode="wait"`: `.pg-route` is absolutely positioned, so
-        the outgoing and incoming screens can occupy the same box and dissolve
-        into each other. That removes the empty frame a sequential transition
-        leaves behind, and avoids the StrictMode double-mount that can wedge a
-        waiting AnimatePresence in development.
+        A plain keyed <div>. No AnimatePresence, and no motion on this wrapper.
+
+        Both were correctness hazards under React StrictMode's double-invoke,
+        and both were measured rather than suspected:
+
+        · With AnimatePresence, two `.pg-route` elements stayed mounted
+          indefinitely — the OUTGOING screen stranded at opacity 1 and the
+          INCOMING one stuck at opacity 0. Clicking "Create game" left the menu
+          on screen forever. The exit also scaled past 1.0, costing 3px of
+          horizontal document overflow on every route change.
+        · Dropping to a keyed `motion.div` fixed the stranding, but the
+          entrance still never ran: the remount applied `initial` and never
+          advanced to `animate`, leaving the new screen invisible at opacity 0.
+
+        Route transitions therefore own no animation at all. Each screen runs
+        its own entrance stagger internally, so arrivals are still animated
+        (quality bar M1) — the wrapper simply cannot wedge them any more.
       */}
       <ErrorBoundary>
-        <AnimatePresence initial={false}>
-          <motion.div
-            key={route}
-            id="pg-main"
-            className="pg-route"
-            /*
-             * Deliberately concrete props rather than a variant set: variants
-             * propagate `exit` down the whole screen, and every descendant's
-             * exit animation then has to resolve before AnimatePresence will
-             * unmount the screen. A single opacity/scale pair on the container
-             * is both cheaper and impossible to wedge. Each screen still runs
-             * its own entrance stagger internally.
-             */
-            initial={{ opacity: 0, scale: 0.99 }}
-            animate={{ opacity: 1, scale: 1, transition: springSoft }}
-            exit={{ opacity: 0, scale: 1.006, transition: { duration: DUR.base } }}
-          >
-            {renderRoute(route)}
-          </motion.div>
-        </AnimatePresence>
+        <div key={route} id="pg-main" className="pg-route">
+          {renderRoute(route)}
+        </div>
       </ErrorBoundary>
 
       <Toaster />

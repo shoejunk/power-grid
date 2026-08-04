@@ -33,6 +33,8 @@ interface Props {
   theme: BoardTheme;
   state: NodeState;
   hovered: boolean;
+  /** `manifest.cityPlate` — the machined medallion each house slot sits on. */
+  plateArt: string | null;
   /** True once the board's entrance has finished, so houses only pop on real placements. */
   settled: boolean;
   reduced: boolean;
@@ -45,6 +47,7 @@ function CityNodeImpl({
   theme,
   state,
   hovered,
+  plateArt,
   settled,
   reduced,
 }: Props): JSX.Element {
@@ -186,6 +189,26 @@ function CityNodeImpl({
           {node.name}
         </text>
 
+        {/*
+          The art module's machined medallion, one per slot. It is the neutral
+          ground every house and every slot cost sits on, so seat colour and
+          the 10/15/20 numerals never have to fight the painted terrain
+          underneath (QUALITY-BAR V3, V6).
+        */}
+        {plateArt
+          ? view.slots.map((slot) => (
+              <image
+                key={`plate-${slot.index}`}
+                href={plateArt}
+                x={pipX(slot.index) - m.pipR * 1.32}
+                y={pipY - m.pipR * 1.32}
+                width={m.pipR * 2.64}
+                height={m.pipR * 2.64}
+                opacity={slot.open ? 1 : 0.62}
+              />
+            ))
+          : null}
+
         {view.slots.map((slot) => {
           const cx = pipX(slot.index);
           const pr = m.pipR;
@@ -244,13 +267,15 @@ function CityNodeImpl({
           /* Empty. Open slots invite; Step-locked slots are shuttered (§10). */
           return (
             <g key={slot.index} opacity={slot.open ? 1 : 0.5}>
+              {/* The medallion supplies the recessed well; only fill it in
+                  when the art module has not loaded yet. */}
               <circle
                 cx={cx}
                 cy={pipY}
                 r={pr}
-                fill={`url(#${DEF.well})`}
+                fill={plateArt ? 'none' : `url(#${DEF.well})`}
                 stroke={slot.open ? theme.line : '#0b1219'}
-                strokeOpacity={slot.open ? 0.5 : 1}
+                strokeOpacity={slot.open ? 0.42 : 1}
                 strokeWidth={pr * 0.15}
                 strokeDasharray={slot.open ? undefined : `${pr * 0.5} ${pr * 0.34}`}
               />

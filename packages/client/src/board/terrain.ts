@@ -20,7 +20,7 @@
 
 import type { GameMap } from '@pg/shared';
 
-import { BOARD_H, boardSpace, clamp } from './geometry';
+import { BOARD_H, boardSpace, clamp, smoothstep } from './geometry';
 
 /* ------------------------------------------------------------------ *
  * Deterministic value noise
@@ -191,8 +191,12 @@ export interface RegionRaster {
   hasScrim: boolean;
 }
 
-/** Longest edge of the generated rasters, in pixels. */
-const REGION_RASTER_MAX = 640;
+/**
+ * Longest edge of the generated rasters, in pixels. Sized so the tint still
+ * holds together at maximum zoom without making the one-off generation cost
+ * (~10 nearest-city tests per pixel) noticeable on mount.
+ */
+const REGION_RASTER_MAX = 960;
 
 const regionCache = new Map<string, RegionRaster>();
 
@@ -231,6 +235,8 @@ export function regionRasters(map: GameMap, zone: readonly string[]): RegionRast
 
   const areaAt = new Int8Array(W * H);
   const coastAt = new Float32Array(W * H);
+  /** Distance from the border with the nearest other area, in board units. */
+  const edgeAt = new Float32Array(W * H);
   const sums = map.areas.map(() => ({ x: 0, y: 0, n: 0 }));
 
   for (let py = 0; py < H; py++) {
@@ -241,6 +247,7 @@ export function regionRasters(map: GameMap, zone: readonly string[]): RegionRast
       // Feather the last stretch before the coast so the wash fades out
       // rather than ending on a hard rim.
       coastAt[i] = s.area < 0 ? 0 : clamp((field.seaDistance - s.d1) / 44, 0, 1);
+      edgeAt[i] = s.edge;
       if (s.area >= 0) {
         const acc = sums[s.area];
         if (acc) {
@@ -268,10 +275,10 @@ export function regionRasters(map: GameMap, zone: readonly string[]): RegionRast
    * decays to a near-neutral whisper across the interior — which is where the
    * houses actually sit.
    */
-  const RIM_UNITS = 34;
-  const INTERIOR_ALPHA = 0.17;
-  const RIM_ALPHA = 0.66;
-  const INTERIOR_DESAT = 0.62;
+  const RIM_UNITS = 78;
+  const INTERIOR_ALPHA = 0.13;
+  const RIM_ALPHA = 0.74;
+  const INTERIOR_DESAT = 0.66;
 
   for (let py = 0; py < H; py++) {
     for (let px = 0; px < W; px++) {

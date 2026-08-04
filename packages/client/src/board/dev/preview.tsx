@@ -87,7 +87,12 @@ function Harness(): JSX.Element {
 const root = document.getElementById('root');
 if (root) {
   try {
-    createRoot(root).render(<Harness />);
+    const reactRoot = createRoot(root);
+    reactRoot.render(<Harness />);
+    // Exposed so teardown can be exercised from the console: the board must
+    // cancel its rAF loop, drop its listeners and disconnect its
+    // ResizeObserver on unmount (requirement 8, no leaks across routes).
+    (window as unknown as { __pgRoot?: unknown }).__pgRoot = reactRoot;
   } catch (err) {
     root.textContent = `render failed: ${String(err)}`;
   }

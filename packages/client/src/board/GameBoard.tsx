@@ -386,11 +386,18 @@ export function GameBoard(): JSX.Element {
           >
             <BoardDefs theme={theme} metrics={layout.metrics} grain={grain} />
 
+            {/*
+              The board settles in rather than fading up from nothing. Starting
+              at zero means any stall in the animation loop — a backgrounded
+              tab, a throttled frame budget — leaves the board invisible, and
+              the board is the one thing on this screen that must never be
+              missing. 0.55 is enough to read as an entrance and always legible.
+            */}
             <motion.g
               ref={viewport.ref}
-              initial={reduced ? { opacity: 0 } : { opacity: 0 }}
+              initial={{ opacity: 0.55 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: reduced ? 0.12 : 0.5, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: reduced ? 0.12 : 0.45, ease: [0.22, 1, 0.36, 1] }}
             >
               <RegionLayer
                 layout={layout}
@@ -460,6 +467,7 @@ export function GameBoard(): JSX.Element {
                       theme={theme}
                       state={state}
                       hovered={hovered === node.id}
+                      plateArt={art?.cityPlate ?? null}
                       settled={settled}
                       reduced={reduced}
                     />

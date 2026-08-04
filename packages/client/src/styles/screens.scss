@@ -13,6 +13,10 @@
 .pg-route {
   position: absolute;
   inset: 0;
+  /* A transitioning screen must never be able to grow the document. `clip`
+     contains any transform overshoot without creating a scroll container the
+     way `hidden` would (quality bar V8/V9: no unintended scrollbars). */
+  overflow: clip;
 }
 
 .pg-screen {

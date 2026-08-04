@@ -1,11 +1,13 @@
 /**
  * Shared SVG paint: gradients, filters and patterns.
  *
- * Everything expensive is declared once and referenced by id. In particular the
- * only real filters on the board are the two glows, both applied to a single
- * element at a time — city plates and cost badges fake their elevation with a
- * duplicated offset shape instead, so panning 42 nodes and 83 badges never
- * triggers a filter re-rasterisation (QUALITY-BAR M6).
+ * Everything expensive is declared once and referenced by id. There is exactly
+ * one real filter on the board — the route-preview glow — and it is applied to
+ * a handful of paths at a time. City plates and cost badges fake their
+ * elevation with a duplicated offset shape instead, so panning 42 nodes and 83
+ * badges never triggers a filter re-rasterisation (QUALITY-BAR M6). An earlier
+ * pulsing halo on every legal build target cost ~30 live filters at once and
+ * dropped the board off 60 fps; it is now a flat keyline.
  */
 
 import { PLAYER_COLORS } from '@pg/shared';
@@ -15,8 +17,6 @@ import type { BoardTheme } from './theme';
 
 export const DEF = {
   glowRoute: 'pgb-glow-route',
-  glowNode: 'pgb-glow-node',
-  hatch: 'pgb-hatch',
   grain: 'pgb-grain',
   plate: 'pgb-plate',
   plateLive: 'pgb-plate-live',
@@ -25,7 +25,6 @@ export const DEF = {
   badgeHot: 'pgb-badge-hot',
   hover: 'pgb-hover',
   edgeFade: 'pgb-edge-fade',
-  seaEdge: 'pgb-sea-edge',
   house: (c: string): string => `pgb-house-${c}`,
 } as const;
 
@@ -37,8 +36,6 @@ interface Props {
 }
 
 export function BoardDefs({ theme, metrics, grain }: Props): JSX.Element {
-  const hatchStep = Math.max(4, metrics.plateH * 0.42);
-
   return (
     <defs>
       {/* Route highlight glow — one element at a time. */}
@@ -51,34 +48,6 @@ export function BoardDefs({ theme, metrics, grain }: Props): JSX.Element {
           <feMergeNode in="SourceGraphic" />
         </feMerge>
       </filter>
-
-      <filter id={DEF.glowNode} x="-70%" y="-70%" width="240%" height="240%">
-        <feGaussianBlur stdDeviation={metrics.plateH * 0.34} result="b" />
-        <feMerge>
-          <feMergeNode in="b" />
-          <feMergeNode in="SourceGraphic" />
-        </feMerge>
-      </filter>
-
-      {/* Out-of-play hatching (§1: those areas are unusable all game). */}
-      <pattern
-        id={DEF.hatch}
-        width={hatchStep}
-        height={hatchStep}
-        patternUnits="userSpaceOnUse"
-        patternTransform="rotate(38)"
-      >
-        <rect width={hatchStep} height={hatchStep} fill="none" />
-        <line
-          x1={0}
-          y1={0}
-          x2={0}
-          y2={hatchStep}
-          stroke={theme.void}
-          strokeOpacity={0.55}
-          strokeWidth={hatchStep * 0.36}
-        />
-      </pattern>
 
       {grain ? (
         <pattern id={DEF.grain} width={128} height={128} patternUnits="userSpaceOnUse">

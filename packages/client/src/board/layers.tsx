@@ -77,11 +77,12 @@ function RegionLayerImpl({
         Region identity (§1, MapArea.color). The plate supplies painted relief
         and brushwork; the hue is washed over it here.
 
-        `color` takes hue and saturation from the wash and luminance from the
-        plate, so a region reads in its own colour at any plate brightness
-        while every stroke underneath survives. `overlay` would have been the
-        obvious choice, but against a dark plate it behaves like multiply and
-        the hue never appears at all.
+        The raster already carries its own alpha ramp — full chroma along each
+        border, decaying to a near-neutral whisper across the interior — so it
+        composites normally. It deliberately does NOT use a `color` blend any
+        more: that reproduced the area hue at full saturation across the entire
+        region, putting a red ground under the red seat's houses and a purple
+        ground under purple's, which is a straight QUALITY-BAR V3 failure.
       */}
       <image
         className="pgb-tint"
@@ -91,19 +92,6 @@ function RegionLayerImpl({
         width={space.width}
         height={space.height}
         preserveAspectRatio="none"
-        opacity={0.62}
-        style={{ mixBlendMode: 'color' }}
-      />
-      {/* A restrained lift, so regions separate without flattening (V2). */}
-      <image
-        href={regions.tint}
-        x={0}
-        y={0}
-        width={space.width}
-        height={space.height}
-        preserveAspectRatio="none"
-        opacity={0.16}
-        style={{ mixBlendMode: 'soft-light' }}
       />
 
       {hasGrain ? (

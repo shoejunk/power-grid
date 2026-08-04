@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useCallback, useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
@@ -110,14 +110,24 @@ export function Modal({
 
   if (typeof document === 'undefined') return null;
 
+  /*
+   * Rendered conditionally rather than through `AnimatePresence`.
+   *
+   * With AnimatePresence, closing this dialog under React StrictMode's
+   * double-invoke was measured to wedge: `open` flipped to false but the exit
+   * animation never completed, so the element was never unmounted and the
+   * dialog could not be dismissed at all. An undismissable modal traps the
+   * user, which is far worse than losing a 120ms fade-out.
+   *
+   * The entrance still animates. Only the exit is given up.
+   */
   return createPortal(
-    <AnimatePresence>
+    <>
       {open ? (
         <motion.div
           className="pg-modal-scrim"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
           transition={{ duration: DUR.base }}
           onMouseDown={(event) => {
             if (dismissible && event.target === event.currentTarget) onClose();
@@ -135,7 +145,6 @@ export function Modal({
             onKeyDown={onKeyDown}
             initial={{ opacity: 0, scale: 0.94, y: 22 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 12, transition: { duration: DUR.fast } }}
             transition={springHeavy}
           >
             <header className="pg-modal__header">
@@ -168,7 +177,7 @@ export function Modal({
           </motion.div>
         </motion.div>
       ) : null}
-    </AnimatePresence>,
+    </>,
     document.body,
   );
 }
