@@ -104,8 +104,26 @@ export class GameSocket {
     this.handlers = handlers;
   }
 
-  /** WebSocket URL for the current origin. */
+  /**
+   * Address of the game server.
+   *
+   * Defaults to `/ws` on the current origin, which is what the Vite dev proxy
+   * serves. That only works when something on this origin actually speaks
+   * WebSocket — true in dev, and true if the server is deployed behind the same
+   * domain, but NOT on a static host such as Netlify or GitHub Pages.
+   *
+   * Set `VITE_WS_URL` at build time to point at a separately hosted server,
+   * e.g. `VITE_WS_URL=wss://power-grid.fly.dev/ws`. A bare host is accepted and
+   * upgraded: `wss://host` becomes `wss://host/ws`.
+   */
   static url(): string {
+    const configured = import.meta.env.VITE_WS_URL?.trim();
+    if (configured) {
+      const withScheme = /^wss?:\/\//i.test(configured)
+        ? configured
+        : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${configured}`;
+      return /\/ws\/?$/.test(withScheme) ? withScheme : `${withScheme.replace(/\/$/, '')}/ws`;
+    }
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${protocol}//${window.location.host}/ws`;
   }
