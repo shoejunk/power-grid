@@ -57,11 +57,17 @@
   /* Read back by the board renderer so its clamp and this grid agree. */
   --pg-rail-min: 264px;
   --pg-phase-min: 398px;
-  --pg-board-w: minmax(0, 1.5fr);
+  --pg-board-w: 1.5fr;
 
+  /*
+   * `minmax(0, …)` on the centre track, not a bare length: the board writes its
+   * width one frame after the viewport changes, and a bare length would let the
+   * grid overflow horizontally for that frame. As a growth limit it simply
+   * cannot push the rails past their minimums.
+   */
   grid-template-columns:
     minmax(var(--pg-rail-min), 1fr)
-    var(--pg-board-w)
+    minmax(0, var(--pg-board-w))
     minmax(var(--pg-phase-min), 1.32fr);
   grid-template-rows: auto auto minmax(150px, 1fr);
   grid-template-areas:
@@ -89,15 +95,12 @@
   .pg-game__grid.pg-gamex__grid {
     grid-template-rows: auto auto minmax(132px, 1fr);
   }
-  .pg-game .pg-game__rail {
-    max-height: clamp(150px, 30vh, 300px);
-  }
 }
 
 /* Below the supported desktop floor we stack rather than clip. */
 @media (max-width: 1023.98px) {
   .pg-game__grid.pg-gamex__grid {
-    --pg-board-w: minmax(0, 1fr);
+    --pg-board-w: 1fr;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(280px, 1fr) auto auto;
     grid-template-areas:
@@ -109,6 +112,14 @@
   }
   .pg-game .pg-game__log {
     min-height: 220px;
+  }
+  /*
+   * Stacked, the right rail sits in an `auto` row with no definite height to
+   * size its scroll containers against, so give it one. Without this the phase
+   * panel's body collapses to 0 and the action bar has nothing above it.
+   */
+  .pg-game .pg-mount--phase {
+    min-height: 540px;
   }
 }
 
@@ -159,10 +170,14 @@
   gap: var(--pg-gcard-gap);
   overflow: hidden;
 }
-/* The market decks: they yield height before the phase panel does. */
+/*
+ * The market decks yield height before the phase panel does — but not all of
+ * it. V10 wants both markets readable without opening anything, so they keep a
+ * floor of their own and only scroll past it.
+ */
 .pg-grr__decks {
   flex: 0 1 auto;
-  min-height: 0;
+  min-height: min(232px, 42%);
   display: flex;
   flex-direction: column;
   gap: var(--pg-gcard-gap);
@@ -306,6 +321,15 @@
  * TOKENS AND STORAGE
  * ==================================================================== */
 
+/*
+ * V4. The fuel letter measured 2.36:1 at 7px in the --xs size. Two things were
+ * wrong: the glyph was too small to hold its own shape, and the inset white
+ * highlight ran under it and lifted the background it was being read against.
+ *
+ * The mark is now 9px minimum and 700 weight, the highlight is pulled to the
+ * top rim only (it is a bevel, not a wash), and each resource carries an ink
+ * chosen against its own fill rather than a blanket #fff.
+ */
 .pg-gtok {
   display: inline-grid;
   place-items: center;
@@ -314,19 +338,20 @@
   height: 15px;
   border-radius: 50%;
   font-family: var(--pg-font-display);
-  font-size: 8px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
   letter-spacing: 0;
   line-height: 1;
   color: #fff;
   background: #555;
-  border: 1px solid rgba(0, 0, 0, 0.5);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 1px 2px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26), 0 1px 2px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
 
   &--xs {
-    width: 13px;
-    height: 13px;
-    font-size: 7px;
+    width: 14px;
+    height: 14px;
+    font-size: 9px;
   }
   &--md {
     width: 19px;
@@ -501,31 +526,47 @@
   height: 3px;
   opacity: 0.9;
 }
-/* The illustration from @/art. Texture, never information: a scrim keeps the
-   number and the fuel tokens at full contrast on top of it (§1, V4). */
+/*
+ * The illustration from @/art.
+ *
+ * It used to render at opacity .22 (--xs) under an ::after scrim ramping
+ * rgba(8,12,18,.5) -> .88, an effective visibility of about 0.07 — 30 real
+ * generated illustrations that nobody could see, on the second most-viewed
+ * surface in the game.
+ *
+ * Now the art carries its own weight and legibility is paid for locally:
+ * a halo on the number (.pg-gplant__num) and an opaque well behind the
+ * fuel/cities row (.pg-gplant__mid), rather than by flooding the whole card.
+ * The scrim that remains is a soft bottom-weighted seat, not a blackout.
+ */
 .pg-gplant__art {
   position: absolute;
   inset: 0;
   background-size: cover;
   background-position: center;
-  opacity: 0.3;
-  filter: saturate(0.9) contrast(1.05);
+  opacity: 0.85;
+  filter: saturate(1.02) contrast(1.06);
 
   &::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(8, 12, 18, 0.5) 0%, rgba(8, 12, 18, 0.88) 68%);
+    background: linear-gradient(
+      180deg,
+      rgba(8, 12, 18, 0.06) 0%,
+      rgba(8, 12, 18, 0.2) 46%,
+      rgba(8, 12, 18, 0.52) 100%
+    );
   }
 
   .pg-gplant--md & {
-    opacity: 0.5;
+    opacity: 1;
   }
   .pg-gplant--xs & {
-    opacity: 0.22;
+    opacity: 0.72;
   }
   .pg-gplant.is-muted & {
-    opacity: 0.14;
+    opacity: 0.4;
   }
 }
 .pg-gplant__num,
@@ -535,10 +576,13 @@
 .pg-gplant__num {
   font-family: var(--pg-font-display);
   font-size: 21px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1;
-  color: var(--pg-text-bright);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  /* Halo, not a scrim: buys the numeral its contrast against whatever the
+     illustration happens to put behind it without dimming the art. */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 3px rgba(0, 0, 0, 0.9),
+    0 0 9px rgba(0, 0, 0, 0.75);
 
   .pg-gplant--xs & {
     font-size: 16px;
@@ -547,14 +591,44 @@
     font-size: 28px;
   }
 }
+/*
+ * The fuel/cities row. `max-width: 100%` + `min-width: 0` is the actual
+ * overflow fix — the row is content-sized and used to run 2.6px (2 fuel) and
+ * 12.6px (3 fuel) past the card edge, taking the city count outside the card.
+ * PlantCard collapses 3+ fuel to "token x3" so the content fits in the first
+ * place; this is the belt to that pair of braces.
+ */
 .pg-gplant__mid {
   display: flex;
   align-items: center;
-  gap: 3px;
+  justify-content: center;
+  gap: 2px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  padding: 1px 4px;
+  border-radius: var(--pg-radius-pill);
+  /* Opaque well so the tokens and the city count keep full contrast over the
+     illustration now that the card-wide scrim is gone. */
+  background: rgba(7, 11, 17, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 .pg-gplant__fuel {
   display: inline-flex;
+  align-items: center;
   gap: 1px;
+  min-width: 0;
+}
+.pg-gplant__mult {
+  font-family: var(--pg-font-display);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--pg-text-primary);
+
+  .pg-gplant--md & {
+    font-size: 11px;
+  }
 }
 .pg-gplant__alt {
   margin-left: -4px;
@@ -577,9 +651,15 @@
 .pg-gplant__min {
   position: absolute;
   bottom: 2px;
-  right: 4px;
+  right: 3px;
+  padding: 0 3px;
+  border-radius: var(--pg-radius-xs);
+  background: rgba(7, 11, 17, 0.78);
   font-size: 8px;
-  color: var(--pg-text-faint);
+  /* Was --pg-text-faint straight over the illustration. With the art at full
+     strength that is not a safe background, so it gets its own well and a
+     brighter ink. */
+  color: var(--pg-text-secondary);
 }
 .pg-gplant__discount {
   position: absolute;
@@ -1436,6 +1516,28 @@
   font-family: var(--pg-font-display);
   font-size: var(--pg-text-md);
   color: var(--pg-text-bright);
+}
+/* Fuel -> cities, the two facts the chooser used to omit entirely. */
+.pg-gpicker__spec {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 3px;
+  font-size: var(--pg-text-3xs);
+  line-height: var(--pg-leading-tight, 1.25);
+  color: var(--pg-text-secondary);
+  text-align: left;
+
+  b {
+    font-family: var(--pg-font-display);
+    color: var(--pg-cyan-bright);
+  }
+}
+.pg-gpicker__arrow {
+  color: var(--pg-text-faint);
+}
+.pg-gpicker__unit {
+  color: var(--pg-text-muted);
 }
 .pg-gpicker__meta {
   display: flex;
@@ -2437,5 +2539,16 @@
    */
   .pg-grr {
     --pg-phase-floor: 210px;
+  }
+  /*
+   * The rail's footer repeats the phase name and summary that the chrome's
+   * phase pips and the phase panel both already state. On a short frame that
+   * is 50 px spent saying something twice — and 50 px is a seat.
+   */
+  .pg-grail__foot {
+    display: none;
+  }
+  .pg-game .pg-game__rail {
+    max-height: clamp(150px, 34vh, 300px);
   }
 }

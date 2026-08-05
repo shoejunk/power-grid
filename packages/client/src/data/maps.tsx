@@ -83,7 +83,16 @@ interface ThumbGeometry {
   regions: { d: string; hue: string }[];
 }
 
-const REGION_HUES = ['#46e2ff', '#d9813f', '#3ad693', '#b06bff', '#ffc93c', '#3d8bff'];
+/*
+ * Decorative region tints for the map-picker thumbnails only.
+ *
+ * Deliberately NOT the seat colours. Two of these previously reused the old
+ * blue and purple seat hexes, which both drifted when the seat palette was
+ * re-solved for colour-blind separation — leaving the thumbnails quoting
+ * colours that no longer exist anywhere else. These are chosen to sit in the
+ * gaps between seat hues so a thumbnail can never be mistaken for a player.
+ */
+const REGION_HUES = ['#46e2ff', '#d9813f', '#3ad693', '#7f8fa6', '#ffc93c', '#2f7fa8'];
 
 const GEOMETRY: Record<MapId, ThumbGeometry> = {
   germany: {

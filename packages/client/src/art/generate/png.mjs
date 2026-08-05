@@ -305,7 +305,16 @@ export function encodePNG(pixels, width, height, channels = 3) {
   ihdr[12] = 0;
 
   const filtered = filterScanlines(Buffer.from(pixels.buffer, pixels.byteOffset, pixels.length), width, height, channels);
-  const idat = zlib.deflateSync(filtered, { level: 9, memLevel: 9, windowBits: 15, strategy: zlib.constants.Z_DEFAULT_STRATEGY });
+  /*
+   * Filtered truecolour residuals are mostly small, near-random deltas. Which
+   * deflate strategy wins on them depends on the image — Z_FILTERED skips the
+   * long-match search that never pays off on that data, and on the painted
+   * plate it beats the default. Both are tried and the smaller kept; the cost
+   * is one extra deflate on a build machine.
+   */
+  const idat = [zlib.constants.Z_DEFAULT_STRATEGY, zlib.constants.Z_FILTERED, zlib.constants.Z_RLE]
+    .map((strategy) => zlib.deflateSync(filtered, { level: 9, memLevel: 9, windowBits: 15, strategy }))
+    .reduce((a, b) => (b.length < a.length ? b : a));
 
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),

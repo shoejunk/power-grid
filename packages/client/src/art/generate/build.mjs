@@ -17,6 +17,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { encodeIndexedPNG, encodePNG, quantise, quantiseError } from './png.mjs';
 import { projectedGeo, PROJECTION } from './geo.mjs';
@@ -82,7 +83,7 @@ const hexLin = (hex) => {
  */
 
 /** Band half-width, as a fraction of board height. */
-const BAND_W = 0.072;
+const BAND_W = 0.036;
 /** Rolloff exponent — >1 concentrates the chroma hard against the boundary. */
 const BAND_FALLOFF = 2.4;
 /** The band is faded out between these distances from any city, so that no
@@ -154,8 +155,21 @@ function makeRegionField(mapId, strength) {
         if (w > bestW) { bestW = w; bestI = ii; }
       }
       const g1 = gy * GW + gx;
-      // Blending unit-luminance tints keeps the blend at unit luminance too.
-      tint[g1 * 3] = r; tint[g1 * 3 + 1] = g; tint[g1 * 3 + 2] = b;
+      /*
+       * The band carries the HARD label's tint, not the soft blend. The soft
+       * blend is the average of the adjacent regions and is therefore at its
+       * most neutral exactly where the band alpha is highest, so using it made
+       * the seam cancel itself out: measured chroma inside the band came in
+       * 1.08 C* BELOW the no-wash control. With the label colour, each side of
+       * a boundary carries its own region's hue and the two meet at the seam —
+       * the printed-atlas treatment. The lattice is bilinearly sampled, so the
+       * changeover is still soft (~1 cell, ~10px at the shipping bake).
+       * Blending unit-luminance tints keeps the result at unit luminance.
+       */
+      const hard = cols[ids[bestI]];
+      tint[g1 * 3] = lerp(r, hard[0], 0.85);
+      tint[g1 * 3 + 1] = lerp(g, hard[1], 0.85);
+      tint[g1 * 3 + 2] = lerp(b, hard[2], 0.85);
       label[g1] = bestI;
       cityDist[g1] = nearest;
     }
@@ -232,20 +246,28 @@ function makeRegionField(mapId, strength) {
  * chroma tracks band chroma, the wash has leaked back into the interiors.
  * ------------------------------------------------------------------ */
 
-function labChroma(r8, g8, b8) {
+function toLab(r8, g8, b8) {
   const r = S2L[r8]; const g = S2L[g8]; const b = S2L[b8];
   const X = r * 0.4124564 + g * 0.3575761 + b * 0.1804375;
   const Y = r * 0.2126729 + g * 0.7151522 + b * 0.0721750;
   const Z = r * 0.0193339 + g * 0.1191920 + b * 0.9503041;
   const f = (t) => (t > 216 / 24389 ? Math.cbrt(t) : (841 / 108) * t + 4 / 29);
   const fx = f(X / 0.95047); const fy = f(Y); const fz = f(Z / 1.08883);
-  return Math.hypot(500 * (fx - fy), 200 * (fy - fz));
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
 }
 
-/** Mean chroma over a disc of radius `rad` (in px) centred on normalised x,y. */
-function discChroma(pixels, W, H, x, y, rad) {
+/**
+ * Mean CIELAB over a disc of radius `rad` px centred on normalised x,y.
+ *
+ * Both C* and the ΔE against the control are reported. C* alone is misleading
+ * here: the wash is a unit-luminance MULTIPLIER, so over the plate's olive
+ * ground a blue-ish tint rotates hue toward neutral and can LOWER C* while
+ * being plainly visible. ΔE against the no-wash control is what actually
+ * answers "how much colour is the wash putting here".
+ */
+function discLab(pixels, W, H, x, y, rad) {
   const cx = Math.round(x * W); const cy = Math.round(y * H);
-  let sum = 0; let n = 0;
+  let L = 0; let a = 0; let b = 0; let n = 0;
   for (let dy = -rad; dy <= rad; dy++) {
     for (let dx = -rad; dx <= rad; dx++) {
       if (dx * dx + dy * dy > rad * rad) continue;
@@ -253,14 +275,25 @@ function discChroma(pixels, W, H, x, y, rad) {
       if (px < 0 || py < 0 || px >= W || py >= H) continue;
       const o = (py * W + px) * 3;
       if (pixels[o] <= pixels[o + 2]) continue; // sea is blue-dominant; skip it
-      sum += labChroma(pixels[o], pixels[o + 1], pixels[o + 2]);
-      n++;
+      const lab = toLab(pixels[o], pixels[o + 1], pixels[o + 2]);
+      L += lab[0]; a += lab[1]; b += lab[2]; n++;
     }
   }
-  return n ? { c: sum / n, n } : { c: NaN, n: 0 };
+  if (!n) return { n: 0, c: NaN, lab: null };
+  const lab = [L / n, a / n, b / n];
+  return { n, c: Math.hypot(lab[1], lab[2]), lab };
 }
+const dE = (p, q) => (p && q ? Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) : NaN);
 
-function regionChromaStats(pixels, W, H, regionsFn) {
+/**
+ * @param {Uint8Array} pixels  the wash render
+ * @param {Uint8Array|null} control  the same render with `regions: null`. The
+ *        terrain has its own chroma (a sage/oatmeal ramp sits at C* ~15), so an
+ *        absolute chroma reading says nothing about the wash. The wash's real
+ *        contribution is the DIFFERENCE against the control, which is what the
+ *        "interiors are neutral" claim has to be tested on.
+ */
+function regionChromaStats(pixels, W, H, regionsFn, control) {
   const { cities } = readGermanyRegions();
   const byArea = {};
   for (const c of cities) (byArea[c.area] ??= []).push(c);
@@ -269,8 +302,10 @@ function regionChromaStats(pixels, W, H, regionsFn) {
   for (const [area, list] of Object.entries(byArea)) {
     const cx = list.reduce((s, c) => s + c.x, 0) / list.length;
     const cy = list.reduce((s, c) => s + c.y, 0) / list.length;
-    const centroid = discChroma(pixels, W, H, cx, cy, Math.round(H * 0.02));
-    rows.push({ area, cx, cy, centroid: centroid.c });
+    const rad = Math.round(H * 0.02);
+    const centroid = discLab(pixels, W, H, cx, cy, rad);
+    const base = control ? discLab(control, W, H, cx, cy, rad) : { c: NaN, lab: null };
+    rows.push({ area, cx, cy, centroid: centroid.c, dE: dE(centroid.lab, base.lab) });
   }
 
   // Band samples: scan for the points the field actually tints hardest.
@@ -287,14 +322,29 @@ function regionChromaStats(pixels, W, H, regionsFn) {
     band.sort((a, b) => b.a - a.a);
   }
   const top = band.slice(0, Math.max(1, Math.round(band.length * 0.15)));
-  let bs = 0; let bn = 0;
+  let bs = 0; let bn = 0; let bd = 0; let bdn = 0;
   for (const p of top) {
-    const d = discChroma(pixels, W, H, p.x, p.y, 2);
-    if (d.n) { bs += d.c; bn++; }
+    const d = discLab(pixels, W, H, p.x, p.y, 2);
+    if (!d.n) continue;
+    bs += d.c; bn++;
+    if (!control) continue;
+    // Skip samples whose control disc landed entirely on sea, or the mean
+    // would go NaN and hide the very number this diagnostic exists to print.
+    const cd = discLab(control, W, H, p.x, p.y, 2);
+    if (cd.n) { bd += dE(d.lab, cd.lab); bdn++; }
   }
 
-  const covered = band.length / (200 * 260);
-  return { rows, bandChroma: bn ? bs / bn : NaN, bandCoverage: covered, maxAlpha: band.length ? band[0].a : 0 };
+  // Coverage counted at a threshold that means something visually, not at
+  // alpha > 0: the rolloff leaves a long, invisible tail.
+  const peak = band.length ? band[0].a : 0;
+  const meaningful = band.filter((p) => p.a > peak * 0.2).length;
+  return {
+    rows,
+    bandChroma: bn ? bs / bn : NaN,
+    bandDE: bdn ? bd / bdn : NaN,
+    bandCoverage: meaningful / (200 * 260),
+    maxAlpha: peak,
+  };
 }
 
 /* ------------------------------------------------------------------ *
@@ -384,7 +434,7 @@ function plateStats(pixels, w, h) {
  * `src/art/index.ts` stays the plate's *layout* size; the raster is upscaled
  * into it, which is free and invisible for content with no hard edges.
  */
-const HEIGHT = Number(process.env.PG_ART_HEIGHT ?? 2800);
+const HEIGHT = Number(process.env.PG_ART_HEIGHT ?? 2820);
 /*
  * The wash is confined to a narrow boundary band now, so it can carry more
  * chroma than the old whole-interior version could: a seam has to be seen to
@@ -400,6 +450,8 @@ const COLORS = Number(process.env.PG_ART_COLORS ?? 256);
  * See the note on the write below for the size trade-off.
  */
 const TRUECOLOUR = process.env.PG_ART_INDEXED !== '1';
+/** `PG_ART_VERIFY=1` also renders a no-wash control and reports region chroma. */
+const VERIFY = process.env.PG_ART_VERIFY === '1';
 
 function build(mapId) {
   const t0 = Date.now();
@@ -418,16 +470,24 @@ function build(mapId) {
     log,
   });
 
-  if (mapId === 'germany') {
-    const rc = regionChromaStats(pixels, W, H, regionsFn);
+  if (mapId === 'germany' && VERIFY) {
+    log('  verify: control render with no region wash');
+    const { pixels: control } = paintTerrain(geo, {
+      width: W, height: H, projection: PROJECTION[mapId], regions: null,
+    });
+    const rc = regionChromaStats(pixels, W, H, regionsFn, control);
     console.log(
       `[art] ${mapId}: region wash — band covers ${(rc.bandCoverage * 100).toFixed(1)}% of the plate,` +
-        ` peak alpha ${rc.maxAlpha.toFixed(3)}, mean chroma in band C* ${rc.bandChroma.toFixed(2)}`,
+        ` peak alpha ${rc.maxAlpha.toFixed(3)}`,
+    );
+    console.log(
+      `[art] ${mapId}:   in band     chroma C* ${rc.bandChroma.toFixed(2)}` +
+        `   dE vs no-wash control ${rc.bandDE.toFixed(2)}`,
     );
     for (const r of rc.rows) {
       console.log(
-        `[art] ${mapId}:   centroid ${r.area.padEnd(6)} (${r.cx.toFixed(2)},${r.cy.toFixed(2)})` +
-          ` chroma C* ${r.centroid.toFixed(2)}`,
+        `[art] ${mapId}:   centroid ${r.area.padEnd(9)} (${r.cx.toFixed(2)},${r.cy.toFixed(2)})` +
+          ` chroma C* ${r.centroid.toFixed(2)}   dE vs no-wash control ${r.dE.toFixed(2)}`,
       );
     }
   }
@@ -453,12 +513,65 @@ function build(mapId) {
     png = encodeIndexedPNG(indices, palette, W, H);
   }
 
-  const file = path.join(OUT, `board-${mapId}.png`);
-  fs.writeFileSync(file, png);
+  /*
+   * SIZE TRADE-OFF, recorded so the next person does not "fix" it blindly.
+   *
+   * The plate ships 24-bit at 2200x2820 and weighs ~4.9 MB, against 541 KB for
+   * the old 214-colour indexed 1092x1400. That is 9x, and it is deliberate:
+   *
+   *  - 1092x1400 upscaled visibly at 2560 with devicePixelRatio 2, which is a
+   *    mainstream desktop configuration, not an edge case;
+   *  - a 214-entry palette cannot hold a smooth gradient. The region seams and
+   *    the sea both banded, and quantiseError peaked in exactly the low-chroma
+   *    ramps the plate is made of.
+   *
+   * Most of the remaining bytes are the relief itself (ridged multifractal,
+   * rivers, AO), not noise — dropping the baked tooth to a fixed feature size
+   * only moved 0.85 -> 0.82 B/px, so there is no cheap win left in the render.
+   *
+   * The real fix is the container, not the content — and it is now applied:
+   * the PNG below is an intermediate, and `sharp` re-encodes it to WebP q90,
+   * which lands the same 2200x2820 image at ~504 KB with no visible loss. That
+   * is smaller than the 214-colour indexed PNG this replaced, and without its
+   * quantisation banding. Only the WebP is kept; `art/index.ts` serves it.
+   */
+  const pngFile = path.join(OUT, `board-${mapId}.png`);
+  fs.writeFileSync(pngFile, png);
   console.log(
-    `[art] ${mapId}: wrote ${path.relative(REPO, file)} — ${(png.length / 1024).toFixed(0)} KB` +
+    `[art] ${mapId}: rendered ${(png.length / 1024).toFixed(0)} KB PNG` +
       ` (${(png.length / (W * H)).toFixed(2)} B/px) in ${((Date.now() - t0) / 1000).toFixed(1)}s`,
   );
+  encodeWebp(mapId, pngFile);
+}
+
+/**
+ * Re-encodes the rendered plate to WebP and drops the PNG intermediate.
+ *
+ * `sharp` is a devDependency, so a contributor without it installed still gets
+ * a working (if large) PNG rather than a failed build — the import is guarded
+ * and the failure is a warning, not an error.
+ */
+function encodeWebp(mapId, pngFile) {
+  const webpFile = path.join(OUT, `board-${mapId}.webp`);
+  let sharp;
+  try {
+    sharp = createRequire(import.meta.url)('sharp');
+  } catch {
+    console.warn(
+      `[art] ${mapId}: sharp not installed — keeping the PNG intermediate.` +
+        ` Run "npm i -D sharp" and rebuild; art/index.ts expects board-${mapId}.webp.`,
+    );
+    return;
+  }
+  sharp(pngFile)
+    .webp({ quality: 90, effort: 6 })
+    .toFile(webpFile)
+    .then(() => {
+      fs.rmSync(pngFile, { force: true });
+      const kb = (fs.statSync(webpFile).size / 1024).toFixed(0);
+      console.log(`[art] ${mapId}: wrote ${path.relative(REPO, webpFile)} — ${kb} KB`);
+    })
+    .catch((err) => console.warn(`[art] ${mapId}: WebP encode failed — ${err.message}`));
 }
 
 const targets = process.argv.slice(2).filter((a) => !a.startsWith('-'));

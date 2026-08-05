@@ -204,7 +204,13 @@ function CityNodeImpl({
                 y={pipY - m.pipR * 1.32}
                 width={m.pipR * 2.64}
                 height={m.pipR * 2.64}
-                opacity={slot.open ? 1 : 0.62}
+                /*
+                 * Full opacity even when the slot is Step-locked. The medallion
+                 * is the opaque ground the cost numeral is measured against —
+                 * fading it fades the only thing keeping those digits off the
+                 * painted terrain. "Locked" is carried by the shutter treatment
+                 * below instead.
+                 */
               />
             ))
           : null}
@@ -264,9 +270,19 @@ function CityNodeImpl({
             );
           }
 
-          /* Empty. Open slots invite; Step-locked slots are shuttered (§10). */
+          /*
+           * Empty. Open slots invite; Step-locked slots are shuttered (§10).
+           *
+           * The shutter darkens the WELL, never the numeral. A locked slot's
+           * cost is still information the player is planning against — it is
+           * what the third house will cost once Step 3 arrives — so it keeps
+           * full-strength ink. Previously a group `opacity: 0.5` and a
+           * `fillOpacity: 0.7` multiplied out to an effective alpha of 0.35 on
+           * those digits, which measured 1.71:1: a V4 failure on a numeral the
+           * rules require the player to be able to read.
+           */
           return (
-            <g key={slot.index} opacity={slot.open ? 1 : 0.5}>
+            <g key={slot.index}>
               {/* The medallion supplies the recessed well; only fill it in
                   when the art module has not loaded yet. */}
               <circle
@@ -279,30 +295,35 @@ function CityNodeImpl({
                 strokeWidth={pr * 0.15}
                 strokeDasharray={slot.open ? undefined : `${pr * 0.5} ${pr * 0.34}`}
               />
+              {!slot.open ? (
+                <>
+                  {/* Shutter: darkens the ground, which if anything RAISES the
+                      contrast of the light numeral drawn on top of it. */}
+                  <circle cx={cx} cy={pipY} r={pr * 0.97} fill={theme.void} opacity={0.42} />
+                  <line
+                    x1={cx - pr * 0.78}
+                    y1={pipY + pr * 0.78}
+                    x2={cx + pr * 0.78}
+                    y2={pipY - pr * 0.78}
+                    stroke={theme.void}
+                    strokeOpacity={0.62}
+                    strokeWidth={pr * 0.2}
+                    strokeLinecap="round"
+                  />
+                </>
+              ) : null}
+              {/* Drawn last: the bar never crosses in front of the digits. */}
               <text
                 className="pgb-cost"
                 x={cx}
                 y={pipY}
                 fontSize={m.costFont}
-                fill={slot.open ? theme.textMuted : theme.textFaint}
-                fillOpacity={slot.open ? 1 : 0.7}
+                fill={theme.textMuted}
                 textAnchor="middle"
                 dominantBaseline="central"
               >
                 {slot.cost}
               </text>
-              {!slot.open ? (
-                <line
-                  x1={cx - pr * 0.78}
-                  y1={pipY + pr * 0.78}
-                  x2={cx + pr * 0.78}
-                  y2={pipY - pr * 0.78}
-                  stroke={theme.void}
-                  strokeOpacity={0.75}
-                  strokeWidth={pr * 0.2}
-                  strokeLinecap="round"
-                />
-              ) : null}
             </g>
           );
         })}

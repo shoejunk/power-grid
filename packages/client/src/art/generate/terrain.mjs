@@ -679,7 +679,10 @@ export function paintTerrain(geo, opts) {
         // Brushwork: fine value break-up, oriented by the warp field. This is
         // the tooth the plate keeps — high frequency, low contrast. It is the
         // CONTRAST that was making it read as grit, not the frequency.
-        const brush = fbmBrush(nx * 62, ny * 62) * 0.038 + fbmBrush(nx * 190 + 5, ny * 190 - 9) * 0.014;
+        // Second octave dropped from 190 to 120 cycles for the same reason as
+        // the tooth below: at the shipping bake width 190 cycles lands near
+        // Nyquist, so it read as grit and cost more than the macro terms.
+        const brush = fbmBrush(nx * 62, ny * 62) * 0.038 + fbmBrush(nx * 120 + 5, ny * 120 - 9) * 0.014;
         const bf = 1 + brush;
         alb = [alb[0] * bf, alb[1] * bf, alb[2] * bf];
 
@@ -789,13 +792,19 @@ export function paintTerrain(geo, opts) {
       }
 
       /* ---- canvas tooth: high-frequency value break-up over everything ----
-       * Kept, but at less than half its old contrast, and without the ordered
-       * ±1 dither that used to ride on top of it. Two reasons: at 1:1 that
-       * dither read as a screen door rather than as tooth, and per-pixel noise
-       * is the single most expensive thing you can put in a PNG.
-       * `ArtManifest.paperGrain` composites real tooth over this at runtime,
-       * at native device resolution, which is where it belongs. */
-      const tooth = fbmTooth(nx * 520, ny * 520) * 0.013;
+       * The frequency here is in cycles across the plate, so it used to get
+       * FINER as the bake resolution went up: at the old 1092px width, 520
+       * cycles was ~2px per cycle; the tooth was effectively per-pixel noise,
+       * which is the single most expensive thing you can put in a PNG and the
+       * main reason the 24-bit export did not fit in budget.
+       *
+       * Held at a fixed *feature size* instead — ~9px at the shipping bake —
+       * so raising the resolution buys real detail rather than more
+       * incompressible noise. `ArtManifest.paperGrain` composites the actual
+       * fine tooth over this at runtime at native device resolution, which is
+       * where a 1px-scale texture belongs; baking a second copy of it only
+       * ever aliased against the first. */
+      const tooth = fbmTooth(nx * 240, ny * 240) * 0.010;
       r *= 1 + tooth; g *= 1 + tooth; b *= 1 + tooth;
 
       /* ---- atmosphere: a slow warm-to-cool sweep along the light axis.

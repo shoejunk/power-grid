@@ -96,11 +96,16 @@
   letter-spacing: 0.006em;
 }
 
+/*
+ * §1 region label. Full opacity on purpose: at 0.72 the fill blended back into
+ * the scrim underneath and measured 2.09-3.15:1, which fails V4 outright. The
+ * dark halo stroke in `layers.tsx` is what keeps it separated from the terrain,
+ * so the fill does not need to be faded as well.
+ */
 .pgb-outzone-label {
   font-family: var(--pg-font-display);
   font-weight: 600;
   letter-spacing: 0.22em;
-  opacity: 0.72;
   pointer-events: none;
 }
 

@@ -86,11 +86,27 @@ export interface Metrics {
   badgeFont: number;
   anchorR: number;
   routeW: number;
+  /** "OUT OF PLAY" region label (§1). Floored well clear of the 10 px line. */
+  outzoneFont: number;
   /** Screen-pixel size of connection-cost type; floored for legibility. */
   badgeFontPx: number;
+  /** Screen-pixel size of city-name type; floored for legibility. */
+  nameFontPx: number;
+  /** Screen-pixel size of the out-of-play region label. */
+  outzoneFontPx: number;
+  /** Diagnostic: typical city spacing in screen pixels. */
+  medianNNpx: number;
 }
 
+/*
+ * Screen-pixel floors. Nothing the board draws is allowed below 10 px — that is
+ * the size at which a reviewer stops calling type "small" and starts calling it
+ * broken, and city names sat on an 8.2 px floor for exactly as long as the board
+ * was letterboxed into half its cell.
+ */
 const MIN_BADGE_FONT_PX = 10.5;
+const MIN_NAME_FONT_PX = 10;
+const MIN_OUTZONE_FONT_PX = 13;
 
 export function computeMetrics(map: GameMap, containerW: number, containerH: number): Metrics {
   const space = boardSpace(map);
@@ -115,7 +131,7 @@ export function computeMetrics(map: GameMap, containerW: number, containerH: num
   const medianNNpx = (nn[Math.floor(nn.length / 2)] ?? 60) * pxPerUnit;
 
   let pipRpx = clamp(medianNNpx * 0.105, 4.6, 8.4);
-  let nameFontPx = clamp(medianNNpx * 0.145, 8.2, 13);
+  let nameFontPx = clamp(medianNNpx * 0.145, MIN_NAME_FONT_PX, 13);
   let badgeHpx = clamp(medianNNpx * 0.32, 13.6, 21);
 
   /*
@@ -149,7 +165,9 @@ export function computeMetrics(map: GameMap, containerW: number, containerH: num
   if (coverage > TARGET_COVERAGE) {
     const squeeze = clamp(Math.sqrt(TARGET_COVERAGE / coverage), 0.62, 1);
     pipRpx = Math.max(3.4, pipRpx * squeeze);
-    nameFontPx = Math.max(6.6, nameFontPx * squeeze);
+    // The squeeze buys packing room out of the optional type, but never below
+    // the legibility floor: an unreadable name is worth less than a tight board.
+    nameFontPx = Math.max(MIN_NAME_FONT_PX, nameFontPx * squeeze);
     badgeHpx = Math.max(MIN_BADGE_FONT_PX / 0.7, badgeHpx * squeeze);
   }
 
@@ -157,6 +175,7 @@ export function computeMetrics(map: GameMap, containerW: number, containerH: num
   const slotHpx = pipRpx * 2 + 3.4;
   const nameHpx = nameFontPx * 1.34;
   const badgeFontPx = Math.max(MIN_BADGE_FONT_PX, badgeHpx * 0.7);
+  const outzoneFontPx = Math.max(MIN_OUTZONE_FONT_PX, nameFontPx * 1.15);
 
   return {
     pxPerUnit,
@@ -172,7 +191,11 @@ export function computeMetrics(map: GameMap, containerW: number, containerH: num
     badgeFont: badgeFontPx * U,
     anchorR: clamp(pipRpx * 0.34, 1.7, 3.2) * U,
     routeW: clamp(medianNNpx * 0.058, 2.5, 4.6) * U,
+    outzoneFont: outzoneFontPx * U,
     badgeFontPx,
+    nameFontPx,
+    outzoneFontPx,
+    medianNNpx,
   };
 }
 
@@ -277,8 +300,112 @@ export interface BoardLayout {
   routes: RouteLayout[];
   routesByCity: Map<CityId, RouteLayout[]>;
   routeByPair: Map<string, RouteLayout>;
+  /** Solved positions of the §1 "OUT OF PLAY" region labels. */
+  outzoneLabels: OutzoneLabel[];
   /** Number of badges that could not find a fully clear slot. */
   badgeCollisions: number;
+  /**
+   * Honest, itemised overlap census on the geometry that is actually drawn.
+   * Every one of these must be 0 — U5 is the criterion we intend to win on, and
+   * a single number hides which pair regressed.
+   */
+  collisions: {
+    badgeBadge: number;
+    badgeName: number;
+    nameName: number;
+    badgeOutzone: number;
+    nameOutzone: number;
+    total: number;
+  };
+}
+
+/**
+ * The out-of-play region label (§1). `RegionLayer` draws it at these metrics,
+ * at the position the solver chose — see `placeOutzoneLabels`.
+ */
+export const OUTZONE_LABEL = 'OUT OF PLAY';
+/** Matches `letter-spacing: 0.22em` on `.pgb-outzone-label`. */
+const OUTZONE_TRACKING = 0.22;
+
+export interface OutzoneLabel {
+  areaId: string;
+  at: Vec;
+  w: number;
+  h: number;
+}
+
+export function outzoneLabelBox(m: Metrics): { w: number; h: number } {
+  const f = m.outzoneFont;
+  return {
+    w: (nameWidthRatio(OUTZONE_LABEL) + OUTZONE_TRACKING * OUTZONE_LABEL.length) * f,
+    h: f * 1.45,
+  };
+}
+
+/**
+ * Finds a clear home for each §1 region label.
+ *
+ * The label is decoration; the 42 nameplates are data, and they are already
+ * settled by the time this runs. So the label moves, not the plates: it is
+ * offered a ring search outward from the region's visual centre and takes the
+ * first position clear of every nameplate. Only once it has a home is it handed
+ * to the badge solver as an obstacle — which is what stops the three connection
+ * costs that used to land on top of it.
+ */
+function placeOutzoneLabels(
+  areas: readonly { id: string; at: Vec }[],
+  plateBoxes: readonly Rect[],
+  m: Metrics,
+  space: BoardSpace,
+): OutzoneLabel[] {
+  const { w, h } = outzoneLabelBox(m);
+  const out: OutzoneLabel[] = [];
+  const taken: Rect[] = [];
+
+  const cost = (cand: Vec): number => {
+    if (
+      cand.x < w / 2 ||
+      cand.x > space.width - w / 2 ||
+      cand.y < h / 2 ||
+      cand.y > space.height - h / 2
+    ) {
+      return Infinity;
+    }
+    const rect = rectFromCenter(cand, w, h);
+    let sum = 0;
+    for (const b of plateBoxes) sum += overlapArea(rect, b);
+    for (const b of taken) sum += overlapArea(rect, b);
+    return sum;
+  };
+
+  for (const area of areas) {
+    let best = area.at;
+    let bestScore = cost(area.at) * 6;
+
+    const GOLDEN = 2.39996;
+    rings: for (let ring = 1; ring <= 12 && bestScore > 0; ring++) {
+      const radius = h * (0.9 + ring * 0.85);
+      const steps = 10 + ring * 3;
+      for (let s = 0; s < steps; s++) {
+        const a = s * GOLDEN + ring * 0.6;
+        const cand = {
+          x: area.at.x + Math.cos(a) * radius * 1.15,
+          y: area.at.y + Math.sin(a) * radius,
+        };
+        // Drifting off the region centre is cheap; covering a name is not.
+        const score = cost(cand) * 6 + radius;
+        if (score < bestScore) {
+          bestScore = score;
+          best = cand;
+        }
+        if (score <= radius) break rings;
+      }
+    }
+
+    taken.push(rectFromCenter(best, w, h));
+    out.push({ areaId: area.id, at: best, w, h });
+  }
+  return out;
 }
 
 export const pairKey = (a: CityId, b: CityId): string => (a < b ? `${a}|${b}` : `${b}|${a}`);
@@ -662,10 +789,23 @@ function solveBadges(
 
 const layoutCache = new Map<string, BoardLayout>();
 
-export function buildLayout(map: GameMap, containerW: number, containerH: number): BoardLayout {
+/**
+ * @param outOfPlay Visual centre of each area that is out of the playing zone
+ *   (§1). Each gets a label placed clear of the nameplates, and that label is
+ *   then reserved against the badge solver — three connection costs used to be
+ *   dropped straight on top of it.
+ */
+export function buildLayout(
+  map: GameMap,
+  containerW: number,
+  containerH: number,
+  outOfPlay: readonly { id: string; at: Vec }[] = [],
+): BoardLayout {
   const metrics = computeMetrics(map, containerW, containerH);
-  // Quantise the cache key: a 1 px resize must not re-solve 83 badges.
-  const cacheKey = `${map.id}@${metrics.pxPerUnit.toFixed(3)}`;
+  // Quantise the cache key: a 1 px resize must not re-solve 83 badges. The
+  // out-of-play labels are part of the obstacle field, so they key it too.
+  const zoneKey = outOfPlay.map((a) => a.id).join(',');
+  const cacheKey = `${map.id}@${metrics.pxPerUnit.toFixed(3)}#${zoneKey}`;
   const cached = layoutCache.get(cacheKey);
   if (cached) return cached;
 
@@ -685,11 +825,23 @@ export function buildLayout(map: GameMap, containerW: number, containerH: number
   // Breathing room around every reserved box, in board units (~1.5 screen px).
   const pad = 1 / m.pxPerUnit;
 
-  /* --- nameplates own their space outright: a cost badge never covers one --- */
+  /*
+   * The §1 region labels take whatever room the settled nameplates left them.
+   * Plates carry data and are never moved for a label; the label moves instead.
+   */
+  const plateBoxes = pos.map((p, i) =>
+    rectFromCenter(p, sizes[i]!.w + pad * 2, sizes[i]!.h + pad * 2),
+  );
+  const outzoneLabels = placeOutzoneLabels(outOfPlay, plateBoxes, m, space);
+
+  /* --- reserved furniture: a cost badge never covers any of it --- */
   const cityBoxes: Rect[] = [
-    ...pos.map((p, i) => rectFromCenter(p, sizes[i]!.w + pad * 2, sizes[i]!.h + pad * 2)),
+    ...plateBoxes,
     // The true-position dot must stay visible even when the plate moved away.
     ...anchors.map((a) => rectFromCenter(a, m.anchorR * 4, m.anchorR * 4)),
+    // §1 region labels. They are drawn text like any other and were the one
+    // piece of board furniture the solver did not know about.
+    ...outzoneLabels.map((l) => rectFromCenter(l.at, l.w + pad * 2, l.h + pad * 2)),
   ];
 
   const anchorById = new Map(map.cities.map((c, i) => [c.id, anchors[i]!] as const));
@@ -737,17 +889,53 @@ export function buildLayout(map: GameMap, containerW: number, containerH: number
    */
   const drawnBadges = badges.map((b) => rectFromCenter(b.badge.at, b.badge.w, b.badge.h));
   const drawnPlates = pos.map((p, i) => rectFromCenter(p, sizes[i]!.w, sizes[i]!.h));
+  const drawnLabels = outzoneLabels.map((l) => rectFromCenter(l.at, l.w, l.h));
+
+  const collisions = {
+    badgeBadge: 0,
+    badgeName: 0,
+    nameName: 0,
+    badgeOutzone: 0,
+    nameOutzone: 0,
+    total: 0,
+  };
   let badgeCollisions = 0;
   for (let i = 0; i < drawnBadges.length; i++) {
     let hit = false;
-    for (let j = 0; j < drawnBadges.length && !hit; j++) {
-      if (j !== i && overlapArea(drawnBadges[i]!, drawnBadges[j]!) > 0.5) hit = true;
+    for (let j = i + 1; j < drawnBadges.length; j++) {
+      if (overlapArea(drawnBadges[i]!, drawnBadges[j]!) > 0.5) {
+        collisions.badgeBadge++;
+        hit = true;
+      }
     }
-    for (let j = 0; j < drawnPlates.length && !hit; j++) {
-      if (overlapArea(drawnBadges[i]!, drawnPlates[j]!) > 0.5) hit = true;
+    for (let j = 0; j < drawnPlates.length; j++) {
+      if (overlapArea(drawnBadges[i]!, drawnPlates[j]!) > 0.5) {
+        collisions.badgeName++;
+        hit = true;
+      }
+    }
+    for (let j = 0; j < drawnLabels.length; j++) {
+      if (overlapArea(drawnBadges[i]!, drawnLabels[j]!) > 0.5) {
+        collisions.badgeOutzone++;
+        hit = true;
+      }
     }
     if (hit) badgeCollisions++;
   }
+  for (let i = 0; i < drawnPlates.length; i++) {
+    for (let j = i + 1; j < drawnPlates.length; j++) {
+      if (overlapArea(drawnPlates[i]!, drawnPlates[j]!) > 0.5) collisions.nameName++;
+    }
+    for (let j = 0; j < drawnLabels.length; j++) {
+      if (overlapArea(drawnPlates[i]!, drawnLabels[j]!) > 0.5) collisions.nameOutzone++;
+    }
+  }
+  collisions.total =
+    collisions.badgeBadge +
+    collisions.badgeName +
+    collisions.nameName +
+    collisions.badgeOutzone +
+    collisions.nameOutzone;
 
   const routesByCity = new Map<CityId, RouteLayout[]>();
   const routeByPair = new Map<string, RouteLayout>();
@@ -769,7 +957,9 @@ export function buildLayout(map: GameMap, containerW: number, containerH: number
     routes: solved,
     routesByCity,
     routeByPair,
+    outzoneLabels,
     badgeCollisions,
+    collisions,
   };
 
   // Bounded cache: a handful of container sizes per session, never unbounded.

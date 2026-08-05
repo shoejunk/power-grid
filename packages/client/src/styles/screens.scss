@@ -558,6 +558,16 @@
 /* ==================================================================== *
  * CREATE GAME
  * ==================================================================== */
+/*
+ * ONE scroll container for the whole form.
+ *
+ * This used to be two columns that each scrolled independently inside a grid
+ * that did not. On a 720p or 768p laptop that put the "Advanced / Setup seed"
+ * panel behind a scrollbar in the right-hand column that nothing on screen
+ * advertised — the form looked simply truncated, and the seed field was
+ * effectively unreachable. The document root is `overflow: hidden` (reset.scss),
+ * so if this element does not scroll, nothing does.
+ */
 .pg-setup__grid {
   position: relative;
   z-index: var(--pg-z-content);
@@ -572,10 +582,14 @@
   max-width: min(1720px, 92vw);
   width: 100%;
   margin: 0 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Anchor the columns to the top so a short column does not stretch and
+     strand its sticky footer halfway down an empty box. */
+  align-content: start;
 
   @include down('lg') {
     grid-template-columns: minmax(0, 1fr);
-    overflow-y: auto;
   }
 }
 
@@ -584,9 +598,33 @@
   flex-direction: column;
   gap: var(--pg-space-4);
   min-height: 0;
-  overflow-y: auto;
   padding-bottom: var(--pg-space-4);
   padding-right: 4px;
+}
+
+/*
+ * Short frames (720p / 768p laptops) reflow rather than just scroll.
+ *
+ * The right-hand column is four stacked panels and it is the one that runs off
+ * the bottom — "Advanced / Setup seed" is its third panel, which is why the
+ * seed field was the control that disappeared. Splitting that column in two
+ * brings the whole form back to roughly one screen; the grid still scrolls, so
+ * nothing depends on the reflow being perfect at every width.
+ */
+@media (max-height: 820px) and (min-width: 1180px) {
+  .pg-setup__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(500px, 1.06fr);
+  }
+  .pg-setup__col:last-child {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(230px, 1fr));
+    align-content: start;
+    gap: var(--pg-space-4);
+  }
+  .pg-setup__col:last-child > .pg-setup__submit,
+  .pg-setup__col:last-child > .pg-inline-error {
+    grid-column: 1 / -1;
+  }
 }
 
 .pg-setup__heading {
@@ -872,13 +910,18 @@
   max-width: var(--pg-max-content);
   width: 100%;
   margin: 0 auto;
+  /* Same rule as the setup screen: the lobby owns exactly one scroll
+     container, and it is this one. A column that scrolls on its own inside a
+     frame that cannot is how a control ends up unreachable. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-content: start;
 
   @include down('xl') {
     grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.8fr);
   }
   @include down('lg') {
     grid-template-columns: minmax(0, 1fr);
-    overflow-y: auto;
   }
 }
 
@@ -889,11 +932,6 @@
   flex-direction: column;
   gap: var(--pg-space-4);
   min-height: 0;
-}
-
-.pg-lobby__share {
-  overflow-y: auto;
-  overflow-x: hidden;
 }
 
 /*
@@ -913,8 +951,6 @@
 }
 
 .pg-lobby__settings {
-  overflow-y: auto;
-
   @include down('xl') {
     display: none;
   }
@@ -1279,12 +1315,13 @@
      grid can never disagree about how narrow a rail may get. */
   --pg-rail-min: 244px;
   --pg-phase-min: 356px;
-  /* Overwritten with a px length by the board renderer. */
-  --pg-board-w: minmax(0, 1.5fr);
+  /* Overwritten with a px length by the board renderer. Used as a growth
+     limit, so a stale value can never push the rails past their minimums. */
+  --pg-board-w: 1.5fr;
 
   grid-template-columns:
     minmax(var(--pg-rail-min), 1fr)
-    var(--pg-board-w)
+    minmax(0, var(--pg-board-w))
     minmax(var(--pg-phase-min), 1.32fr);
   grid-template-rows: auto auto minmax(150px, 1fr);
   grid-template-areas:
@@ -1528,7 +1565,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .pg-game__grid {
-    --pg-board-w: minmax(0, 1fr);
+    --pg-board-w: 1fr;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(320px, 1fr) auto auto;
     grid-template-areas:

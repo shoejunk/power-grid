@@ -77,7 +77,17 @@ export function GameBoard(): JSX.Element {
     read();
     const ro = new ResizeObserver(read);
     ro.observe(el);
-    return () => ro.disconnect();
+    /*
+     * Belt and braces. ResizeObserver callbacks are delivered as part of the
+     * rendering steps, so a window that resizes while the tab is not painting
+     * (backgrounded, occluded, offscreen) can deliver nothing at all and leave
+     * the board solved for the previous size. `resize` still fires there.
+     */
+    window.addEventListener('resize', read);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', read);
+    };
   }, []);
 
   const map = useMemo(
@@ -154,10 +164,34 @@ export function GameBoard(): JSX.Element {
     };
   }, [fontsReady]);
 
+  /*
+   * Region tint and out-of-play scrim. Keyed on the zone rather than folded
+   * into the layout, because the zone is game state that can change at setup
+   * while every position on the board stays exactly where it was.
+   */
+  const regions = useMemo(
+    () => (map && gameState ? regionRasters(map, gameState.zone) : null),
+    [map, gameState],
+  );
+
+  /*
+   * Where the "OUT OF PLAY" labels land (§1). They are handed to the layout
+   * solver as reserved boxes: the label is drawn text like a city name, and
+   * before this the badge solver treated it as empty canvas and dropped three
+   * connection costs straight on top of it.
+   */
+  const outOfPlay = useMemo(() => {
+    if (!map || !gameState || !regions?.hasScrim) return [];
+    return map.areas
+      .filter((a) => !gameState.zone.includes(a.id))
+      .map((a) => ({ id: a.id, at: regions.centroids[a.id] }))
+      .filter((a): a is { id: string; at: { x: number; y: number } } => a.at !== undefined);
+  }, [map, gameState, regions]);
+
   const layout = useMemo<BoardLayout | null>(() => {
     if (!map || !fontsReady || box.w < 40 || box.h < 40) return null;
-    return buildLayout(map, box.w, box.h);
-  }, [map, fontsReady, box.w, box.h]);
+    return buildLayout(map, box.w, box.h, outOfPlay);
+  }, [map, fontsReady, box.w, box.h, outOfPlay]);
 
   const model = useMemo(
     () => (gameState && map ? buildModel(gameState, map, myPlayerId) : null),
@@ -181,16 +215,6 @@ export function GameBoard(): JSX.Element {
 
   const terrain = art && map ? art.boardBase[map.id] : null;
   const grain = art?.paperGrain ?? null;
-
-  /*
-   * Region tint and out-of-play scrim. Keyed on the zone rather than folded
-   * into the layout, because the zone is game state that can change at setup
-   * while every position on the board stays exactly where it was.
-   */
-  const regions = useMemo(
-    () => (map && gameState ? regionRasters(map, gameState.zone) : null),
-    [map, gameState],
-  );
 
   /* --- viewport --------------------------------------------------- */
   const space = layout?.space ?? { width: 780, height: 1000 };
@@ -354,8 +378,30 @@ export function GameBoard(): JSX.Element {
     [viewport, space.width, space.height],
   );
 
-  /* --- diagnostics: frame rate + solver residual ------------------- */
+  /* --- diagnostics: frame rate + solver residual -------------------
+   *
+   * The solver census is published from the layout effect rather than from the
+   * frame loop: requestAnimationFrame is throttled to nothing in a background
+   * or offscreen tab, and the overlap counts are exactly what an automated
+   * check wants to read there.
+   */
   const fpsRef = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    const w = window as unknown as { __pgBoard?: Record<string, unknown> };
+    w.__pgBoard = {
+      ...(w.__pgBoard ?? {}),
+      badgeCollisions: layout?.badgeCollisions ?? null,
+      collisions: layout?.collisions ?? null,
+      routes: layout?.routes.length ?? 0,
+      cities: layout?.nodes.length ?? 0,
+      cell: { w: box.w, h: box.h },
+      badgeFontPx: layout?.metrics.badgeFontPx ?? null,
+      nameFontPx: layout?.metrics.nameFontPx ?? null,
+      outzoneFontPx: layout?.metrics.outzoneFontPx ?? null,
+      medianNNpx: layout?.metrics.medianNNpx ?? null,
+    };
+  }, [layout, box.w, box.h]);
+
   useEffect(() => {
     let frames = 0;
     let last = performance.now();
@@ -367,21 +413,14 @@ export function GameBoard(): JSX.Element {
         frames = 0;
         last = now;
         const w = window as unknown as { __pgBoard?: Record<string, unknown> };
-        w.__pgBoard = {
-          ...(w.__pgBoard ?? {}),
-          fps,
-          badgeCollisions: layout?.badgeCollisions ?? null,
-          routes: layout?.routes.length ?? 0,
-          cities: layout?.nodes.length ?? 0,
-          badgeFontPx: layout?.metrics.badgeFontPx ?? null,
-        };
+        w.__pgBoard = { ...(w.__pgBoard ?? {}), fps };
         if (fpsRef.current) fpsRef.current.textContent = `${fps}`;
       }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [layout]);
+  }, []);
 
   const debug =
     typeof window !== 'undefined' && window.location.search.includes('boarddebug');

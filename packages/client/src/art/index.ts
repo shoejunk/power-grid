@@ -74,20 +74,27 @@ export interface ArtManifest {
 /**
  * Intrinsic pixel size of each baked board plate, for `<image>` sizing.
  *
- * Germany is baked at 1092x1400 (aspect 0.78, matching the map data). The plate
- * is deliberately smaller than display resolution — device-resolution tooth
- * comes from the runtime `paperGrain` overlay instead, which keeps the largest
- * asset in the build under 600 KB. Consumers should size from these values
- * rather than hard-coding dimensions.
+ * Germany is baked at 2200x2820 (aspect 0.78, matching the map data) so it
+ * still resolves on a HiDPI 2560 display without upscaling. Consumers should
+ * size from these values rather than hard-coding dimensions.
  */
 export const BOARD_BASE_SIZE: Record<MapId, { width: number; height: number }> = {
-  germany: { width: 1092, height: 1400 },
+  germany: { width: 2200, height: 2820 },
   usa: { width: 1024, height: 661 },
 };
 
-/** Where the offline pipeline writes its output. */
+/**
+ * Where the offline pipeline writes its output.
+ *
+ * WebP, not PNG. The plate is a photographic relief render, so its bytes are
+ * the terrain itself rather than compressible noise: as a lossless 24-bit PNG
+ * it costs 4.87 MB, which is by far the largest asset in the build and delays
+ * first paint of the board. WebP q90 lands the same 2200x2820 image at 504 KB
+ * with no visible loss — smaller than the 214-colour indexed PNG it replaces,
+ * and without that version's quantisation banding in the tint gradients.
+ */
 const BOARD_BASE_URL: Partial<Record<MapId, TextureRef>> = {
-  germany: '/art/board-germany.png',
+  germany: '/art/board-germany.webp',
 };
 
 /**

@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useEffect } from 'react';
 
 import { useGameStore } from '../net/store';
@@ -37,7 +37,6 @@ function ToastCard({ toast, onDismiss }: ToastCardProps): JSX.Element {
       variants={toastVariants}
       initial="hidden"
       animate="visible"
-      exit="exit"
       role={toast.tone === 'error' ? 'alert' : 'status'}
     >
       <span className="pg-toast__icon">
@@ -74,6 +73,16 @@ function ToastCard({ toast, onDismiss }: ToastCardProps): JSX.Element {
  *
  * Reads the toast stack straight off the store and renders it into the fixed
  * top-right rail. Mounted once, at the app root — screens never render it.
+ *
+ * Deliberately NOT wrapped in `AnimatePresence`. The store already caps the
+ * stack at four, yet a bot-driven game was measured with **84** toast cards
+ * mounted and overflowing the viewport: under React StrictMode's double-invoke
+ * AnimatePresence never completes the exit, so dismissed toasts are never
+ * unmounted and simply accumulate. The same wedge previously stranded route
+ * transitions and made the Modal undismissable.
+ *
+ * Rendering the store list directly makes the mounted count exactly the store
+ * count, by construction. Toasts still animate in; only the exit is given up.
  */
 export function Toaster(): JSX.Element {
   const toasts = useGameStore((s) => s.toasts);
@@ -81,11 +90,9 @@ export function Toaster(): JSX.Element {
 
   return (
     <div className="pg-toaster" aria-live="polite" aria-atomic="false">
-      <AnimatePresence initial={false}>
-        {toasts.map((toast) => (
-          <ToastCard key={toast.id} toast={toast} onDismiss={dismiss} />
-        ))}
-      </AnimatePresence>
+      {toasts.map((toast) => (
+        <ToastCard key={toast.id} toast={toast} onDismiss={dismiss} />
+      ))}
     </div>
   );
 }

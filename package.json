@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@esbuild/win32-x64": "^0.28.1",
-    "@rollup/rollup-win32-x64-msvc": "^4.62.3"
+    "@rollup/rollup-win32-x64-msvc": "^4.62.3",
+    "sharp": "^0.35.3"
   }
 }

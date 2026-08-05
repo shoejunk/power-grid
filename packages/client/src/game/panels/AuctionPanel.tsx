@@ -6,6 +6,7 @@ import { MAX_PLANTS_PER_PLAYER, getPlant } from '@pg/shared';
 import { net } from '../../net';
 import { springSnappy, springSoft } from '../../styles/motion';
 import { Avatar, Badge, Button, Money, NumberStepper, Tooltip } from '../../ui';
+import { fuelText } from '../format';
 import { useMatch } from '../model';
 import { PlantCard } from '../parts/PlantCard';
 import { Callout, CostRow, PhaseShell, Stat, Waiting, type RuleLine } from './shell';
@@ -157,6 +158,23 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
                 onClick={() => onSelectPlant(option.plantId)}
               >
                 <span className="pg-gpicker__num pg-numeral">{option.plantId}</span>
+                {/*
+                 * What the plant actually DOES. This chooser used to show only
+                 * the number and the minimum bid ("6 / min 6₤") — the fuel it
+                 * burns and the cities it powers were nowhere on the one
+                 * screen where the player is deciding between plants, so they
+                 * had to hover each option to compare them.
+                 */}
+                <span className="pg-gpicker__spec">
+                  {fuelText(getPlant(option.plantId))}
+                  <span className="pg-gpicker__arrow" aria-hidden="true">
+                    ▸
+                  </span>
+                  <b className="pg-numeral">{getPlant(option.plantId).cities}</b>
+                  <span className="pg-gpicker__unit">
+                    {getPlant(option.plantId).cities === 1 ? 'city' : 'cities'}
+                  </span>
+                </span>
                 <span className="pg-gpicker__meta">
                   {option.discounted ? <Badge tone="accent">discount 1₤</Badge> : null}
                   <span className="pg-gpicker__min">

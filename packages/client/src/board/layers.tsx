@@ -9,7 +9,7 @@
 
 import { memo } from 'react';
 
-import type { BoardLayout } from './layout';
+import { OUTZONE_LABEL, type BoardLayout } from './layout';
 import type { RegionRaster } from './terrain';
 import type { BoardModel } from './selectors';
 import { DEF } from './Defs';
@@ -41,7 +41,7 @@ function RegionLayerImpl({
   regions,
   hasGrain,
 }: RegionProps): JSX.Element {
-  const { space, map, metrics } = layout;
+  const { space, metrics } = layout;
 
   /*
    * The plate is authored to the map's own aspect ratio, so it normally maps
@@ -141,27 +141,32 @@ function RegionLayerImpl({
             height={space.height}
             preserveAspectRatio="none"
           />
-          {map.areas
-            .filter((a) => !model.zone.has(a.id))
-            .map((a) => {
-              const c = regions.centroids[a.id];
-              if (!c) return null;
+          {layout.outzoneLabels
+            .filter((l) => !model.zone.has(l.areaId))
+            .map((l) => {
               return (
                 <text
-                  key={a.id}
+                  key={l.areaId}
                   className="pgb-outzone-label"
-                  x={c.x}
-                  y={c.y}
-                  fontSize={metrics.nameFont * 0.92}
+                  x={l.at.x}
+                  y={l.at.y}
+                  /*
+                   * Its own floored size (>= 13 screen px), not a fraction of
+                   * the city-name size. At 1280x720 the old `nameFont * 0.92`
+                   * resolved to 7.5 px of 2.1:1 grey — a caption nobody could
+                   * read, on the one piece of information that tells a player a
+                   * third of the board is unusable for the whole game.
+                   */
+                  fontSize={metrics.outzoneFont}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fill={theme.textFaint}
+                  fill={theme.textMuted}
                   stroke={theme.void}
-                  strokeWidth={metrics.nameFont * 0.42}
-                  strokeOpacity={0.85}
+                  strokeWidth={metrics.outzoneFont * 0.34}
+                  strokeOpacity={0.92}
                   style={{ paintOrder: 'stroke' }}
                 >
-                  OUT OF PLAY
+                  {OUTZONE_LABEL}
                 </text>
               );
             })}
