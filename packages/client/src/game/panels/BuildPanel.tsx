@@ -1,11 +1,17 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
 import type { BuildTarget } from '@pg/shared';
-import { END_GAME_THRESHOLD, HOUSE_SLOT_COSTS, SLOTS_OPEN_AT_STEP, STEP2_THRESHOLD } from '@pg/shared';
+import {
+  END_GAME_THRESHOLD,
+  HOUSE_SLOT_COSTS,
+  PAYMENT_TABLE,
+  SLOTS_OPEN_AT_STEP,
+  STEP2_THRESHOLD,
+} from '@pg/shared';
 
 import { net } from '../../net';
 import { springSnappy } from '../../styles/motion';
-import { Badge, Button, Money, TextInput, Tooltip } from '../../ui';
+import { Badge, Button, Modal, Money, TextInput, Tooltip } from '../../ui';
 import { plural } from '../format';
 import { useMatch } from '../model';
 import { Callout, PhaseShell, Stat, Waiting, type RuleLine } from './shell';
@@ -36,7 +42,12 @@ export function BuildPanel(): JSX.Element {
 
   if (!legal.isActive || !me) {
     return (
-      <PhaseShell title="Build Houses" subtitle="Phase 4 · reverse player order" rules={BUILD_RULES}>
+      <PhaseShell
+        title="Build Houses"
+        subtitle="Phase 4 · reverse player order"
+        actions={<PaymentSummaryButton />}
+        rules={BUILD_RULES}
+      >
         <Waiting note="Connecting cities, paying the cheapest route plus the city slot (§8)." />
         <StepNote step={state.step} slotsOpen={slotsOpen} costsOpen={costsOpen} />
       </PhaseShell>
@@ -58,9 +69,12 @@ export function BuildPanel(): JSX.Element {
       tone="live"
       rules={BUILD_RULES}
       actions={
-        <Badge tone="accent" dot>
-          Acting
-        </Badge>
+        <div className="pg-gactions">
+          <PaymentSummaryButton />
+          <Badge tone="accent" dot>
+            Acting
+          </Badge>
+        </div>
       }
       footer={
         <div className="pg-gactions">
@@ -150,6 +164,40 @@ export function BuildPanel(): JSX.Element {
         Zone: {state.zone.map((id) => map.areas.find((a) => a.id === id)?.name ?? id).join(' · ')}
       </span>
     </PhaseShell>
+  );
+}
+
+function PaymentSummaryButton(): JSX.Element {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+        Payment summary
+      </Button>
+      {open ? (
+        <Modal
+          open
+          onClose={() => setOpen(false)}
+          title="Payment summary card"
+          description="Elektro income for the number of cities supplied during Phase 5."
+          width="720px"
+        >
+          <div className="pg-gpay">
+            <span className="pg-overline pg-gsectionlabel">Cities supplied → Elektro earned</span>
+            <div className="pg-gpay__grid">
+              {PAYMENT_TABLE.map((amount, cities) => (
+                <div key={cities} className="pg-gpay__cell">
+                  <span className="pg-gpay__cities pg-numeral">{cities}</span>
+                  <span className="pg-gpay__amount pg-numeral">{amount}</span>
+                </div>
+              ))}
+            </div>
+            <p className="pg-caption">Supplying zero cities still pays the guaranteed minimum of 10 Elektro. <em>§9.1</em></p>
+          </div>
+        </Modal>
+      ) : null}
+    </>
   );
 }
 
