@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { REFILL_TABLE } from '@pg/shared';
 import type { ResourceBundle, ResourceType } from '@pg/shared';
 
 import { springSnappy } from '../styles/motion';
-import { Hint, Panel, Tooltip } from '../ui';
+import { Button, Hint, Modal, Panel, Tooltip } from '../ui';
 import { useMatch } from './model';
 import { RESOURCE_META, RESOURCE_ORDER } from './format';
 
@@ -32,12 +34,15 @@ export function ResourceMarket({ draft = null }: ResourceMarketProps): JSX.Eleme
       title="Resource market"
       subtitle="Buy from the cheapest space first"
       actions={
-        <Hint
-          placement="left"
-          title="Resource market"
-          rule="§1, §7, §9.2"
-          content="Every space has a printed price and holds up to three tokens (uranium holds one). You pay the price of the space each token is taken from, always starting with the cheapest. Resupply during Phase 5 fills the most expensive empty spaces first."
-        />
+        <div className="pg-gactions">
+          <ResupplySummaryButton />
+          <Hint
+            placement="left"
+            title="Resource market"
+            rule="§1, §7, §9.2"
+            content="Every space has a printed price and holds up to three tokens (uranium holds one). You pay the price of the space each token is taken from, always starting with the cheapest. Resupply during Phase 5 fills the most expensive empty spaces first."
+          />
+        </div>
       }
     >
       <div className="pg-gtrack" role="table" aria-label="Resource market price track">
@@ -63,6 +68,78 @@ export function ResourceMarket({ draft = null }: ResourceMarketProps): JSX.Eleme
         ))}
       </div>
     </Panel>
+  );
+}
+
+function ResupplySummaryButton(): JSX.Element {
+  const { state } = useMatch();
+  const [open, setOpen] = useState(false);
+  const refill = REFILL_TABLE[state.settings.mapId][state.settings.playerCount]!;
+  const steps = [1, 2, 3] as const;
+
+  return (
+    <>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+        Resupply table
+      </Button>
+      {open ? (
+        <Modal
+          open
+          onClose={() => setOpen(false)}
+          title="Resource resupply table"
+          description={`${state.settings.playerCount}-player game - tokens added during Phase 5.`}
+          width="560px"
+        >
+          <div className="pg-grefill">
+            <span className="pg-overline pg-gsectionlabel">Tokens added from the supply</span>
+            <div className="pg-grefill__table" role="table" aria-label="Resource resupply table">
+              <div className="pg-grefill__row pg-grefill__row--head" role="row">
+                <span className="pg-grefill__label pg-overline" role="columnheader">
+                  Resource
+                </span>
+                {steps.map((step) => (
+                  <span
+                    key={step}
+                    className="pg-grefill__cell pg-grefill__step pg-numeral"
+                    data-active={state.step === step}
+                    role="columnheader"
+                  >
+                    Step {step}
+                  </span>
+                ))}
+              </div>
+              {RESOURCE_ORDER.map((type) => {
+                const meta = RESOURCE_META[type];
+                return (
+                  <div key={type} className="pg-grefill__row" role="row">
+                    <span className="pg-grefill__label" role="rowheader">
+                      <span className="pg-gtok pg-gtok--xs" data-res={type} aria-hidden="true">
+                        {meta.mark}
+                      </span>
+                      {meta.label}
+                    </span>
+                    {steps.map((step) => (
+                      <span
+                        key={step}
+                        className="pg-grefill__cell pg-numeral"
+                        data-active={state.step === step}
+                        role="cell"
+                      >
+                        {refill[step][type]}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="pg-caption">
+              The highlighted column is the current Step. These values fill the most expensive empty spaces first.{' '}
+              <em>Rule 9.2</em>
+            </p>
+          </div>
+        </Modal>
+      ) : null}
+    </>
   );
 }
 
