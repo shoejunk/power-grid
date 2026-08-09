@@ -40,7 +40,7 @@ export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
 
 /**
- * Pass-like moves tried, in order, when a disconnected player's turn timer
+ * Pass-like moves tried, in order, when a bot's turn timer
  * fires and the engine offers no `defaultActionFor`. The engine still decides
  * which (if any) is legal — the server only proposes.
  */
@@ -554,16 +554,15 @@ export class GameRoom {
   }
 
   /* ---------------------------------------------------------------- *
-   * Turn timers (requirement 8)
+   * Bot turns
    * ---------------------------------------------------------------- */
 
   /**
    * Arms — or disarms — the automatic-move timer for whoever is on the clock.
    *
-   *  - Connected human: no timer, ever. The server never plays for someone
-   *    who is sitting right there.
+   *  - Human seat: no timer, ever. Async games wait indefinitely, whether the
+   *    player is connected or disconnected.
    *  - Bot seat: short cosmetic delay, then the engine's default move.
-   *  - Disconnected human: the generous `turnTimeoutMs`, then a safe pass.
    */
   rescheduleAutoAction(): void {
     this.clearTurnTimer();
@@ -576,22 +575,9 @@ export class GameRoom {
     if (!seat) return;
 
     if (seat.isBot) {
-      this.turnTimer = setTimeout(() => this.takeAutoAction(active, 'bot'), this.deps.config.botDelayMs);
+      this.turnTimer = setTimeout(() => this.takeAutoAction(active), this.deps.config.botDelayMs);
       this.turnTimer.unref?.();
-      return;
     }
-    if (this.isConnected(active)) return;
-
-    const ms = this.deps.config.turnTimeoutMs;
-    this.deps.logger.info('Turn timer armed for disconnected player', {
-      gameId: this.gameId,
-      code: this.code,
-      playerId: active,
-      name: seat.name,
-      timeoutMs: ms,
-    });
-    this.turnTimer = setTimeout(() => this.takeAutoAction(active, 'disconnected'), ms);
-    this.turnTimer.unref?.();
   }
 
   private clearTurnTimer(): void {
@@ -602,24 +588,17 @@ export class GameRoom {
   }
 
   /** Asks the engine for a safe move, applies it, and says so loudly. */
-  private takeAutoAction(playerId: PlayerId, reason: 'bot' | 'disconnected'): void {
+  private takeAutoAction(playerId: PlayerId): void {
     this.turnTimer = null;
     if (this.disposed || !this.state || !this.started) return;
     if (this.state.activePlayerId !== playerId) return;
-    // Guard against a race: they reconnected while the timer was in flight.
-    if (reason === 'disconnected' && this.isConnected(playerId)) {
-      this.rescheduleAutoAction();
-      return;
-    }
-
     const action = this.findSafeAction(playerId);
     const seat = this.seat(playerId);
     if (!action) {
-      this.deps.logger.warn('No safe default action available; turn is stalled', {
+      this.deps.logger.warn('No safe bot action available; turn is stalled', {
         gameId: this.gameId,
         playerId,
         phase: this.state.phase,
-        reason,
       });
       return;
     }
@@ -635,25 +614,23 @@ export class GameRoom {
       return;
     }
 
-    this.deps.logger.info(
-      reason === 'bot' ? 'Bot acted' : 'Auto-played for disconnected player',
-      {
-        gameId: this.gameId,
-        code: this.code,
-        playerId,
-        name: seat?.name,
-        action: action.type,
-      },
-    );
+    this.deps.logger.info('Bot acted', {
+      gameId: this.gameId,
+      code: this.code,
+      playerId,
+      name: seat?.name,
+      action: action.type,
+    });
     this.persist();
     this.broadcastState();
-    // The next player may also be a bot or absent — keep the table moving.
+    // The next player may also be a bot; keep the table moving.
     this.rescheduleAutoAction();
   }
 
   /**
    * The engine's own suggestion if it has one, otherwise the first pass-like
-   * candidate the engine says is legal. Rules knowledge stays in the engine.
+   * candidate the engine says is legal. This is only used for bot seats; human
+   * turns are never resolved by the server. Rules knowledge stays in the engine.
    */
   private findSafeAction(playerId: PlayerId): GameAction | null {
     const state = this.state;

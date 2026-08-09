@@ -86,7 +86,7 @@ not against the source code alone.
 | N2 | State is server-authoritative. A tampered client cannot make an illegal move. |
 | N3 | A player who closes the tab and returns resumes their exact seat, money, plants, houses and turn position. |
 | N4 | The game survives a **full server restart** with no loss of state. |
-| N5 | A disconnected player never permanently blocks the game. |
+| N5 | A disconnected player may pause the game indefinitely without losing their seat or state. |
 | N6 | Two real browser clients can play a full game against each other end to end. |
 
 ---

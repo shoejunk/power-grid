@@ -2,7 +2,7 @@
  * Placeholder rules engine.
  *
  * This exists so the *server* — lobbies, join codes, persistence, reconnection,
- * turn timers — can be built, run and tested end to end while the real rules
+ * bot turn timers — can be built, run and tested end to end while the real rules
  * engine (`@pg/shared/engine`) is authored in parallel. It is loaded ONLY when
  * the real engine cannot be resolved, and it says so loudly on boot.
  *
@@ -10,7 +10,7 @@
  * real plant and resource data) and a single mechanic: players take turns in
  * player order, nominating a plant from the current market or passing, with
  * phases cycling. That is enough to exercise turn ownership, out-of-turn
- * rejection, reconnection mid-turn, and the disconnected-player timeout —
+ * rejection, reconnection mid-turn, and bot turns —
  * but it is NOT Power Grid and must never ship to players.
  */
 

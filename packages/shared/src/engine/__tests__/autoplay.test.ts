@@ -3,7 +3,7 @@
  *
  * Regression origin: every one of the server's fallback actions was pass-like,
  * but §6 makes passing illegal during the first round's mandatory purchase, so
- * any game containing a bot or a dropped player deadlocked on the very first
+ * any game containing a bot deadlocked on the very first
  * auction turn. These tests pin the invariant that broke.
  */
 
@@ -20,8 +20,8 @@ import { randomZone } from '../setup.js';
  * deliberately conservative — they decline to build (§8 permits deferring a
  * network indefinitely) — so a table of nothing but defaults never connects a
  * city and never reaches the end-game threshold. That is correct behaviour for
- * a disconnected player and useless behaviour for an opponent, which is why
- * bots need a real policy rather than this. What we assert here is the safety
+ * a bot and useless behaviour for an opponent, which is why bots need a real
+ * policy rather than this. What we assert here is the safety
  * property: every reachable state offers a legal action, so nothing ever hangs.
  */
 function autoplay(state: GameState, maxTurns = 600) {

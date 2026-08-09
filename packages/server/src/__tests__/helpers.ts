@@ -36,7 +36,6 @@ export function boot(overrides: StartServerOptions = {}): Promise<RunningServer>
     logger: silentLogger,
     // Long enough that no test races the timers unless it opts in.
     heartbeatMs: 60_000,
-    turnTimeoutMs: 60_000,
     botDelayMs: 30,
     ...overrides,
   });

@@ -39,7 +39,6 @@ describe('rules engine integration', () => {
       dataDir,
       logger: silentLogger,
       heartbeatMs: 60_000,
-      turnTimeoutMs: 60_000,
     });
     cleanups.push(() => server.close());
 

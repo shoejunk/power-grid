@@ -2,9 +2,9 @@
  * Tiny structured logger.
  *
  * The server logs a lot of things the operator genuinely needs to see —
- * notably every automatic action taken on behalf of a disconnected player
- * (requirement 8: "clearly logged"). Keeping this dependency-free means the
- * test suite can swap in a silent logger without any plumbing.
+ * notably every automatic action taken on behalf of a bot. Keeping this
+ * dependency-free means the test suite can swap in a silent logger without
+ * any plumbing.
  */
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';

@@ -5,9 +5,9 @@
  * restart. The store is therefore the source of truth on boot; the in-memory
  * `GameHub` is a cache rebuilt from it.
  *
- * Anything that is genuinely runtime-only (an open socket, a pending turn
- * timer, whether a player is connected *right now*) is intentionally NOT
- * persisted: after a restart every player is disconnected until they reconnect.
+ * Anything that is genuinely runtime-only (an open socket, a bot turn timer,
+ * whether a player is connected *right now*) is intentionally NOT persisted:
+ * after a restart every player is disconnected until they reconnect.
  */
 
 import type { GameSettings, GameState, PlayerColor, PlayerId } from '@pg/shared';

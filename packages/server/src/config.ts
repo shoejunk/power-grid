@@ -30,12 +30,6 @@ export interface ServerConfig {
   /** Serve `packages/client/dist` as static files. */
   serveClient: boolean;
   clientDist: string;
-  /**
-   * How long the server waits for a *disconnected* player before playing a
-   * safe default move on their behalf. Deliberately generous — a player who
-   * reloads the page must never lose their turn. Requirement 8.
-   */
-  turnTimeoutMs: number;
   /** Think-time for bot seats, purely cosmetic pacing. */
   botDelayMs: number;
   /** WebSocket ping interval; two missed pongs terminate the socket. */
@@ -83,9 +77,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     clientDist: env.PG_CLIENT_DIST
       ? path.resolve(env.PG_CLIENT_DIST)
       : path.join(PACKAGES_ROOT, 'client', 'dist'),
-    // 3 minutes. Long enough to survive a page reload, a phone call, or a
-    // laptop lid; short enough that a vanished player cannot stall a table.
-    turnTimeoutMs: num(env.PG_TURN_TIMEOUT_MS, 180_000),
     botDelayMs: num(env.PG_BOT_DELAY_MS, 600),
     heartbeatMs: num(env.PG_HEARTBEAT_MS, 30_000),
     maxPayloadBytes: num(env.PG_MAX_PAYLOAD, 64 * 1024),

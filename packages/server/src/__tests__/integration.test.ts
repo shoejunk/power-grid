@@ -443,36 +443,30 @@ describe('Power Grid multiplayer server', () => {
   });
 
   /* ================================================================ *
-   * 5. Disconnected-player turn timer
+   * 5. Async disconnected turns
    * ================================================================ */
 
-  describe('disconnected turn timer', () => {
-    it('plays a safe default move for a disconnected player, but never for a connected one', async () => {
-      const fastDir = makeDataDir();
-      const fast = await boot({ dataDir: fastDir, turnTimeoutMs: 150 });
-      try {
-        const host = await createGame(fast, 'Ada');
-        const guest = await joinGame(fast, host.code, 'Grace');
-        guest.client.send({ t: 'setReady', ready: true });
-        await host.client.waitLobby((l) => l.players.every((p) => p.ready || p.isHost));
-        host.client.send({ t: 'startGame' });
-        await host.client.wait('state');
-        await guest.client.wait('state');
+  describe('async disconnected turns', () => {
+    it('waits indefinitely for a disconnected player instead of auto-playing', async () => {
+      const host = track(await createGame(server, 'Ada', { playerCount: 2 }));
+      const guest = track(await joinGame(server, host.code, 'Grace'));
+      guest.client.send({ t: 'setReady', ready: true });
+      await host.client.waitLobby((l) => l.players.every((p) => p.ready || p.isHost));
+      host.client.send({ t: 'startGame' });
 
-        // It is the host's turn and the host is connected: nothing should happen.
-        await new Promise((r) => setTimeout(r, 400));
-        expect(fast.hub.roomByCode(host.code)?.state?.activePlayerId).toBe(host.playerId);
+      await host.client.wait('state');
+      const initial = await guest.client.wait('state');
+      expect(initial.state.activePlayerId).toBe(host.playerId);
 
-        // Now the host vanishes on their own turn.
-        host.client.kill();
-        const moved = await guest.client.waitState((s) => s.activePlayerId === guest.playerId, 3000);
-        expect(moved.state.players[host.playerId]?.phaseStatus).toBe('passed');
+      host.client.kill();
+      await guest.client.waitState((s) => s.players[host.playerId]?.connected === false);
 
-        await closeAll(host.client, guest.client);
-      } finally {
-        await fast.close();
-        removeDataDir(fastDir);
-      }
+      // A disconnected human must not lose the turn, even after the old
+      // timeout window would have expired.
+      await new Promise((r) => setTimeout(r, 300));
+      const roomState = server.hub.roomByCode(host.code)?.state;
+      expect(roomState?.activePlayerId).toBe(host.playerId);
+      expect(roomState?.players[host.playerId]?.phaseStatus).not.toBe('passed');
     });
   });
 

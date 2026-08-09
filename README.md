@@ -231,7 +231,6 @@ Games survive the restart, provided `PG_DATA_DIR` lives outside the checkout.
 | `PG_DB_FILE` | `power-grid.db` | Database filename |
 | `PG_SERVE_CLIENT` | on when `NODE_ENV=production` | Serve the built client |
 | `PG_CLIENT_DIST` | `packages/client/dist` | Where the client bundle is |
-| `PG_TURN_TIMEOUT_MS` | `180000` | Before a default move is taken for a *disconnected* player |
 | `PG_LOG_LEVEL` | `info` in production | `debug`, `info`, `warn`, `error` |
 
 ### Hosting the client separately
@@ -254,3 +253,7 @@ the host starts the match. Each seated player holds a session token in `localSto
 Games are persisted on every applied action. Closing the tab, losing the network, or restarting the server
 does not end a game — reconnecting with the session token restores the exact seat, hand, network, money and
 turn position.
+
+Games are asynchronous: a human player's turn has no time limit. If they disconnect while active, the server
+waits indefinitely for them to reconnect and never takes a default action on their behalf. Bot seats remain
+automated.

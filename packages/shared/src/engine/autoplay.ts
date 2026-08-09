@@ -2,8 +2,6 @@
  * Default action resolution.
  *
  * Used in two situations where the game must proceed without a human decision:
- *   - a disconnected player's turn timer expires (the server must not let one
- *     dropped connection deadlock the table);
  *   - a bot seat has to act.
  *
  * The contract is narrow but strict: **for any state where the engine is

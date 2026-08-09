@@ -65,7 +65,7 @@ export interface RulesEngine {
   applyAction(state: GameState, playerId: PlayerId, action: GameAction, now?: number): GameState;
 
   /**
-   * Optional: the safest legal move for a player who is not responding.
+   * Optional: the safest legal move for an automated seat.
    * When absent the server probes `validateAction` with a list of pass-like
    * actions instead. §14 keeps rules knowledge in the engine, so an engine
    * that implements this wins over the server's generic probe.

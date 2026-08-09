@@ -84,7 +84,7 @@ export class GameHub {
       backend: this.deps.store.kind,
     });
 
-    // Absent players may already be on the clock in a restored game.
+    // Bot seats may already be on the clock in a restored game.
     for (const room of this.rooms.values()) room.rescheduleAutoAction();
   }
 
