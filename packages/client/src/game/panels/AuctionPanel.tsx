@@ -1,11 +1,10 @@
-import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useMemo, useState } from 'react';
-import type { LogEntry, Player } from '@pg/shared';
+import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import { MAX_PLANTS_PER_PLAYER, getPlant } from '@pg/shared';
 
 import { net } from '../../net';
-import { springSnappy, springSoft } from '../../styles/motion';
-import { Avatar, Badge, Button, Money, NumberStepper, Tooltip } from '../../ui';
+import { springSoft } from '../../styles/motion';
+import { Avatar, Badge, Button, NumberStepper, Tooltip } from '../../ui';
 import { fuelText } from '../format';
 import { useMatch } from '../model';
 import { PlantCard } from '../parts/PlantCard';
@@ -14,8 +13,8 @@ import { Callout, CostRow, PhaseShell, Stat, Waiting, type RuleLine } from './sh
 const AUCTION_RULES: readonly RuleLine[] = [
   { text: 'Each player may acquire at most one plant per round; in round 1 every player must.', rule: '§6' },
   { text: 'Only the four current-market plants may be auctioned — never a future-market plant.', rule: '§6, §14' },
-  { text: 'The minimum opening bid is the plant number, or 1₤ for the plant under the discount token.', rule: '§6' },
-  { text: 'Passing on a bid ends that auction for you; passing instead of nominating ends the whole phase for you.', rule: '§6' },
+  { text: 'Each eligible player simultaneously passes or submits a secret minimum and maximum bid.', rule: '§6' },
+  { text: 'After all decisions arrive, bidding is simulated clockwise without exceeding anyone’s maximum.', rule: '§6' },
   { text: 'A player may own at most three plants. Acquiring a fourth forces a scrap — never the new plant.', rule: '§6, §14' },
 ];
 
@@ -63,15 +62,24 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
   const money = me?.money ?? 0;
   const options = legal.nominatablePlants;
   const chosen = options.find((o) => o.plantId === selectedPlantId) ?? null;
-  const [bid, setBid] = useState(0);
+  const [minBid, setMinBid] = useState(0);
+  const [maxBid, setMaxBid] = useState(0);
 
   useEffect(() => {
-    if (chosen) setBid(chosen.minimumBid);
+    if (chosen) {
+      setMinBid(chosen.minimumBid);
+      setMaxBid(chosen.minimumBid);
+    }
   }, [chosen?.plantId, chosen?.minimumBid, chosen]);
 
   const uncontested = chosen?.uncontested === true;
-  const maxBid = uncontested ? (chosen?.minimumBid ?? 0) : money;
-  const canNominate = chosen !== null && chosen.affordable && bid >= chosen.minimumBid && bid <= money;
+  const allowedMaximum = uncontested ? (chosen?.minimumBid ?? 0) : money;
+  const canNominate =
+    chosen !== null &&
+    chosen.affordable &&
+    minBid >= chosen.minimumBid &&
+    maxBid >= minBid &&
+    maxBid <= money;
 
   const passBlock = legal.canPassNomination
     ? null
@@ -115,18 +123,19 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
             disabled={!canNominate}
             onClick={() => {
               if (!chosen) return;
-              net.action({ type: 'nominatePlant', plantId: chosen.plantId, bid });
+              net.action({ type: 'nominatePlant', plantId: chosen.plantId, bid: minBid, maxBid });
               onSelectPlant(null);
             }}
           >
-            {chosen ? `Open at ${bid}₤` : 'Select a plant'}
+            {chosen ? 'Submit sealed range' : 'Select a plant'}
           </Button>
         </div>
       }
     >
       <p className="pg-gphase__lead">
-        Choose one of the <strong>current market</strong> plants above and set your opening bid. Bidding
-        then runs clockwise; the last bidder standing pays and takes the plant.
+        Choose one of the <strong>current market</strong> plants and privately set the first amount
+        you are willing to bid and your ceiling. Everyone answers at once; the server then simulates
+        the normal clockwise auction immediately.
       </p>
 
       <div className="pg-gpicker">
@@ -200,17 +209,29 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
         >
           <PlantCard plantId={chosen.plantId} size="md" discounted={chosen.discounted} />
           <div className="pg-gbidbox__ctrl">
-            <span className="pg-overline">Opening bid</span>
+            <span className="pg-overline">Your sealed bid range</span>
             <NumberStepper
-              label="Opening bid"
-              value={bid}
+              label="Minimum bid"
+              value={minBid}
               min={chosen.minimumBid}
-              max={maxBid}
-              onChange={setBid}
+              max={allowedMaximum}
+              onChange={(value) => {
+                setMinBid(value);
+                if (maxBid < value) setMaxBid(value);
+              }}
               unit="₤"
               disabled={uncontested}
             />
-            <CostRow label="You would hold" amount={money - bid} tone="default" />
+            <NumberStepper
+              label="Maximum bid"
+              value={maxBid}
+              min={minBid}
+              max={allowedMaximum}
+              onChange={setMaxBid}
+              unit="₤"
+              disabled={uncontested}
+            />
+            <CostRow label="Left at your ceiling" amount={money - maxBid} tone="default" />
           </div>
         </motion.div>
       ) : null}
@@ -231,53 +252,39 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
  * The auction floor
  * ------------------------------------------------------------------ */
 
-interface LadderEntry {
-  player: Player;
-  lastBid: number | null;
-  state: 'high' | 'in' | 'passed' | 'toAct';
-}
-
 function AuctionFloor(): JSX.Element {
   const { state, meId, legal, map } = useMatch();
   const auction = state.auction!;
   const bidding = legal.bidding;
   const me = meId ? state.players[meId] : null;
-  const [amount, setAmount] = useState(auction.currentBid + 1);
+  const floor = bidding?.minimumRaise ?? 0;
+  const [minBid, setMinBid] = useState(floor);
+  const [maxBid, setMaxBid] = useState(floor);
 
   useEffect(() => {
-    setAmount(auction.currentBid + 1);
-  }, [auction.currentBid]);
+    setMinBid(floor);
+    setMaxBid(floor);
+  }, [auction.plantId, floor]);
 
-  const history = useMemo(() => auctionHistory(state.log, auction.plantId), [state.log, auction.plantId]);
-
-  const ladder: LadderEntry[] = state.playerOrder
-    .map((id) => state.players[id])
-    .filter((p): p is Player => p !== undefined && !p.isTrust)
-    .filter((p) => !state.acquiredThisRound.includes(p.id) && !state.passedThisPhase.includes(p.id))
-    .map((player) => {
-      const still = auction.activeBidders.includes(player.id);
-      const lastBid = history.bids.get(player.id) ?? null;
-      const entryState: LadderEntry['state'] = !still
-        ? 'passed'
-        : auction.highBidderId === player.id
-          ? 'high'
-          : auction.currentBidderId === player.id
-            ? 'toAct'
-            : 'in';
-      return { player, lastBid, state: entryState };
-    });
-
-  const canBid = bidding !== null && bidding.canRaise;
+  const canSubmit =
+    bidding !== null &&
+    bidding.canRaise &&
+    minBid >= bidding.minimumRaise &&
+    maxBid >= minBid &&
+    maxBid <= bidding.maximumBid;
+  const submittedCount = auction.eligibleBidders.filter(
+    (id) => auction.commitments[id] !== undefined,
+  ).length;
 
   return (
     <PhaseShell
-      title="Auction in progress"
-      subtitle={`Plant ${auction.plantId} under the hammer · ${map.name}`}
+      title="Sealed bids"
+      subtitle={`Plant ${auction.plantId} · ${map.name}`}
       tone="live"
       rules={AUCTION_RULES}
       actions={
         <Badge tone={bidding ? 'accent' : 'info'} dot>
-          {bidding ? 'Your bid' : 'Bidding'}
+          {bidding ? 'Your decision' : `${submittedCount}/${auction.eligibleBidders.length} submitted`}
         </Badge>
       }
       footer={
@@ -287,7 +294,7 @@ function AuctionFloor(): JSX.Element {
               placement="top"
               title="Pass on this plant"
               rule="§6 Auction Power Plants"
-              content="Passing a bid takes you out of this one auction only — you may still nominate a different plant later this phase, as long as you have not yet acquired one."
+              content="This sealed decision takes you out of this auction only. You may still nominate later if you have not acquired a plant."
             >
               <span className="pg-gactions__wrap">
                 <Button variant="ghost" onClick={() => net.action({ type: 'passBid' })}>
@@ -297,21 +304,21 @@ function AuctionFloor(): JSX.Element {
             </Tooltip>
             <Tooltip
               placement="top"
-              title={canBid ? `Raise to ${amount}₤` : 'You cannot raise'}
+              title={canSubmit ? `Bid from ${minBid}₤ to ${maxBid}₤` : 'Choose a valid range'}
               rule="§6 Auction Power Plants"
               content={
-                canBid
-                  ? 'Each raise must beat the standing bid. The last bidder left pays their bid to the bank and takes the plant.'
-                  : `The standing bid is ${bidding.currentBid}₤ and you hold ${me?.money ?? 0}₤, so you cannot raise.`
+                canSubmit
+                  ? 'Your range stays hidden. The server will bid clockwise on your behalf, starting at your minimum and never exceeding your maximum.'
+                  : `The plant starts at ${bidding.minimumRaise}₤ and you hold ${me?.money ?? 0}₤.`
               }
             >
               <span className="pg-gactions__wrap">
                 <Button
                   variant="primary"
-                  disabled={!canBid}
-                  onClick={() => net.action({ type: 'bid', amount })}
+                  disabled={!canSubmit}
+                  onClick={() => net.action({ type: 'submitBidRange', minBid, maxBid })}
                 >
-                  Bid {amount}₤
+                  Submit sealed bid
                 </Button>
               </span>
             </Tooltip>
@@ -322,129 +329,72 @@ function AuctionFloor(): JSX.Element {
       <div className="pg-gfloor">
         <PlantCard plantId={auction.plantId} size="md" discounted={auction.discounted} />
         <div className="pg-gfloor__figures">
-          <Stat label="Standing bid" value={<Money value={auction.currentBid} size="lg" />} />
-          <Stat
-            label="High bidder"
-            value={
-              auction.highBidderId ? (
-                <span className="pg-gfloor__high">
-                  {state.players[auction.highBidderId]?.name ?? 'unknown'}
-                </span>
-              ) : (
-                '—'
-              )
-            }
-          />
+          <Stat label="Plant minimum" value={`${bidding?.minimumRaise ?? auction.currentBid + 1}₤`} />
+          <Stat label="Decisions received" value={`${submittedCount}/${auction.eligibleBidders.length}`} />
         </div>
       </div>
 
       {bidding ? (
         <div className="pg-gbidctrl">
           <NumberStepper
-            label="Your bid"
-            value={amount}
+            label="Minimum bid"
+            value={minBid}
             min={bidding.minimumRaise}
             max={bidding.maximumBid}
-            onChange={setAmount}
+            onChange={(value) => {
+              setMinBid(value);
+              if (maxBid < value) setMaxBid(value);
+            }}
             unit="₤"
-            disabled={!canBid}
+            disabled={!bidding.canRaise}
           />
-          <div className="pg-gbidctrl__quick">
-            {[1, 2, 5].map((delta) => (
-              <Button
-                key={delta}
-                size="sm"
-                variant="secondary"
-                disabled={!canBid || auction.currentBid + delta > bidding.maximumBid}
-                onClick={() => setAmount(auction.currentBid + delta)}
-              >
-                +{delta}
-              </Button>
-            ))}
-          </div>
-          <CostRow label="Left if you win" amount={(me?.money ?? 0) - amount} tone="default" />
+          <NumberStepper
+            label="Maximum bid"
+            value={maxBid}
+            min={minBid}
+            max={bidding.maximumBid}
+            onChange={setMaxBid}
+            unit="₤"
+            disabled={!bidding.canRaise}
+          />
+          <CostRow label="Left at your ceiling" amount={(me?.money ?? 0) - maxBid} tone="default" />
         </div>
-      ) : null}
+      ) : (
+        <Callout tone="info" title="Your decision is sealed">
+          Waiting for the remaining eligible players. The auction resolves as soon as everyone has
+          submitted a bid range or passed.
+        </Callout>
+      )}
 
-      <span className="pg-overline pg-gsectionlabel">Bid ladder</span>
+      <span className="pg-overline pg-gsectionlabel">Responses</span>
       <div className="pg-gladder" role="list">
-        <AnimatePresence initial={false}>
-          {ladder.map((entry) => (
-            <motion.div
-              key={entry.player.id}
+        {auction.eligibleBidders.map((id) => {
+          const player = state.players[id]!;
+          const commitment = auction.commitments[id];
+          const mine = id === meId && commitment?.status === 'bid' ? commitment : null;
+          return (
+            <div
+              key={id}
               className="pg-gladder__row"
               role="listitem"
-              data-player-color={entry.player.color}
-              data-state={entry.state}
-              layout
-              transition={springSnappy}
+              data-player-color={player.color}
+              data-state={commitment ? 'in' : 'toAct'}
             >
-              <Avatar name={entry.player.name} color={entry.player.color} size="sm" glow={entry.state === 'toAct'} />
+              <Avatar name={player.name} color={player.color} size="sm" glow={!commitment} />
               <span className="pg-gladder__name">
-                {entry.player.name}
-                {entry.player.id === auction.auctioneerId ? <em>auctioneer</em> : null}
+                {player.name}
+                {id === auction.auctioneerId ? <em>auctioneer</em> : null}
               </span>
               <span className="pg-gladder__bid pg-numeral">
-                {entry.lastBid !== null ? `${entry.lastBid}₤` : '—'}
+                {mine ? `${mine.minBid}–${mine.maxBid}₤` : 'sealed'}
               </span>
-              <span className="pg-gladder__state">
-                {entry.state === 'high'
-                  ? 'leading'
-                  : entry.state === 'toAct'
-                    ? 'to act'
-                    : entry.state === 'passed'
-                      ? 'passed'
-                      : 'in'}
-              </span>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+              <span className="pg-gladder__state">{commitment ? 'submitted' : 'deciding'}</span>
+            </div>
+          );
+        })}
       </div>
-
-      {history.lines.length > 0 ? (
-        <div className="pg-ghistory">
-          {history.lines.slice(-4).map((line, i) => (
-            <span key={i} className="pg-ghistory__line">
-              {line}
-            </span>
-          ))}
-        </div>
-      ) : null}
     </PhaseShell>
   );
-}
-
-function auctionHistory(
-  log: readonly LogEntry[],
-  plantId: number,
-): { bids: Map<string, number>; lines: string[] } {
-  const bids = new Map<string, number>();
-  const lines: string[] = [];
-  let start = -1;
-  for (let i = log.length - 1; i >= 0; i--) {
-    const entry = log[i]!;
-    if (entry.data?.event === 'plantNominated' && entry.data.plantId === plantId) {
-      start = i;
-      break;
-    }
-  }
-  if (start < 0) return { bids, lines };
-  for (let i = start; i < log.length; i++) {
-    const entry = log[i]!;
-    const event = entry.data?.event;
-    if (event === 'plantNominated' && typeof entry.playerId === 'string') {
-      const bid = entry.data?.bid;
-      if (typeof bid === 'number') bids.set(entry.playerId, bid);
-      lines.push(entry.message);
-    } else if (event === 'bidPlaced' && typeof entry.playerId === 'string') {
-      const amount = entry.data?.amount;
-      if (typeof amount === 'number') bids.set(entry.playerId, amount);
-      lines.push(entry.message);
-    } else if (event === 'bidPassed') {
-      lines.push(entry.message);
-    }
-  }
-  return { bids, lines };
 }
 
 /* ------------------------------------------------------------------ *

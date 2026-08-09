@@ -2,8 +2,10 @@
  * Phase 2 — Auction Power Plants. §6.
  *
  * Turn structure: the first eligible player in player order either nominates a
- * current-market plant with an opening bid, or passes out of the phase. Bidding
- * then runs clockwise from the auctioneer until one bidder remains.
+ * current-market plant with a sealed minimum/maximum bid, or passes out of the
+ * phase. Every other eligible human simultaneously submits a sealed range or
+ * passes; once all decisions are in, the engine deterministically replays the
+ * ordinary clockwise auction and resolves it immediately.
  */
 
 import type { GameState, PlayerId, ValidationResult } from '../types.js';
@@ -97,7 +99,8 @@ export function validateNominatePlant(
   state: GameState,
   playerId: PlayerId,
   plantId: number,
-  bid: number,
+  minBid: number,
+  maxBid: number = minBid,
 ): ValidationResult {
   if (state.phase !== 'auction') return fail('Plants may only be auctioned during Phase 2');
   if (state.pendingScrap) return fail('A plant must be scrapped first');
@@ -112,13 +115,15 @@ export function validateNominatePlant(
   }
   if (getPlant(plantId).isStep3) return fail('The Step 3 card cannot be auctioned');
   const min = minimumBid(state, plantId);
-  if (!Number.isInteger(bid)) return fail('Bids must be whole Elektro');
-  if (bid < min) return fail(`The minimum bid for plant ${plantId} is ${min}`);
-  if (bid > player.money) return fail(`You only have ${player.money} Elektro`);
+  if (Number.isInteger(minBid) && minBid < min) {
+    return fail(`The minimum bid for plant ${plantId} is ${min}`);
+  }
+  const range = validateBidRange(minBid, maxBid, min, player.money);
+  if (!range.ok) return range;
   // §6: "The last player to start an auction in the round pays the minimum bid
   // for the plant they choose, because no later eligible player remains to
   // create a higher bid."
-  if (clockwiseBidders(state, playerId, false).length === 0 && bid !== min) {
+  if (clockwiseBidders(state, playerId, false).length === 0 && (minBid !== min || maxBid !== min)) {
     return fail(`No one else can bid, so plant ${plantId} costs exactly ${min}`);
   }
   return ok;
@@ -129,7 +134,8 @@ export function applyNominatePlant(
   now: number,
   playerId: PlayerId,
   plantId: number,
-  bid: number,
+  minBid: number,
+  maxBid: number = minBid,
 ): void {
   const player = getPlayer(state, playerId);
   const others = clockwiseBidders(state, playerId, false);
@@ -138,12 +144,11 @@ export function applyNominatePlant(
   pushLog(state, now, {
     category: 'auction',
     playerId,
-    message: `${player.name} puts plant ${plantId} up for auction at ${bid} Elektro.`,
+    message: `${player.name} puts plant ${plantId} up for auction.`,
     data: {
       event: 'plantNominated',
       playerId,
       plantId,
-      bid,
       discounted,
       minimumBid: minimumBid(state, plantId),
       bidders: [playerId, ...others],
@@ -152,18 +157,25 @@ export function applyNominatePlant(
 
   if (others.length === 0) {
     // Uncontested: the nominator takes it at the minimum.
-    finishAuction(state, now, playerId, plantId, bid, 'uncontested');
+    finishAuction(state, now, playerId, plantId, minBid, 'uncontested');
     return;
   }
 
+  const eligibleBidders = clockwiseBidders(state, playerId, true);
   state.auction = {
     plantId,
     auctioneerId: playerId,
-    currentBid: bid,
-    highBidderId: playerId,
-    activeBidders: clockwiseBidders(state, playerId, true),
+    // These legacy/public ladder fields deliberately contain no sealed value
+    // while decisions are being collected.
+    currentBid: minimumBid(state, plantId) - 1,
+    highBidderId: null,
+    activeBidders: eligibleBidders.slice(),
     currentBidderId: others[0]!,
     discounted,
+    eligibleBidders,
+    commitments: {
+      [playerId]: { status: 'bid', minBid, maxBid },
+    },
   };
 }
 
@@ -203,15 +215,7 @@ export function validateBid(
   playerId: PlayerId,
   amount: number,
 ): ValidationResult {
-  const a = state.auction;
-  if (state.phase !== 'auction' || !a) return fail('No auction is running');
-  if (a.currentBidderId !== playerId) return fail('It is not your turn to bid');
-  if (!a.activeBidders.includes(playerId)) return fail('You already passed on this plant');
-  if (!Number.isInteger(amount)) return fail('Bids must be whole Elektro');
-  if (amount <= a.currentBid) return fail(`You must bid more than ${a.currentBid}`);
-  const player = getPlayer(state, playerId);
-  if (amount > player.money) return fail(`You only have ${player.money} Elektro`);
-  return ok;
+  return validateSubmitBidRange(state, playerId, amount, amount);
 }
 
 export function applyBid(
@@ -220,50 +224,151 @@ export function applyBid(
   playerId: PlayerId,
   amount: number,
 ): void {
+  applySubmitBidRange(state, now, playerId, amount, amount);
+}
+
+export function validateSubmitBidRange(
+  state: GameState,
+  playerId: PlayerId,
+  minBid: number,
+  maxBid: number,
+): ValidationResult {
+  const a = state.auction;
+  if (state.phase !== 'auction' || !a) return fail('No auction is running');
+  if (!a.eligibleBidders.includes(playerId)) return fail('You are not eligible for this auction');
+  if (a.commitments[playerId] !== undefined) return fail('You already submitted a decision');
+  return validateBidRange(
+    minBid,
+    maxBid,
+    minimumBid(state, a.plantId),
+    getPlayer(state, playerId).money,
+  );
+}
+
+export function applySubmitBidRange(
+  state: GameState,
+  now: number,
+  playerId: PlayerId,
+  minBid: number,
+  maxBid: number,
+): void {
   const a = state.auction!;
-  const player = getPlayer(state, playerId);
-  a.currentBid = amount;
-  a.highBidderId = playerId;
-  pushLog(state, now, {
-    category: 'bid',
-    playerId,
-    message: `${player.name} bids ${amount} Elektro for plant ${a.plantId}.`,
-    data: { event: 'bidPlaced', playerId, plantId: a.plantId, amount },
-  });
-  a.currentBidderId = successor(a.activeBidders, playerId);
+  a.commitments[playerId] = { status: 'bid', minBid, maxBid };
+  logCommitment(state, now, playerId);
+  resolveIfReady(state, now);
 }
 
 export function validatePassBid(state: GameState, playerId: PlayerId): ValidationResult {
   const a = state.auction;
   if (state.phase !== 'auction' || !a) return fail('No auction is running');
-  if (a.currentBidderId !== playerId) return fail('It is not your turn to bid');
-  if (!a.activeBidders.includes(playerId)) return fail('You already passed on this plant');
+  if (!a.eligibleBidders.includes(playerId)) return fail('You are not eligible for this auction');
+  if (a.commitments[playerId] !== undefined) return fail('You already submitted a decision');
   return ok;
 }
 
 export function applyPassBid(state: GameState, now: number, playerId: PlayerId): void {
   const a = state.auction!;
+  a.commitments[playerId] = { status: 'pass' };
+  logCommitment(state, now, playerId);
+  resolveIfReady(state, now);
+}
+
+function validateBidRange(
+  minBid: number,
+  maxBid: number,
+  floor: number,
+  money: number,
+): ValidationResult {
+  if (!Number.isInteger(minBid) || !Number.isInteger(maxBid)) {
+    return fail('Bids must be whole Elektro');
+  }
+  if (minBid < floor) return fail(`The minimum bid is ${floor}`);
+  if (maxBid < minBid) return fail('The maximum bid must be at least the minimum bid');
+  if (maxBid > money) return fail(`You only have ${money} Elektro`);
+  return ok;
+}
+
+function logCommitment(state: GameState, now: number, playerId: PlayerId): void {
+  const a = state.auction!;
   const player = getPlayer(state, playerId);
-  const index = a.activeBidders.indexOf(playerId);
-  a.activeBidders.splice(index, 1);
   pushLog(state, now, {
     category: 'bid',
     playerId,
-    message: `${player.name} passes on plant ${a.plantId}.`,
-    data: { event: 'bidPassed', playerId, plantId: a.plantId, currentBid: a.currentBid },
+    message: `${player.name} has submitted a sealed auction decision.`,
+    data: { event: 'auctionCommitmentSubmitted', playerId, plantId: a.plantId },
   });
-
-  if (a.activeBidders.length <= 1) {
-    const winner = a.highBidderId ?? a.activeBidders[0]!;
-    finishAuction(state, now, winner, a.plantId, a.currentBid, 'outbid');
-    return;
-  }
-  a.currentBidderId = a.activeBidders[index % a.activeBidders.length]!;
 }
 
-function successor(list: readonly PlayerId[], id: PlayerId): PlayerId {
-  const i = list.indexOf(id);
-  return list[(i + 1) % list.length]!;
+function resolveIfReady(state: GameState, now: number): void {
+  const a = state.auction!;
+  const pending = a.eligibleBidders.filter((id) => a.commitments[id] === undefined);
+  if (pending.length > 0) {
+    a.currentBidderId = pending[0]!;
+    return;
+  }
+  simulateAuction(state, now);
+}
+
+/** Replays an ordinary one-Elektro clockwise auction from the sealed strategies. */
+function simulateAuction(state: GameState, now: number): void {
+  const a = state.auction!;
+  const participants = a.eligibleBidders.filter(
+    (id) => a.commitments[id]?.status === 'bid',
+  );
+  const auctioneer = a.commitments[a.auctioneerId];
+  if (!auctioneer || auctioneer.status !== 'bid') {
+    throw new Error('Auctioneer is missing a sealed bid');
+  }
+
+  let currentBid = auctioneer.minBid;
+  let highBidderId = a.auctioneerId;
+  let active = participants.slice();
+  let cursor = active.length > 1 ? 1 : 0;
+
+  pushSimulatedBid(state, now, highBidderId, a.plantId, currentBid);
+  for (let guard = 0; active.length > 1 && guard < 100_000; guard++) {
+    const bidderId = active[cursor % active.length]!;
+    if (bidderId === highBidderId) {
+      cursor = (cursor + 1) % active.length;
+      continue;
+    }
+    const commitment = a.commitments[bidderId]!;
+    if (commitment.status !== 'bid') throw new Error('Active bidder has no bid range');
+    const nextBid = Math.max(commitment.minBid, currentBid + 1);
+    if (nextBid <= commitment.maxBid) {
+      currentBid = nextBid;
+      highBidderId = bidderId;
+      pushSimulatedBid(state, now, bidderId, a.plantId, currentBid);
+      cursor = (cursor + 1) % active.length;
+    } else {
+      const index = active.indexOf(bidderId);
+      active.splice(index, 1);
+      pushLog(state, now, {
+        category: 'bid',
+        playerId: bidderId,
+        message: `${getPlayer(state, bidderId).name} passes on plant ${a.plantId}.`,
+        data: { event: 'bidPassed', playerId: bidderId, plantId: a.plantId, currentBid },
+      });
+      cursor = index % active.length;
+    }
+  }
+  if (active.length !== 1) throw new Error('Sealed auction simulation did not settle');
+  finishAuction(state, now, highBidderId, a.plantId, currentBid, 'outbid');
+}
+
+function pushSimulatedBid(
+  state: GameState,
+  now: number,
+  playerId: PlayerId,
+  plantId: number,
+  amount: number,
+): void {
+  pushLog(state, now, {
+    category: 'bid',
+    playerId,
+    message: `${getPlayer(state, playerId).name} bids ${amount} Elektro for plant ${plantId}.`,
+    data: { event: 'bidPlaced', playerId, plantId, amount, simulated: true },
+  });
 }
 
 function finishAuction(

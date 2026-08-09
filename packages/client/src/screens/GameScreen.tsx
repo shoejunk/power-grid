@@ -110,7 +110,7 @@ export function GameScreen(): JSX.Element {
       legal,
       map,
       cityIndex,
-      isMyTurn: me !== null && gameState.activePlayerId === me.id,
+      isMyTurn: me !== null && legal.isActive,
     };
   }, [gameState, myPlayerId]);
 

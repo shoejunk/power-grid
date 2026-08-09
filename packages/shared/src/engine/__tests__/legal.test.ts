@@ -59,9 +59,12 @@ describe('§14 auction enumeration', () => {
     expect(validateAction(t, bidder, { type: 'bid', amount: bidding.minimumRaise }).ok).toBe(true);
     expect(validateAction(t, bidder, { type: 'bid', amount: bidding.currentBid }).ok).toBe(false);
     expect(validateAction(t, bidder, { type: 'bid', amount: bidding.maximumBid + 1 }).ok).toBe(false);
-    // A player who is not on the clock is offered nothing.
+    // Every still-pending eligible player may answer simultaneously.
     const idle = t.playerOrder.find((id: PlayerId) => id !== bidder && id !== a)!;
-    expect(legalActions(t, idle).bidding).toBeNull();
+    expect(legalActions(t, idle).bidding).not.toBeNull();
+    expect(legalActions(t, idle).isActive).toBe(true);
+    // The auctioneer already submitted their range with the nomination.
+    expect(legalActions(t, a).bidding).toBeNull();
   });
 });
 

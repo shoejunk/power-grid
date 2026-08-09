@@ -196,16 +196,30 @@ export interface AuctionState {
   plantId: number;
   /** Player who put it up. */
   auctioneerId: PlayerId;
+  /** Public floor minus one while sealed decisions are being collected. */
   currentBid: number;
-  /** Player currently winning; null before the first bid is placed. */
+  /** Null while sealed decisions are being collected. */
   highBidderId: PlayerId | null;
-  /** Players still able to bid, in clockwise turn order from the auctioneer. */
+  /** Eligible players, retained for older clients that render a bid ladder. */
   activeBidders: PlayerId[];
-  /** Whose turn it is to raise or pass. */
+  /** First outstanding decision; other eligible players may still answer now. */
   currentBidderId: PlayerId;
   /** True when the plant's minimum bid is 1 because of the discount token. §6. */
   discounted: boolean;
+  /** Every human who may take part, in table order beginning with the auctioneer. */
+  eligibleBidders: PlayerId[];
+  /**
+   * Simultaneous sealed decisions. Missing means the player has not answered.
+   * Server views replace another player's answer with `submitted` so bid
+   * ranges never leak while commitments are being collected.
+   */
+  commitments: Partial<Record<PlayerId, AuctionCommitment>>;
 }
+
+export type AuctionCommitment =
+  | { status: 'bid'; minBid: number; maxBid: number }
+  | { status: 'pass' }
+  | { status: 'submitted' };
 
 /** Pending "scrap a plant" decision after acquiring a 4th plant. §6. */
 export interface PendingScrap {
@@ -389,8 +403,9 @@ export type GameAction =
   | { type: 'placeTrustHouse'; cityId: CityId }
   | { type: 'startGame' }
   /* phase 2 — auction */
-  | { type: 'nominatePlant'; plantId: number; bid: number }
+  | { type: 'nominatePlant'; plantId: number; bid: number; maxBid?: number }
   | { type: 'passNomination' }
+  | { type: 'submitBidRange'; minBid: number; maxBid: number }
   | { type: 'bid'; amount: number }
   | { type: 'passBid' }
   | { type: 'scrapPlant'; plantId: number }

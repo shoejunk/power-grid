@@ -132,16 +132,15 @@ describe('§6 discount token', () => {
 });
 
 describe('§6 bidding', () => {
-  it('clockwise raise/pass resolves to the last standing bidder', () => {
+  it('collects sealed decisions and resolves immediately after the last response', () => {
     const s = rig(() => {});
     const [a, b, c] = s.playerOrder as [string, string, string];
-    let t = act(s, a, { type: 'nominatePlant', plantId: 4, bid: 4 });
+    let t = act(s, a, { type: 'nominatePlant', plantId: 4, bid: 4, maxBid: 4 });
     expect(t.auction!.currentBidderId).toBe(b);
-    t = act(t, b, { type: 'bid', amount: 5 });
+    t = act(t, b, { type: 'submitBidRange', minBid: 5, maxBid: 5 });
+    expect(t.auction).not.toBeNull();
     expect(t.auction!.currentBidderId).toBe(c);
     t = act(t, c, { type: 'passBid' });
-    expect(t.auction!.currentBidderId).toBe(a);
-    t = act(t, a, { type: 'passBid' });
     expect(t.auction).toBeNull();
     expect(t.players[b]!.plants.map((p) => p.plantId)).toEqual([4]);
     expect(t.players[b]!.money).toBe(45);
@@ -157,25 +156,42 @@ describe('§6 bidding', () => {
     expect(t.auction!.currentBidderId).toBe(c);
   });
 
-  it('a raise must exceed the current bid', () => {
+  it('a sealed range must respect the plant floor and place max at or above min', () => {
     const s = rig(() => {});
     const [a, b] = s.playerOrder as [string, string];
     const t = act(s, a, { type: 'nominatePlant', plantId: 4, bid: 4 });
-    expect(validateAction(t, b, { type: 'bid', amount: 4 }).ok).toBe(false);
-    expect(validateAction(t, b, { type: 'bid', amount: 5 }).ok).toBe(true);
+    expect(validateAction(t, b, { type: 'submitBidRange', minBid: 3, maxBid: 10 }).ok).toBe(false);
+    expect(validateAction(t, b, { type: 'submitBidRange', minBid: 8, maxBid: 7 }).ok).toBe(false);
+    expect(validateAction(t, b, { type: 'submitBidRange', minBid: 4, maxBid: 10 }).ok).toBe(true);
   });
 
   it('an outbid auctioneer may nominate again in the same phase', () => {
     const s = rig(() => {});
     const [a, b, c] = s.playerOrder as [string, string, string];
-    let t = act(s, a, { type: 'nominatePlant', plantId: 4, bid: 4 });
-    t = act(t, b, { type: 'bid', amount: 10 });
+    let t = act(s, a, { type: 'nominatePlant', plantId: 4, bid: 4, maxBid: 4 });
+    t = act(t, b, { type: 'submitBidRange', minBid: 10, maxBid: 10 });
     t = act(t, c, { type: 'passBid' });
-    t = act(t, a, { type: 'passBid' });
     expect(t.players[b]!.plants).toHaveLength(1);
     // a lost, so a is the next nominator and is still eligible.
     expect(t.activePlayerId).toBe(a);
     expect(validateAction(t, a, { type: 'nominatePlant', plantId: 5, bid: 5 }).ok).toBe(true);
+  });
+
+  it('accepts eligible players in any response order and simulates clockwise bidding', () => {
+    const s = rig(() => {});
+    const [a, b, c] = s.playerOrder as [string, string, string];
+    let t = act(s, a, { type: 'nominatePlant', plantId: 4, bid: 4, maxBid: 10 });
+    // c answers before b even though b remains the compatibility clock holder.
+    t = act(t, c, { type: 'submitBidRange', minBid: 6, maxBid: 10 });
+    expect(t.auction).not.toBeNull();
+    t = act(t, b, { type: 'submitBidRange', minBid: 5, maxBid: 10 });
+
+    // Normal table order is a:4, b:5, c:6 ... a:10, after which b and c
+    // cannot raise. Thus tied ceilings are broken by clockwise position.
+    expect(t.auction).toBeNull();
+    expect(t.players[a]!.plants.map((p) => p.plantId)).toEqual([4]);
+    expect(t.players[a]!.money).toBe(40);
+    expect(findLog(t, 'bidPlaced').map((e) => e.data?.amount)).toEqual([4, 5, 6, 7, 8, 9, 10]);
   });
 
   it('a player who already bought cannot buy a second plant this round', () => {

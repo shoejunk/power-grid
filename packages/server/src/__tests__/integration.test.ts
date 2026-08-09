@@ -210,6 +210,44 @@ describe('Power Grid multiplayer server', () => {
       expect(rejected.reason).toMatch(/not your turn/i);
     });
 
+    it('accepts simultaneous sealed bids out of turn and redacts every other range', async () => {
+      const { host, guest } = await startedGame();
+      const room = server.hub.roomByCode(host.code)!;
+      room.state!.activePlayerId = host.playerId;
+      room.state!.auction = {
+        plantId: 4,
+        auctioneerId: host.playerId,
+        currentBid: 3,
+        highBidderId: null,
+        activeBidders: [host.playerId, guest.playerId],
+        currentBidderId: guest.playerId,
+        discounted: false,
+        eligibleBidders: [host.playerId, guest.playerId],
+        commitments: {
+          [host.playerId]: { status: 'bid', minBid: 4, maxBid: 9 },
+        },
+      };
+
+      host.client.clear();
+      guest.client.clear();
+      guest.client.send({
+        t: 'action',
+        action: { type: 'submitBidRange', minBid: 5, maxBid: 12 },
+      });
+
+      const hostView = (await host.client.wait('state')).state.auction!;
+      const guestView = (await guest.client.wait('state')).state.auction!;
+      expect(hostView.commitments[host.playerId]).toEqual({ status: 'bid', minBid: 4, maxBid: 9 });
+      expect(hostView.commitments[guest.playerId]).toEqual({ status: 'submitted' });
+      expect(guestView.commitments[host.playerId]).toEqual({ status: 'submitted' });
+      expect(guestView.commitments[guest.playerId]).toEqual({ status: 'bid', minBid: 5, maxBid: 12 });
+      expect(room.state!.auction!.commitments[guest.playerId]).toEqual({
+        status: 'bid',
+        minBid: 5,
+        maxBid: 12,
+      });
+    });
+
     it('rejects an action that the engine says is illegal, with the engine reason', async () => {
       const { host } = await startedGame();
       host.client.clear();

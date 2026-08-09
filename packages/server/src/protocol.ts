@@ -106,11 +106,20 @@ function parseAction(v: unknown): GameAction | null {
     case 'startGame':
       return { type: 'startGame' };
     case 'nominatePlant':
-      return isInt(v.plantId) && isInt(v.bid) && v.bid >= 0
-        ? { type: 'nominatePlant', plantId: v.plantId, bid: v.bid }
-        : null;
+      if (!isInt(v.plantId) || !isInt(v.bid) || v.bid < 0) return null;
+      if (v.maxBid !== undefined && (!isInt(v.maxBid) || v.maxBid < 0)) return null;
+      return {
+        type: 'nominatePlant',
+        plantId: v.plantId,
+        bid: v.bid,
+        ...(v.maxBid !== undefined ? { maxBid: v.maxBid as number } : {}),
+      };
     case 'passNomination':
       return { type: 'passNomination' };
+    case 'submitBidRange':
+      return isInt(v.minBid) && v.minBid >= 0 && isInt(v.maxBid) && v.maxBid >= 0
+        ? { type: 'submitBidRange', minBid: v.minBid, maxBid: v.maxBid }
+        : null;
     case 'bid':
       return isInt(v.amount) && v.amount >= 0 ? { type: 'bid', amount: v.amount } : null;
     case 'passBid':

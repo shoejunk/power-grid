@@ -39,6 +39,7 @@ import {
   applyBid,
   applyNominatePlant,
   applyPassBid,
+  applySubmitBidRange,
   applyPassNomination,
   applyScrapPlant,
   beginAuctionPhase,
@@ -47,6 +48,7 @@ import {
   validateBid,
   validateNominatePlant,
   validatePassBid,
+  validateSubmitBidRange,
   validatePassNomination,
   validateScrapPlant,
 } from './auction.js';
@@ -99,9 +101,11 @@ export function validateAction(
       return playerId === state.hostId ? ok : fail('Only the host may start the game');
 
     case 'nominatePlant':
-      return validateNominatePlant(state, playerId, action.plantId, action.bid);
+      return validateNominatePlant(state, playerId, action.plantId, action.bid, action.maxBid);
     case 'passNomination':
       return validatePassNomination(state, playerId);
+    case 'submitBidRange':
+      return validateSubmitBidRange(state, playerId, action.minBid, action.maxBid);
     case 'bid':
       return validateBid(state, playerId, action.amount);
     case 'passBid':
@@ -172,10 +176,13 @@ function reduce(state: GameState, now: number, playerId: PlayerId, action: GameA
       return;
 
     case 'nominatePlant':
-      applyNominatePlant(state, now, playerId, action.plantId, action.bid);
+      applyNominatePlant(state, now, playerId, action.plantId, action.bid, action.maxBid);
       return;
     case 'passNomination':
       applyPassNomination(state, now, playerId);
+      return;
+    case 'submitBidRange':
+      applySubmitBidRange(state, now, playerId, action.minBid, action.maxBid);
       return;
     case 'bid':
       applyBid(state, now, playerId, action.amount);

@@ -90,8 +90,23 @@ export const stubEngine: RulesEngine = {
 
   validateAction(state: GameState, playerId: PlayerId, action: GameAction): ValidationResult {
     if (!state.players[playerId]) return { ok: false, reason: 'You are not in this game.' };
-    if (state.activePlayerId !== playerId) return { ok: false, reason: 'It is not your turn.' };
+    const simultaneousAuctionAction =
+      state.auction !== null &&
+      (action.type === 'submitBidRange' || action.type === 'bid' || action.type === 'passBid');
+    if (!simultaneousAuctionAction && state.activePlayerId !== playerId) {
+      return { ok: false, reason: 'It is not your turn.' };
+    }
     switch (action.type) {
+      case 'submitBidRange':
+      case 'bid':
+      case 'passBid':
+        if (!state.auction?.eligibleBidders.includes(playerId)) {
+          return { ok: false, reason: 'You are not eligible for this auction.' };
+        }
+        if (state.auction.commitments[playerId] !== undefined) {
+          return { ok: false, reason: 'You already submitted.' };
+        }
+        return { ok: true };
       case 'passNomination':
         return { ok: true };
       case 'nominatePlant':
@@ -113,7 +128,24 @@ export const stubEngine: RulesEngine = {
     const player = next.players[playerId];
     if (!player) return next;
 
-    if (action.type === 'nominatePlant') {
+    if (action.type === 'submitBidRange' && next.auction) {
+      next.auction.commitments[playerId] = {
+        status: 'bid',
+        minBid: action.minBid,
+        maxBid: action.maxBid,
+      };
+      return next;
+    } else if (action.type === 'bid' && next.auction) {
+      next.auction.commitments[playerId] = {
+        status: 'bid',
+        minBid: action.amount,
+        maxBid: action.amount,
+      };
+      return next;
+    } else if (action.type === 'passBid' && next.auction) {
+      next.auction.commitments[playerId] = { status: 'pass' };
+      return next;
+    } else if (action.type === 'nominatePlant') {
       player.money -= action.bid;
       player.plants.push({ plantId: action.plantId, stored: emptyResources() });
       next.plantMarket.current = next.plantMarket.current.filter((id) => id !== action.plantId);

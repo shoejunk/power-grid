@@ -213,15 +213,20 @@ export class GameRoom {
   /**
    * Per-player view of the authoritative state.
    *
-   * The only genuinely hidden information in the current model is the
-   * face-down plant supply stack (§1/§2: cards are drawn blind, and setup
-   * removals are never looked at). Its *length* is public — players can see
-   * how thick the deck is — so we preserve the length and blank the ids.
+   * Face-down plant ids and other players' sealed auction ranges are hidden.
+   * Submission presence remains public so the table can see who still needs
+   * to answer without learning whether they bid or passed.
    */
-  stateFor(_playerId: PlayerId): GameState | null {
+  stateFor(playerId: PlayerId): GameState | null {
     if (!this.state) return null;
     const view = structuredClone(this.state);
     view.plantMarket.stack = view.plantMarket.stack.map(() => HIDDEN_PLANT_ID);
+    if (view.auction) {
+      for (const id of view.auction.eligibleBidders) {
+        if (id === playerId || view.auction.commitments[id] === undefined) continue;
+        view.auction.commitments[id] = { status: 'submitted' };
+      }
+    }
     return view;
   }
 
@@ -493,9 +498,9 @@ export class GameRoom {
    * ---------------------------------------------------------------- */
 
   /**
-   * Validates and applies a player action. The three gates — membership,
-   * turn ownership, engine validation — are all server-side; the client's
-   * opinion is never consulted.
+   * Validates and applies a player action. Membership, turn/auction ownership,
+   * and engine validation are all server-side; simultaneous sealed decisions
+   * intentionally bypass the single active-player clock.
    */
   applyPlayerAction(playerId: PlayerId, action: GameAction): RoomResult {
     if (!this.started || !this.state) {
@@ -507,7 +512,10 @@ export class GameRoom {
     if (this.state.phase === 'gameOver') {
       return fail('gameOver', 'The game is over.');
     }
-    if (this.state.activePlayerId !== playerId) {
+    const simultaneousAuctionAction =
+      this.state.auction !== null &&
+      (action.type === 'submitBidRange' || action.type === 'bid' || action.type === 'passBid');
+    if (!simultaneousAuctionAction && this.state.activePlayerId !== playerId) {
       return fail('notYourTurn', 'It is not your turn.');
     }
 

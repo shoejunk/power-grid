@@ -171,13 +171,15 @@ export function legalActions(state: GameState, playerId: PlayerId): LegalActions
     }
     if (state.auction) {
       const a = state.auction;
-      if (a.currentBidderId === playerId && a.activeBidders.includes(playerId)) {
+      if (a.eligibleBidders.includes(playerId) && a.commitments[playerId] === undefined) {
+        out.isActive = true;
+        const floor = minimumBid(state, a.plantId);
         out.bidding = {
           plantId: a.plantId,
-          currentBid: a.currentBid,
-          minimumRaise: a.currentBid + 1,
+          currentBid: floor - 1,
+          minimumRaise: floor,
           maximumBid: player.money,
-          canRaise: player.money > a.currentBid,
+          canRaise: player.money >= floor,
         };
       }
       return out;
