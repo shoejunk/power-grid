@@ -42,6 +42,8 @@ interface Options {
   width: number;
   height: number;
   reduced: boolean;
+  /** Detailed reset view. Values above 1 trade a whole-map overview for room. */
+  defaultZoom?: number;
   /** Called whenever the applied transform changes, for tooltip anchoring. */
   onChange?: (view: ViewState) => void;
 }
@@ -69,14 +71,19 @@ function clampView(v: ViewState, width: number, height: number): ViewState {
   };
 }
 
-export function useViewport({ width, height, reduced, onChange }: Options): Viewport {
-  const current = useRef<ViewState>({ k: 1, tx: 0, ty: 0 });
-  const target = useRef<ViewState>({ k: 1, tx: 0, ty: 0 });
+function centeredView(zoom: number, width: number, height: number): ViewState {
+  const k = clamp(zoom, MIN_ZOOM, MAX_ZOOM);
+  return { k, tx: (width * (1 - k)) / 2, ty: (height * (1 - k)) / 2 };
+}
+
+export function useViewport({ width, height, reduced, defaultZoom = 1, onChange }: Options): Viewport {
+  const current = useRef<ViewState>(centeredView(defaultZoom, width, height));
+  const target = useRef<ViewState>(centeredView(defaultZoom, width, height));
   const velocity = useRef<ViewState>({ k: 0, tx: 0, ty: 0 });
   const node = useRef<SVGGElement | null>(null);
   const frame = useRef(0);
-  const [zoom, setZoom] = useState(1);
-  const lastReported = useRef(1);
+  const [zoom, setZoom] = useState(defaultZoom);
+  const lastReported = useRef(defaultZoom);
 
   const apply = useCallback(() => {
     const g = node.current;
@@ -167,9 +174,9 @@ export function useViewport({ width, height, reduced, onChange }: Options): View
   );
 
   const reset = useCallback(() => {
-    target.current = { k: 1, tx: 0, ty: 0 };
+    target.current = centeredView(defaultZoom, width, height);
     kick();
-  }, [kick]);
+  }, [defaultZoom, width, height, kick]);
 
   const settleNow = useCallback(() => {
     current.current = { ...target.current };

@@ -54,6 +54,15 @@ interface Fit {
   oy: number;
 }
 
+/*
+ * A full-map fit leaves only ~7.5 horizontal pixels per Germany city at the
+ * real match-grid size. Solve the board for a larger virtual canvas, then make
+ * that detailed view the reset position. Labels retain their legible pixel
+ * size while cities and their routes gain 45% more room. The view remains
+ * pannable, and Zoom out provides the complete-map overview.
+ */
+const BOARD_DETAIL_SCALE = 1.45;
+
 /** A map choice that must be explicitly confirmed before it reaches the server. */
 type PendingPlacement =
   | { type: 'buildCity'; cityId: CityId }
@@ -196,7 +205,7 @@ export function GameBoard(): JSX.Element {
 
   const layout = useMemo<BoardLayout | null>(() => {
     if (!map || !fontsReady || box.w < 40 || box.h < 40) return null;
-    return buildLayout(map, box.w, box.h, outOfPlay);
+    return buildLayout(map, box.w * BOARD_DETAIL_SCALE, box.h * BOARD_DETAIL_SCALE, outOfPlay);
   }, [map, fontsReady, box.w, box.h, outOfPlay]);
 
   const model = useMemo(
@@ -249,8 +258,11 @@ export function GameBoard(): JSX.Element {
     width: space.width,
     height: space.height,
     reduced,
+    defaultZoom: BOARD_DETAIL_SCALE,
     onChange: onViewChange,
   });
+
+  const relativeZoom = viewport.zoom / BOARD_DETAIL_SCALE;
 
   useLayoutEffect(() => {
     const scale = Math.min(box.w / space.width, box.h / space.height) || 1;
@@ -713,14 +725,14 @@ export function GameBoard(): JSX.Element {
             className="pgb-btn pgb-btn--reset"
             title="Reset view"
             aria-label="Reset view"
-            data-active={viewport.zoom > 1.01}
+            data-active={Math.abs(relativeZoom - 1) > 0.01}
             onClick={() => viewport.reset()}
           >
             <svg viewBox="0 0 16 16" aria-hidden="true">
               <path d="M2.6 6.4h3.2V3.2M13.4 9.6h-3.2v3.2" />
               <path d="M3.1 9.1a5 5 0 0 0 9 1.6M12.9 6.9a5 5 0 0 0-9-1.6" />
             </svg>
-            <span className="pgb-btn__zoom">{viewport.zoom.toFixed(1)}×</span>
+            <span className="pgb-btn__zoom">{relativeZoom.toFixed(1)}×</span>
           </button>
         </div>
 

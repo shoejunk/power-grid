@@ -14,8 +14,8 @@
  *
  *   1. Each city reserves ONE box covering both its name and its three-slot
  *      plate. Those boxes are relaxed apart (Germany's Ruhr packs four cities
- *      into 37 board units), and any plate that had to move keeps a stem back
- *      to a dot at its true coordinate, which is still where routes meet.
+ *      into 37 board units), and routes meet the final separated positions.
+ *      This keeps every connection visually attached to the city it names.
  *   2. Those boxes go into a spatial index and are never yielded, so a cost
  *      badge can never cover a city or its name.
  *   3. Every connection is then offered 121 candidate slots — eleven arc-length
@@ -252,7 +252,7 @@ export interface NodeLayout {
   id: CityId;
   name: string;
   areaId: string;
-  /** True map coordinate — where routes meet and where the anchor dot sits. */
+  /** Final separated city coordinate, where routes and the node meet. */
   anchor: Vec;
   /** Centre of the city's whole footprint (name + slot plate) after relaxation. */
   plate: Vec;
@@ -265,8 +265,6 @@ export interface NodeLayout {
   nameY: number;
   /** Centre-line of the three house slots, relative to the footprint centre. */
   slotY: number;
-  /** True when the plate had to move far enough to need a stem. */
-  stem: boolean;
 }
 
 export interface BadgeLayout {
@@ -418,20 +416,25 @@ export const pairKey = (a: CityId, b: CityId): string => (a < b ? `${a}|${b}` : 
  * Pushes overlapping nameplates apart while springing each back toward its true
  * coordinate. Germany's Ruhr cluster (Duisburg/Essen/Düsseldorf/Dortmund) spans
  * 25-37 board units, so at any realistic container size the plates would
- * otherwise bury each other. Displaced plates keep a stem back to a dot at the
- * real coordinate, which is where routes still meet.
+ * otherwise bury each other. Routes use the resulting positions as their
+ * endpoints, so dense clusters fan out into an unambiguous network instead of
+ * converging behind displaced labels.
  */
 function relaxPlates(
   anchors: Vec[],
   sizes: { w: number; h: number }[],
   m: Metrics,
   space: BoardSpace,
-): { pos: Vec[]; moved: boolean[] } {
+): Vec[] {
   const pos = anchors.map((a) => ({ ...a }));
-  const gap = m.plateH * 0.1;
+  // Leave a visible route channel between neighbouring city footprints. A
+  // hairline-only gap kept the boxes collision-free but still made the Ruhr
+  // read as one combined control; roughly half a cost badge is enough to keep
+  // the lines distinct without noticeably distorting the geography.
+  const gap = Math.max(m.plateH * 0.18, m.badgeH * 0.55);
   // Generous travel: Germany packs six cities (Duisburg, Essen, Düsseldorf,
   // Dortmund, Münster, Köln) into a patch narrower than two nameplates, and a
-  // stem back to the true dot makes a displaced plate unambiguous.
+  // the route moving with each displaced node keeps the result unambiguous.
   const maxDisp = Math.max(m.plateW * 1.5, m.plateH * 2.4);
 
   const ITERS = 300;
@@ -486,8 +489,7 @@ function relaxPlates(
     }
   }
 
-  const moved = pos.map((p, i) => dist(p, anchors[i]!) > m.anchorR * 2.2);
-  return { pos, moved };
+  return pos;
 }
 
 /* ------------------------------------------------------------------ *
@@ -764,9 +766,11 @@ function solveBadges(
   for (let i = 0; i < n; i++) {
     const { conn, path } = prepared[i]!;
     const residual = residualOf(i);
-    // The leader points at the nearest point of this badge's OWN route, so an
-    // offset badge is never ambiguous about which connection it prices.
+    // A displaced badge always points to the middle of its OWN route. Pointing
+    // to the nearest point can put the dot almost on top of an endpoint city,
+    // which makes a correct leader look like it belongs to that city instead.
     const near = closestOnPolyline(path.points, at[i]!);
+    const midpoint = frameAt(path, 0.5).point;
     out.push({
       conn,
       path,
@@ -774,7 +778,7 @@ function solveBadges(
         at: { ...at[i]! },
         w: w[i]! - pad * 2,
         h: m.badgeH,
-        anchor: near.point,
+        anchor: midpoint,
         leader: Math.sqrt(near.d2) > m.badgeH * 1.15,
         residual,
       },
@@ -811,7 +815,7 @@ export function buildLayout(
 
   const space = boardSpace(map);
   const m = metrics;
-  const anchors = map.cities.map((c) => cityPoint(c, space));
+  const geographicAnchors = map.cities.map((c) => cityPoint(c, space));
 
   /*
    * One box per city carrying both the name ribbon and the three house slots,
@@ -820,7 +824,16 @@ export function buildLayout(
    * fit alongside all 83 cost badges at the smallest supported container size.
    */
   const sizes = map.cities.map((c) => footprintFor(c.name, m));
-  const { pos, moved } = relaxPlates(anchors, sizes, m, space);
+  const pos = relaxPlates(geographicAnchors, sizes, m, space);
+
+  /*
+   * Connections must terminate at the city the player can actually see. When
+   * routes kept the original geographic anchors while dense city plates moved
+   * aside, the Ruhr costs formed a detached knot of lines and leader dots. The
+   * settled positions retain the geography, add the required breathing room,
+   * and give every route a visually honest endpoint.
+   */
+  const anchors = pos;
 
   // Breathing room around every reserved box, in board units (~1.5 screen px).
   const pad = 1 / m.pxPerUnit;
@@ -870,7 +883,6 @@ export function buildLayout(
     // Name above, slot plate beneath, both inside one reserved footprint.
     nameY: -m.plateH / 2 + m.nameH * 0.46,
     slotY: -m.plateH / 2 + m.nameH + m.slotH / 2,
-    stem: moved[i]!,
   }));
 
   const nodeById = new Map(nodes.map((n) => [n.id, n] as const));

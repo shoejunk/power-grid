@@ -12,8 +12,8 @@
  *  · whether the city is a legal build target right now.
  *
  * Where the map puts cities closer together than a plate is wide (Germany's
- * Ruhr), the plate is nudged aside by the layout solver and keeps a stem back
- * to a dot at the true coordinate, which is also where routes meet.
+ * Ruhr), the layout solver moves the whole city junction with the plate so
+ * routes still visibly terminate at the city they connect.
  */
 
 import { motion } from 'framer-motion';
@@ -76,21 +76,7 @@ function CityNodeImpl({
       data-hovered={hovered || undefined}
       opacity={outzone ? 0.42 : 1}
     >
-      {/* Stem back to the real coordinate when the plate had to move. */}
-      {node.stem ? (
-        <line
-          x1={node.anchor.x}
-          y1={node.anchor.y}
-          x2={px}
-          y2={py}
-          stroke={theme.void}
-          strokeOpacity={0.85}
-          strokeWidth={m.anchorR * 1.15}
-          strokeLinecap="round"
-        />
-      ) : null}
-
-      {/* The true map coordinate — routes meet here, not at the plate. */}
+      {/* Route junction; dense cities move with their visible plate. */}
       <circle cx={node.anchor.x} cy={node.anchor.y} r={m.anchorR * 1.5} fill={theme.void} opacity={0.8} />
       <circle
         cx={node.anchor.x}
