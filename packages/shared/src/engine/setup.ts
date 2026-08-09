@@ -459,7 +459,7 @@ export function applyMarkStartCity(
   p.markedStartCity = cityId;
   pushLog(state, now, {
     category: 'setup',
-    message: `${p.name} marks ${cityId} as their starting city.`,
+    message: `${p.name} marks ${cityId} as an available starting city.`,
     data: { event: 'startCityMarked', playerId, cityId },
   });
   // §13 experienced setup: the Trust occupies the 15 Elektro slot of each city

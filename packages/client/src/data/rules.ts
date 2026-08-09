@@ -21,7 +21,7 @@ export const RULES: Record<string, RuleNote> = {
   experiencedStart: {
     title: 'Experienced start',
     content:
-      'After the playing zone is chosen, each player reserves a future starting city in player order. That city is where their network must begin, and — except as starting cities — reserved cities cannot be connected during Step 1. Recommended once everyone knows the map.',
+      'After the playing zone is chosen, each player marks an available starting city in player order. During Step 1, a player without a network may claim any unoccupied marked city as their first city; other unoccupied markers cannot be connected. Recommended once everyone knows the map.',
     rule: '§2 Optional experienced-player starting cities',
   },
   againstTheTrust: {

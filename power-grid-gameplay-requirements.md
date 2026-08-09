@@ -115,7 +115,7 @@ Each market space has a price. A resource purchase pays the price printed on the
 
 ### Optional experienced-player starting cities
 
-After initial player order and zone selection, let players choose a future starting city in player order and mark it temporarily with a uranium token. When that player begins building, the marked city is their required starting city for this optional mode; exchange the uranium marker for the player's house and return the uranium token to the supply. Except as starting cities, marked starting cities cannot be connected during Step 1.
+After initial player order and zone selection, let players choose future starting cities in player order and mark each temporarily with a neutral uranium token. The markers form a shared pool: when a player begins building, they may exchange any unoccupied marked city's token for their house and return the token to the supply. A marker must not use the colour of the player who selected it before a house occupies that city. Except when a player is establishing their first city, unoccupied marked starting cities cannot be connected during Step 1.
 
 ## 3. Round and phase state machine
 
@@ -213,7 +213,7 @@ Resolve players in reverse player order. Each player may connect any number of c
 - A player with no network may choose any empty city in the selected zone and place a house in its lowest available slot for 10 Elektro.
 - The player pays the building cost to the bank.
 - A player may defer starting their network until a later round.
-- In the optional experienced-player mode, use the player's marked starting city as described in Setup.
+- In the optional experienced-player mode, a player with no network may choose any unoccupied marked starting city as described in Setup.
 
 ### Expanding a network
 
@@ -494,4 +494,3 @@ A complete implementation must be able to demonstrate that:
 7. Endgame winner evaluation can select a player other than the player who first reached the city threshold.
 8. The two-player Trust setup and all Trust phase actions work without giving the Trust money, a score-track position, or a win condition.
 9. The replay or rules log can explain every automatic market, resource, Step, and winner-evaluation transition.
-

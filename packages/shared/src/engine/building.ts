@@ -39,6 +39,20 @@ export function cityIsEmpty(state: GameState, cityId: CityId): boolean {
   return slots.every((s) => s === null || s === undefined);
 }
 
+/**
+ * True while an experienced-start marker is still available to be claimed.
+ *
+ * The marker records a setup choice, not ownership: any player without a
+ * network may use it for their first house. A house in the 10-Elektro slot
+ * consumes it. The Trust may already occupy the 15-Elektro slot in the
+ * combined variant, which must not make the marker unavailable.
+ */
+export function hasUnclaimedStartCityMarker(state: GameState, cityId: CityId): boolean {
+  const slots = state.citySlots[cityId];
+  if (!slots || (slots[0] !== null && slots[0] !== undefined)) return false;
+  return state.playerOrder.some((id) => getPlayer(state, id).markedStartCity === cityId);
+}
+
 /* ------------------------------------------------------------------ *
  * Buildability
  * ------------------------------------------------------------------ */
@@ -95,19 +109,15 @@ export function buildBlockReason(
   const slot = lowestOpenSlot(state, cityId);
   if (slot < 0) return 'That city has no empty slot at the current Step';
 
-  // §2 experienced start: the marked city is the player's required first city,
-  // and other players' marked cities are blocked during Step 1.
+  // §2 experienced start: markers are neutral. A player's first city may claim
+  // any unoccupied marker, while the remaining markers stay protected in Step 1.
   if (state.settings.experiencedStart) {
-    if (!player.hasNetwork && player.markedStartCity && player.markedStartCity !== cityId) {
-      return 'You must start your network in your marked starting city';
+    const markedStartCity = hasUnclaimedStartCityMarker(state, cityId);
+    if (!player.hasNetwork && !markedStartCity) {
+      return 'Your first city must be an unoccupied marked starting city';
     }
-    if (state.step === 1) {
-      for (const id of state.playerOrder) {
-        const other = getPlayer(state, id);
-        if (other.id !== playerId && other.markedStartCity === cityId && !other.hasNetwork) {
-          return 'That city is another player’s marked starting city';
-        }
-      }
+    if (player.hasNetwork && state.step === 1 && markedStartCity) {
+      return 'That city is reserved as an unoccupied starting city';
     }
   }
 

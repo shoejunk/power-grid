@@ -12,7 +12,10 @@ const SETUP_RULES: readonly RuleLine[] = [
   { text: 'Every map has 6 areas of 7 cities; only a contiguous subset is in play.', rule: '§1' },
   { text: 'The zone size is fixed by player count: 3 areas for 2–3, 4 for 4, 5 for 5–6.', rule: '§1' },
   { text: 'Nothing outside the zone may be used all game — not even as a route through.', rule: '§1, §14' },
-  { text: 'Reserved starting cities cannot be connected by anyone else during Step 1.', rule: '§2' },
+  {
+    text: 'Any player may claim an unoccupied marked starting city first; the other markers are protected during Step 1.',
+    rule: '§2',
+  },
 ];
 
 export function SetupPanel(): JSX.Element {
@@ -153,7 +156,7 @@ function StartCityPicker(): JSX.Element {
 
   return (
     <PhaseShell
-      title="Reserve your starting city"
+      title="Mark a starting city"
       subtitle="§2 · experienced-player setup"
       tone="live"
       rules={SETUP_RULES}
@@ -171,13 +174,14 @@ function StartCityPicker(): JSX.Element {
               if (choice) net.action({ type: 'markStartCity', cityId: choice });
             }}
           >
-            {choice ? `Reserve ${cityIndex.get(choice)?.name ?? choice}` : 'Pick a city'}
+            {choice ? `Mark ${cityIndex.get(choice)?.name ?? choice}` : 'Pick a city to mark'}
           </Button>
         </div>
       }
     >
       <p className="pg-gphase__lead">
-        Your network must begin here. Until you build, no one else may connect it during Step 1.
+        This adds a neutral marker to the map. When you begin building, you may claim any unoccupied
+        marked starting city.
       </p>
       <div className="pg-gcitylist" role="listbox" aria-label="Starting city">
         {legal.startCityChoices.map((id) => {

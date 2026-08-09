@@ -720,11 +720,11 @@ export function GameBoard(): JSX.Element {
           <Modal
             open
             onClose={() => setPendingPlacement(null)}
-            title={pendingPlacement.type === 'buildCity' ? 'Confirm house placement' : 'Reserve starting city'}
+            title={pendingPlacement.type === 'buildCity' ? 'Confirm house placement' : 'Mark starting city'}
             description={
               pendingPlacement.type === 'buildCity'
                 ? 'Review the connection cost before placing your house.'
-                : 'This city will be reserved until you place your first house.'
+                : 'This adds a neutral marker. Any player may claim it as their first city until it is occupied.'
             }
             footer={
               <>
@@ -732,7 +732,7 @@ export function GameBoard(): JSX.Element {
                   Cancel
                 </Button>
                 <Button variant="primary" onClick={confirmPlacement}>
-                  {pendingPlacement.type === 'buildCity' ? 'Confirm placement' : 'Confirm reservation'}
+                  {pendingPlacement.type === 'buildCity' ? 'Confirm placement' : 'Confirm marker'}
                 </Button>
               </>
             }
@@ -740,7 +740,7 @@ export function GameBoard(): JSX.Element {
             <p>
               {pendingPlacement.type === 'buildCity'
                 ? `Place your next house in ${pendingCity.name}.`
-                : `Reserve ${pendingCity.name} as the starting city for your network.`}
+                : `Mark ${pendingCity.name} as an available starting city.`}
             </p>
             {pendingBuildTarget ? (
               <dl>
@@ -816,7 +816,7 @@ export function GameBoard(): JSX.Element {
               {hoveredView.target && !hoveredView.unaffordable ? (
                 <p className="pgb-tip__cta">Click to review placement</p>
               ) : model?.mode === 'startCity' && model.interactive.has(hoveredNode.id) ? (
-                <p className="pgb-tip__cta">Click to reserve this city</p>
+                <p className="pgb-tip__cta">Click to mark this starting city</p>
               ) : null}
 
               <ul className="pgb-tip__slots">

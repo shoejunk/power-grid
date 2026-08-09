@@ -269,7 +269,7 @@ export function CreateGame(): JSX.Element {
               checked={draft.experiencedStart}
               onChange={(experiencedStart) => setDraft((d) => ({ ...d, experiencedStart }))}
               label="Experienced start"
-              description="Players reserve their starting city before anyone builds."
+              description="Players mark available starting cities before anyone builds."
               adornment={<Hint {...RULES.experiencedStart!} placement="left" />}
             />
 

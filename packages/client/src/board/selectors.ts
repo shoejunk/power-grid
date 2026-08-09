@@ -14,6 +14,7 @@ import {
   buildAdjacency,
   buildBlockReason,
   cheapestRoutes,
+  hasUnclaimedStartCityMarker,
   legalActions,
   type BuildTarget,
   type CityId,
@@ -47,6 +48,8 @@ export interface CityView {
   /** True when the reason is purely "you cannot afford it". */
   unaffordable: boolean;
   ownedByMe: boolean;
+  /** Neutral experienced-start marker, until a player claims the city. */
+  startingCityMarked: boolean;
 }
 
 export interface BoardModel {
@@ -127,6 +130,7 @@ export function buildModel(state: GameState, map: GameMap, myPlayerId: PlayerId 
       blockedReason,
       unaffordable,
       ownedByMe: !!me && me.cities.includes(city.id),
+      startingCityMarked: hasUnclaimedStartCityMarker(state, city.id),
     });
   }
 

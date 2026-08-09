@@ -9,7 +9,15 @@
 
 import { describe, expect, it } from 'vitest';
 import type { GameState, PlayerId } from '../../types.js';
-import { buildCost, buildTargets, deepClone, legalActions, validateAction } from '../index.js';
+import {
+  buildCost,
+  buildTargets,
+  deepClone,
+  hasUnclaimedStartCityMarker,
+  legalActions,
+  stateMap,
+  validateAction,
+} from '../index.js';
 import { act, enterPhase, placeHouse, start } from './helpers.js';
 
 const ZONE = ['west', 'southwest', 'east'];
@@ -238,7 +246,7 @@ describe('§8 turn flow and undo', () => {
 });
 
 describe('§2 experienced-player starting cities', () => {
-  it('a player must start in their marked city, and others may not take it in Step 1', () => {
+  it('lets a player claim any unoccupied marked city, while protecting the rest in Step 1', () => {
     const base = start({ playerCount: 3, seed: 'MARKED', zone: ZONE, experiencedStart: true });
     const s = deepClone(base);
     const actor = s.playerOrder[2]!;
@@ -246,19 +254,52 @@ describe('§2 experienced-player starting cities', () => {
     const mine = s.players[actor]!.markedStartCity!;
     const theirs = s.players[other]!.markedStartCity!;
     const t = enterPhase(s, 'building', actor);
+    const marked = s.playerOrder.map((id) => s.players[id]!.markedStartCity!).sort();
+    const unmarked = stateMap(s).cities.find(
+      (city) => s.zone.includes(city.area) && !marked.includes(city.id),
+    )!.id;
 
     const targets = buildTargets(t, actor).map((x) => x.cityId);
-    expect(targets).toEqual([mine]);
-    expect(validateAction(t, actor, build(theirs))).toEqual({
+    expect(targets).toEqual(marked);
+    expect(hasUnclaimedStartCityMarker(t, theirs)).toBe(true);
+    expect(validateAction(t, actor, build(unmarked))).toEqual({
       ok: false,
-      reason: 'You must start your network in your marked starting city',
+      reason: 'Your first city must be an unoccupied marked starting city',
     });
 
-    // Once started, other players' marked cities are still blocked in Step 1.
-    const started = act(t, actor, build(mine));
+    // Claiming another player's setup choice consumes its neutral marker.
+    const started = act(t, actor, build(theirs));
+    expect(started.players[actor]!.cities).toEqual([theirs]);
+    expect(hasUnclaimedStartCityMarker(started, theirs)).toBe(false);
+    expect(hasUnclaimedStartCityMarker(started, mine)).toBe(true);
+
+    // Once started, every remaining unclaimed marker is still blocked in Step 1.
     expect(
       buildTargets(started, actor).map((x) => x.cityId),
-    ).not.toContain(theirs);
+    ).not.toContain(mine);
+  });
+
+  it('keeps a marker available when the Trust occupies its 15-Elektro slot', () => {
+    const s = deepClone(
+      start({
+        playerCount: 2,
+        seed: 'MARKED-TRUST',
+        zone: ZONE,
+        experiencedStart: true,
+        againstTheTrust: true,
+      }),
+    );
+    const actor = s.playerOrder.find((id) => !s.players[id]!.isTrust)!;
+    const other = s.playerOrder.find((id) => id !== actor && !s.players[id]!.isTrust)!;
+    const marked = [s.players[actor]!.markedStartCity!, s.players[other]!.markedStartCity!].sort();
+    const t = enterPhase(s, 'building', actor);
+
+    expect(marked.every((cityId) => hasUnclaimedStartCityMarker(t, cityId))).toBe(true);
+    expect(buildTargets(t, actor).map((x) => x.cityId)).toEqual(marked);
+
+    const claimed = act(t, actor, build(s.players[other]!.markedStartCity!));
+    expect(claimed.citySlots[s.players[other]!.markedStartCity!]![0]).toBe(actor);
+    expect(hasUnclaimedStartCityMarker(claimed, s.players[other]!.markedStartCity!)).toBe(false);
   });
 });
 

@@ -206,7 +206,7 @@ export function MainMenu(): JSX.Element {
               <li>
                 <span className="pg-menu__variant-name">Experienced start</span>
                 <span className="pg-menu__variant-note">
-                  Reserve starting cities before anyone builds.
+                  Mark shared starting cities before anyone builds.
                 </span>
               </li>
               {/* Implemented and tested in the rules engine; its faction UI is

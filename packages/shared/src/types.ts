@@ -179,7 +179,7 @@ export interface Player {
   /** 0-based index into `GameState.playerOrder`. */
   orderIndex: number;
   phaseStatus: PhaseStatus;
-  /** Optional experienced-player marked starting city. §2. */
+  /** Optional experienced-player setup choice; its map marker is neutral until claimed. §2. */
   markedStartCity?: CityId;
   /** Set once the player has taken their first house off the board. */
   hasNetwork: boolean;

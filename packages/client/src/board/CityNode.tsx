@@ -136,6 +136,30 @@ function CityNodeImpl({
           />
         ) : null}
 
+        {/*
+          Experienced-start markers belong to the city pool, never to the
+          player who selected them. The dashed graphite keyline deliberately
+          uses no seat colour and disappears as soon as a house claims the
+          10-Elektro slot.
+        */}
+        {view.startingCityMarked ? (
+          <g className="pgb-start-marker">
+            <title>Unclaimed starting city</title>
+            <rect
+              x={-w / 2 - h * 0.25}
+              y={top - h * 0.25}
+              width={w + h * 0.5}
+              height={h + h * 0.5}
+              rx={r + h * 0.18}
+              fill="none"
+              stroke={theme.textMuted}
+              strokeOpacity={0.92}
+              strokeWidth={h * 0.06}
+              strokeDasharray={`${h * 0.19} ${h * 0.13}`}
+            />
+          </g>
+        ) : null}
+
         {/* Contact shadow — a duplicated shape, not a filter. */}
         <rect
           x={-w / 2}

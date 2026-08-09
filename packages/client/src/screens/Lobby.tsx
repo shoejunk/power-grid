@@ -318,7 +318,7 @@ export function Lobby(): JSX.Element {
                   <span className="pg-phaselist__body">
                     <span className="pg-phaselist__name">Starting cities</span>
                     <span className="pg-phaselist__summary">
-                      Each player reserves the city their network must begin from.
+                      Each player marks an available city; anyone may claim an unoccupied marker first.
                     </span>
                   </span>
                 </li>
