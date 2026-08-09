@@ -307,8 +307,8 @@ export function Lobby(): JSX.Element {
                 <span className="pg-phaselist__body">
                   <span className="pg-phaselist__name">Playing zone</span>
                   <span className="pg-phaselist__summary">
-                    {ZONE_AREAS[settings.playerCount] ?? 3} contiguous areas are chosen. Nothing
-                    outside them can be used all game — not even as a route.
+                    {ZONE_AREAS[settings.playerCount] ?? 3} contiguous areas are chosen randomly.
+                    Nothing outside them can be used all game — not even as a route.
                   </span>
                 </span>
               </li>
@@ -356,7 +356,7 @@ export function Lobby(): JSX.Element {
 
         {/* ------------------ settings summary ------------------ */}
         <motion.section variants={staggerItem} className="pg-lobby__settings">
-          <Panel title="Setup" subtitle="What the host chose" ticks>
+          <Panel title="Setup" subtitle="Game options and automatic setup" ticks>
             <div className="pg-lobby__map">
               <div
                 className="pg-lobby__mapart"
@@ -374,7 +374,7 @@ export function Lobby(): JSX.Element {
               <SummaryRow label="Players" value={`${settings.playerCount}`} />
               <SummaryRow
                 label="Playing zone"
-                value={`${ZONE_AREAS[settings.playerCount] ?? 3} areas`}
+                value={`${ZONE_AREAS[settings.playerCount] ?? 3} random contiguous areas`}
               />
               <SummaryRow
                 label="Step 2 at"

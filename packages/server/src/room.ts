@@ -419,8 +419,20 @@ export class GameRoom {
         this.hostId,
         this.code,
       );
+
+      // Region choice is automatic for every new game. The empty selection is
+      // the engine's request to draw a seeded random zone; validating and
+      // applying it here keeps contiguity and replay rules inside the engine.
+      if (state.phase === 'setup' && state.setupStage === 'zoneSelection') {
+        const action: GameAction = { type: 'selectZone', areas: [] };
+        const verdict = this.deps.engine.validateAction(state, this.hostId, action);
+        if (!verdict.ok) {
+          throw new Error(`Engine rejected automatic zone selection: ${verdict.reason}`);
+        }
+        state = this.deps.engine.applyAction(state, this.hostId, action, Date.now());
+      }
     } catch (err) {
-      this.deps.logger.error('Engine failed to create game', {
+      this.deps.logger.error('Engine failed to set up game', {
         gameId: this.gameId,
         error: err instanceof Error ? err.message : String(err),
       });

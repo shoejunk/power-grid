@@ -5,6 +5,7 @@
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
+import { ZONE_AREA_COUNT, getMap, isZoneContiguous } from '@pg/shared';
 import { loadEngine } from '../engine/loadEngine.js';
 import { silentLogger } from '../logger.js';
 import { startServer, type RunningServer } from '../server.js';
@@ -59,6 +60,9 @@ describe('rules engine integration', () => {
     expect(state.hostId).toBe(host.playerId);
     expect(Object.keys(state.players).length).toBeGreaterThanOrEqual(2);
     expect(state.settings.playerCount).toBe(2);
+    expect(state.zone).toHaveLength(ZONE_AREA_COUNT[state.settings.playerCount]);
+    expect(isZoneContiguous(getMap(state.settings.mapId), state.zone)).toBe(true);
+    expect(state.setupStage).not.toBe('zoneSelection');
     // Whatever the engine's opening flow is, the game must survive a restart.
     const persisted = server.store.loadGames().find((g) => g.code === host.code);
     expect(persisted?.started).toBe(true);
