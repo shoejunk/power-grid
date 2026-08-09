@@ -481,20 +481,18 @@ export class GameHub {
     room.rescheduleAutoAction();
   }
 
-  /** Called when a socket dies for any reason. Seats always survive. */
+  /** Called when a socket dies for any reason. Seats and host ownership survive. */
   handleDisconnect(conn: Connection): void {
     const bound = this.boundRoom(conn);
     if (!bound) return;
     const { room, playerId } = bound;
     if (!room.detach(playerId, conn)) return;
 
-    const promoted = room.promoteHostIfNeeded(playerId, true);
     this.logger.info('Player disconnected', {
       gameId: room.gameId,
       code: room.code,
       playerId,
       started: room.started,
-      ...(promoted ? { newHost: promoted } : {}),
     });
 
     // An abandoned, never-started lobby is garbage; a started game is not.

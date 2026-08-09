@@ -461,19 +461,17 @@ export class GameRoom {
    * ---------------------------------------------------------------- */
 
   /**
-   * Promotes the longest-seated connected player when the host goes away.
-   * Falls back to the longest-seated player of any presence, so a table is
-   * never left host-less after a restart.
+   * Promotes the longest-seated connected player when the host explicitly
+   * leaves. Falls back to the longest-seated player of any presence, so a
+   * table is never left host-less after a restart.
    */
-  promoteHostIfNeeded(departingId: PlayerId, requireConnectedCandidate = false): PlayerId | null {
+  promoteHostIfNeeded(departingId: PlayerId): PlayerId | null {
     if (this.hostId !== departingId) return null;
     const candidates = this.seats.filter((s) => s.playerId !== departingId && !s.isBot);
     if (candidates.length === 0) return null;
     const bySeniority = [...candidates].sort((a, b) => a.joinedAt - b.joinedAt);
     const connected = bySeniority.find((s) => this.isConnected(s.playerId));
-    // On a plain disconnect we only hand the crown to someone who is actually
-    // present; a lone host who reloads the page keeps their table.
-    const chosen = requireConnectedCandidate ? connected : (connected ?? bySeniority[0]);
+    const chosen = connected ?? bySeniority[0];
     if (!chosen) return null;
     this.hostId = chosen.playerId;
     if (this.state) this.state.hostId = chosen.playerId;

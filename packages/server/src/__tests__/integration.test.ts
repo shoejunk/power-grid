@@ -429,7 +429,7 @@ describe('Power Grid multiplayer server', () => {
    * ================================================================ */
 
   describe('host promotion', () => {
-    it('promotes the longest-seated connected player when the host disconnects', async () => {
+    it('keeps the host when the host disconnects from a lobby', async () => {
       const host = track(await createGame(server, 'Ada'));
       const first = track(await joinGame(server, host.code, 'Grace'));
       const second = track(await joinGame(server, host.code, 'Linus'));
@@ -438,15 +438,17 @@ describe('Power Grid multiplayer server', () => {
       second.client.clear();
       host.client.kill();
 
-      const lobby = await first.client.waitLobby((l) => l.hostId !== host.playerId);
-      expect(lobby.lobby.hostId).toBe(first.playerId);
-      expect(lobby.lobby.players.find((p) => p.id === first.playerId)?.isHost).toBe(true);
+      const lobby = await first.client.waitLobby(
+        (l) => l.players.find((p) => p.id === host.playerId)?.connected === false,
+      );
+      expect(lobby.lobby.hostId).toBe(host.playerId);
+      expect(lobby.lobby.players.find((p) => p.id === host.playerId)?.isHost).toBe(true);
+      expect(lobby.lobby.players.find((p) => p.id === first.playerId)?.isHost).toBe(false);
 
-      // The new host really has host powers.
+      // A disconnected host has not left, so another player cannot use host powers.
       first.client.clear();
       first.client.send({ t: 'updateSettings', settings: { mapId: 'usa' } });
-      const updated = await first.client.waitLobby((l) => l.settings.mapId === 'usa');
-      expect(updated.lobby.hostId).toBe(first.playerId);
+      expect((await first.client.wait('error')).code).toBe('notHost');
     });
 
     it('promotes on an explicit leaveGame and frees the seat in a lobby', async () => {
@@ -461,7 +463,7 @@ describe('Power Grid multiplayer server', () => {
       expect(lobby.lobby.players[0]?.name).toBe('Grace');
     });
 
-    it('keeps a game in progress alive and promotes when the host leaves mid-game', async () => {
+    it('keeps a game in progress alive without promoting when the host disconnects', async () => {
       const host = track(await createGame(server, 'Ada'));
       const guest = track(await joinGame(server, host.code, 'Grace'));
       guest.client.send({ t: 'setReady', ready: true });
@@ -472,11 +474,33 @@ describe('Power Grid multiplayer server', () => {
       guest.client.clear();
       host.client.kill();
 
+      const lobby = await guest.client.waitLobby(
+        (l) => l.players.find((p) => p.id === host.playerId)?.connected === false,
+      );
+      expect(lobby.lobby.hostId).toBe(host.playerId);
+      expect(lobby.lobby.players).toHaveLength(2);
+      expect(lobby.lobby.players.find((p) => p.id === host.playerId)?.connected).toBe(false);
+      expect(server.hub.roomByCode(host.code)?.state?.players[host.playerId]).toBeDefined();
+      expect(server.hub.roomByCode(host.code)?.state?.hostId).toBe(host.playerId);
+    });
+
+    it('promotes when the host explicitly leaves a game in progress', async () => {
+      const host = track(await createGame(server, 'Ada'));
+      const guest = track(await joinGame(server, host.code, 'Grace'));
+      guest.client.send({ t: 'setReady', ready: true });
+      await host.client.waitLobby((l) => l.players.every((p) => p.ready || p.isHost));
+      host.client.send({ t: 'startGame' });
+      await guest.client.wait('state');
+
+      guest.client.clear();
+      host.client.send({ t: 'leaveGame' });
+
       const lobby = await guest.client.waitLobby((l) => l.hostId === guest.playerId);
       // The departed host keeps their seat — requirement 5 beats host churn.
       expect(lobby.lobby.players).toHaveLength(2);
       expect(lobby.lobby.players.find((p) => p.id === host.playerId)?.connected).toBe(false);
       expect(server.hub.roomByCode(host.code)?.state?.players[host.playerId]).toBeDefined();
+      expect(server.hub.roomByCode(host.code)?.state?.hostId).toBe(guest.playerId);
     });
   });
 
