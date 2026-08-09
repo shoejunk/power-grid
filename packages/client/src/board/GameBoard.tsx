@@ -30,6 +30,7 @@ import {
 
 import { BOARD_BASE_SIZE, loadArtManifest, type ArtManifest } from '@/art';
 import { net, useGameStore } from '@/net';
+import { Button, Modal } from '@/ui';
 import { SLOTS_OPEN_AT_STEP, getMap, type CityId } from '@pg/shared';
 
 import { BoardDefs, DEF } from './Defs';
@@ -52,6 +53,11 @@ interface Fit {
   ox: number;
   oy: number;
 }
+
+/** A map choice that must be explicitly confirmed before it reaches the server. */
+type PendingPlacement =
+  | { type: 'buildCity'; cityId: CityId }
+  | { type: 'markStartCity'; cityId: CityId };
 
 export function GameBoard(): JSX.Element {
   const gameState = useGameStore((s) => s.gameState);
@@ -197,6 +203,20 @@ export function GameBoard(): JSX.Element {
     () => (gameState && map ? buildModel(gameState, map, myPlayerId) : null),
     [gameState, map, myPlayerId],
   );
+  const [pendingPlacement, setPendingPlacement] = useState<PendingPlacement | null>(null);
+
+  /*
+   * The server can advance the match while a confirmation is open. Do not leave
+   * a stale decision on screen, and never submit it after its legal window has
+   * closed.
+   */
+  useEffect(() => {
+    if (!pendingPlacement || !model) return;
+    const expectedMode = pendingPlacement.type === 'buildCity' ? 'building' : 'startCity';
+    if (model.mode !== expectedMode || !model.interactive.has(pendingPlacement.cityId)) {
+      setPendingPlacement(null);
+    }
+  }, [model, pendingPlacement]);
 
   /* --- art assets: the painted plate + grain ----------------------- */
   const [art, setArt] = useState<ArtManifest | null>(null);
@@ -335,12 +355,24 @@ export function GameBoard(): JSX.Element {
       if (drag.current.moved > 6) return;
       if (!model) return;
       if (!model.interactive.has(cityId)) return;
-      if (model.mode === 'building') net.action({ type: 'buildCity', cityId });
-      else if (model.mode === 'startCity') net.action({ type: 'markStartCity', cityId });
+      if (model.mode === 'building') setPendingPlacement({ type: 'buildCity', cityId });
+      else if (model.mode === 'startCity') setPendingPlacement({ type: 'markStartCity', cityId });
       else if (model.mode === 'trustPlacement') net.action({ type: 'placeTrustHouse', cityId });
     },
     [model],
   );
+
+  const confirmPlacement = useCallback(() => {
+    if (!pendingPlacement || !model) return;
+    const expectedMode = pendingPlacement.type === 'buildCity' ? 'building' : 'startCity';
+    if (model.mode !== expectedMode || !model.interactive.has(pendingPlacement.cityId)) {
+      setPendingPlacement(null);
+      return;
+    }
+
+    setPendingPlacement(null);
+    net.action(pendingPlacement);
+  }, [model, pendingPlacement]);
 
   /* --- keyboard (U6): pan, zoom, reset ---------------------------- */
   const onKeyDown = useCallback(
@@ -448,6 +480,13 @@ export function GameBoard(): JSX.Element {
   }
 
   const slotsOpen = SLOTS_OPEN_AT_STEP[gameState.step] ?? 1;
+  const pendingCity = pendingPlacement
+    ? map.cities.find((city) => city.id === pendingPlacement.cityId) ?? null
+    : null;
+  const pendingBuildTarget =
+    pendingPlacement?.type === 'buildCity'
+      ? model?.cities.get(pendingPlacement.cityId)?.target ?? null
+      : null;
 
   return (
     <MotionConfig reducedMotion="user">
@@ -677,6 +716,51 @@ export function GameBoard(): JSX.Element {
           <span ref={fpsRef} hidden />
         )}
 
+        {pendingPlacement && pendingCity ? (
+          <Modal
+            open
+            onClose={() => setPendingPlacement(null)}
+            title={pendingPlacement.type === 'buildCity' ? 'Confirm house placement' : 'Reserve starting city'}
+            description={
+              pendingPlacement.type === 'buildCity'
+                ? 'Review the connection cost before placing your house.'
+                : 'This city will be reserved until you place your first house.'
+            }
+            footer={
+              <>
+                <Button variant="ghost" onClick={() => setPendingPlacement(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" onClick={confirmPlacement}>
+                  {pendingPlacement.type === 'buildCity' ? 'Confirm placement' : 'Confirm reservation'}
+                </Button>
+              </>
+            }
+          >
+            <p>
+              {pendingPlacement.type === 'buildCity'
+                ? `Place your next house in ${pendingCity.name}.`
+                : `Reserve ${pendingCity.name} as the starting city for your network.`}
+            </p>
+            {pendingBuildTarget ? (
+              <dl>
+                <div>
+                  <dt>Cheapest route</dt>
+                  <dd className="pg-numeral">{pendingBuildTarget.routeCost} Elektro</dd>
+                </div>
+                <div>
+                  <dt>House slot {pendingBuildTarget.slot + 1}</dt>
+                  <dd className="pg-numeral">{pendingBuildTarget.slotCost} Elektro</dd>
+                </div>
+                <div>
+                  <dt>Total</dt>
+                  <dd className="pg-numeral">{pendingBuildTarget.total} Elektro</dd>
+                </div>
+              </dl>
+            ) : null}
+          </Modal>
+        ) : null}
+
         <AnimatePresence>
           {/*
             Only opacity is animated here. Giving framer-motion a `y` as well
@@ -730,7 +814,9 @@ export function GameBoard(): JSX.Element {
               ) : null}
 
               {hoveredView.target && !hoveredView.unaffordable ? (
-                <p className="pgb-tip__cta">Click to connect</p>
+                <p className="pgb-tip__cta">Click to review placement</p>
+              ) : model?.mode === 'startCity' && model.interactive.has(hoveredNode.id) ? (
+                <p className="pgb-tip__cta">Click to reserve this city</p>
               ) : null}
 
               <ul className="pgb-tip__slots">
