@@ -324,6 +324,15 @@ export function GameBoard(): JSX.Element {
     }
   }, []);
 
+  // A city click must not become a board drag. In particular, capturing the
+  // pointer on the SVG retargets the subsequent click away from the city's hit
+  // layer in some browsers, which made the visible house slots appear inert.
+  const onInteractiveCityPointerDown = useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    drag.current = { active: false, moved: 0, x: e.clientX, y: e.clientY };
+  }, []);
+
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
       const d = drag.current;
@@ -624,18 +633,27 @@ export function GameBoard(): JSX.Element {
                     <g
                       key={node.id}
                       className="pgb-hit"
+                      data-city-id={node.id}
                       data-interactive={interactive || undefined}
                       data-dead={dead || undefined}
                       onPointerEnter={() => setHovered(node.id)}
                       onPointerLeave={() => setHovered((h) => (h === node.id ? null : h))}
+                      onPointerDown={interactive ? onInteractiveCityPointerDown : undefined}
                       onClick={() => onCityClick(node.id)}
                     >
                       <rect
-                        x={node.plate.x - layout.metrics.plateW * 0.6}
-                        y={node.plate.y - layout.metrics.plateH * 0.95}
-                        width={layout.metrics.plateW * 1.2}
-                        height={layout.metrics.plateH * 1.9}
+                        /*
+                         * `node.w` includes the measured city label as well as
+                         * the slot plate. Using only the plate width left the
+                         * readable ends of long names (for example,
+                         * Wilhelmshaven) visibly outside the click target.
+                         */
+                        x={node.plate.x - node.w / 2}
+                        y={node.plate.y - node.h / 2}
+                        width={node.w}
+                        height={node.h}
                         fill="transparent"
+                        pointerEvents="all"
                       />
                       <circle
                         cx={node.anchor.x}
