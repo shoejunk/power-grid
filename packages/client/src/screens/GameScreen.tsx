@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { GameMap, LegalActions, MapCity } from '@pg/shared';
 import { END_GAME_THRESHOLD, STEP2_THRESHOLD, getMap, legalActions } from '@pg/shared';
@@ -16,7 +16,16 @@ import { MatchProvider, noLegalActions, type MatchValue } from '../game/model';
 import '../game/game.scss';
 import { net, useGameStore } from '../net';
 import { springSoft } from '../styles/motion';
-import { Badge, Button, ConnectionPill, IconBolt, IconLogout, LoadingSpinner, Tooltip } from '../ui';
+import {
+  Badge,
+  Button,
+  ConnectionPill,
+  IconBolt,
+  IconLogout,
+  LoadingSpinner,
+  Tooltip,
+} from '../ui';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { AmbientBackdrop, Wordmark } from '../ui/Artwork';
 
 /* ==================================================================== *
@@ -87,6 +96,7 @@ const PHASE_KEYS = ['order', 'auction', 'resources', 'building', 'bureaucracy'] 
 export function GameScreen(): JSX.Element {
   const gameState = useGameStore((s) => s.gameState);
   const myPlayerId = useGameStore((s) => s.myPlayerId);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
   const match = useMemo<MatchValue | null>(() => {
     if (!gameState) return null;
@@ -200,7 +210,12 @@ export function GameScreen(): JSX.Element {
           <div className="pg-game__chrome-right">
             <RulesSheet />
             <ConnectionPill />
-            <Button variant="ghost" size="sm" icon={<IconLogout />} onClick={() => net.leaveGame()}>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<IconLogout />}
+              onClick={() => setLeaveDialogOpen(true)}
+            >
               Leave
             </Button>
           </div>
@@ -230,6 +245,19 @@ export function GameScreen(): JSX.Element {
         </div>
 
         <MomentOverlay />
+
+        <ConfirmDialog
+          open={leaveDialogOpen}
+          onCancel={() => setLeaveDialogOpen(false)}
+          onConfirm={() => {
+            setLeaveDialogOpen(false);
+            net.leaveGame();
+          }}
+          title="Leave this game?"
+          description="You will be disconnected from the table. Your seat remains in an active game, but you will stop receiving updates here."
+          confirmLabel="Leave game"
+          confirmVariant="danger"
+        />
       </div>
     </MatchProvider>
   );

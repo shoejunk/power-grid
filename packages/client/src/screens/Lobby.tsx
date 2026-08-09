@@ -29,6 +29,7 @@ import {
   TextInput,
   Tooltip,
 } from '../ui';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { AmbientBackdrop, Wordmark } from '../ui/Artwork';
 
 /**
@@ -47,6 +48,7 @@ export function Lobby(): JSX.Element {
   const pushToast = useGameStore((s) => s.pushToast);
 
   const [copied, setCopied] = useState(false);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
   const copyCode = useCallback(async () => {
     if (!lobby) return;
@@ -109,7 +111,7 @@ export function Lobby(): JSX.Element {
           variant="ghost"
           size="sm"
           icon={<IconLogout />}
-          onClick={() => net.leaveGame()}
+          onClick={() => setLeaveDialogOpen(true)}
         >
           Leave
         </Button>
@@ -410,6 +412,19 @@ export function Lobby(): JSX.Element {
           </Panel>
         </motion.section>
       </motion.main>
+
+      <ConfirmDialog
+        open={leaveDialogOpen}
+        onCancel={() => setLeaveDialogOpen(false)}
+        onConfirm={() => {
+          setLeaveDialogOpen(false);
+          net.leaveGame();
+        }}
+        title="Leave this table?"
+        description="You will leave the lobby and give up your seat at this table."
+        confirmLabel="Leave table"
+        confirmVariant="danger"
+      />
     </div>
   );
 }

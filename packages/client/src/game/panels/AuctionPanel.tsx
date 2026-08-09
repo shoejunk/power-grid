@@ -5,6 +5,7 @@ import { MAX_PLANTS_PER_PLAYER, getPlant } from '@pg/shared';
 import { net } from '../../net';
 import { springSoft } from '../../styles/motion';
 import { Avatar, Badge, Button, NumberStepper, Tooltip } from '../../ui';
+import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { fuelText } from '../format';
 import { useMatch } from '../model';
 import { PlantCard } from '../parts/PlantCard';
@@ -260,6 +261,7 @@ function AuctionFloor(): JSX.Element {
   const floor = bidding?.minimumRaise ?? 0;
   const [minBid, setMinBid] = useState(floor);
   const [maxBid, setMaxBid] = useState(floor);
+  const [passDialogOpen, setPassDialogOpen] = useState(false);
 
   useEffect(() => {
     setMinBid(floor);
@@ -297,7 +299,7 @@ function AuctionFloor(): JSX.Element {
               content="This sealed decision takes you out of this auction only. You may still nominate later if you have not acquired a plant."
             >
               <span className="pg-gactions__wrap">
-                <Button variant="ghost" onClick={() => net.action({ type: 'passBid' })}>
+                <Button variant="ghost" onClick={() => setPassDialogOpen(true)}>
                   Pass
                 </Button>
               </span>
@@ -393,6 +395,17 @@ function AuctionFloor(): JSX.Element {
           );
         })}
       </div>
+      <ConfirmDialog
+        open={passDialogOpen}
+        onCancel={() => setPassDialogOpen(false)}
+        onConfirm={() => {
+          setPassDialogOpen(false);
+          net.action({ type: 'passBid' });
+        }}
+        title={`Pass on Plant ${auction.plantId}?`}
+        description="Passing ends your bidding on this power plant. You will not be able to re-enter this auction."
+        confirmLabel="Pass on plant"
+      />
     </PhaseShell>
   );
 }
