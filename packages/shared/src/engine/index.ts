@@ -425,4 +425,5 @@ export * from './steps.js';
 export * from './endgame.js';
 export * from './trust.js';
 export * from './legal.js';
+export * from './bot.js';
 export * from './autoplay.js';

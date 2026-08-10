@@ -16,13 +16,9 @@ import { randomZone } from '../setup.js';
 /**
  * Drives a game entirely by default actions.
  *
- * Note what this does NOT assert: that the game ends. Default actions are
- * deliberately conservative — they decline to build (§8 permits deferring a
- * network indefinitely) — so a table of nothing but defaults never connects a
- * city and never reaches the end-game threshold. That is correct behaviour for
- * a bot and useless behaviour for an opponent, which is why bots need a real
- * policy rather than this. What we assert here is the safety
- * property: every reachable state offers a legal action, so nothing ever hangs.
+ * What this asserts is the safety property, not the quality of play: every
+ * reachable state offers a legal action, so nothing ever hangs. The strength of
+ * the move chosen is `bot.test.ts`'s subject.
  */
 function autoplay(state: GameState, maxTurns = 600) {
   let s = state;
@@ -118,17 +114,21 @@ describe('defaultActionFor — never deadlocks', () => {
     expect(validateAction(s, actor, action!).ok).toBe(true);
   });
 
-  it('nominates the cheapest affordable plant rather than an arbitrary one', () => {
+  it('opens at the minimum bid on a plant it can afford', () => {
     const s = started({ playerCount: 4, seed: 'AUTOPLAY-CHEAP' });
     const actor = s.activePlayerId!;
     const legal = legalActions(s, actor);
-    const cheapest = Math.min(...legal.nominatablePlants.filter((p) => p.affordable).map((p) => p.minimumBid));
 
     const action = defaultActionFor(s, actor);
-    expect(action).toMatchObject({ type: 'nominatePlant', bid: cheapest });
+    expect(action!.type).toBe('nominatePlant');
+    const nomination = action as Extract<typeof action, { type: 'nominatePlant' }>;
+    const chosen = legal.nominatablePlants.find((p) => p.plantId === nomination.plantId)!;
+    // §6: opening above the floor only ever pays more for the same plant.
+    expect(nomination.bid).toBe(chosen.minimumBid);
+    expect(chosen.affordable).toBe(true);
   });
 
-  it('never bids up a plant on a player behalf mid-auction', () => {
+  it('answers a live auction with a sealed range it can pay', () => {
     let s = started({ playerCount: 3, seed: 'AUTOPLAY-BID' });
     const opener = s.activePlayerId!;
     const first = defaultActionFor(s, opener)!;
@@ -137,7 +137,15 @@ describe('defaultActionFor — never deadlocks', () => {
     // Someone else is now on the clock inside a live auction.
     expect(s.auction).not.toBeNull();
     const responder = s.activePlayerId!;
-    expect(defaultActionFor(s, responder)).toEqual({ type: 'passBid' });
+    const bidding = legalActions(s, responder).bidding!;
+    const action = defaultActionFor(s, responder)!;
+
+    if (action.type === 'passBid') return; // declining is a legal answer too
+    expect(action.type).toBe('submitBidRange');
+    const range = action as Extract<typeof action, { type: 'submitBidRange' }>;
+    expect(range.minBid).toBe(bidding.minimumRaise);
+    expect(range.maxBid).toBeGreaterThanOrEqual(range.minBid);
+    expect(range.maxBid).toBeLessThanOrEqual(s.players[responder]!.money);
   });
 
   it('returns null for a player the engine is not waiting on', () => {

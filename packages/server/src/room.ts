@@ -610,9 +610,9 @@ export class GameRoom {
     this.turnTimer = null;
     if (this.disposed || !this.state || !this.started) return;
     if (this.state.activePlayerId !== playerId) return;
-    const action = this.findSafeAction(playerId);
+    const candidates = this.findSafeActions(playerId);
     const seat = this.seat(playerId);
-    if (!action) {
+    if (candidates.length === 0) {
       this.deps.logger.warn('No safe bot action available; turn is stalled', {
         gameId: this.gameId,
         playerId,
@@ -621,16 +621,27 @@ export class GameRoom {
       return;
     }
 
-    const result = this.applyPlayerAction(playerId, action);
-    if (!result.ok) {
+    /*
+     * The engine's suggestion first, then the pass-like fallbacks. Trying the
+     * rest after a rejection matters because a rejected move leaves the timer
+     * chain dead and the table stalled forever: the engine plays a real strategy
+     * now, and one mis-planned move must not be able to end the game.
+     */
+    let action: GameAction | null = null;
+    for (const candidate of candidates) {
+      const result = this.applyPlayerAction(playerId, candidate);
+      if (result.ok) {
+        action = candidate;
+        break;
+      }
       this.deps.logger.warn('Automatic action was rejected by the engine', {
         gameId: this.gameId,
         playerId,
-        action: action.type,
+        action: candidate.type,
         reason: result.message,
       });
-      return;
     }
+    if (!action) return;
 
     this.deps.logger.info('Bot acted', {
       gameId: this.gameId,
@@ -646,13 +657,15 @@ export class GameRoom {
   }
 
   /**
-   * The engine's own suggestion if it has one, otherwise the first pass-like
-   * candidate the engine says is legal. This is only used for bot seats; human
-   * turns are never resolved by the server. Rules knowledge stays in the engine.
+   * The engine's own suggestion, then every pass-like candidate the engine says
+   * is legal, in the order they should be tried. This is only used for bot
+   * seats; human turns are never resolved by the server. Rules knowledge stays
+   * in the engine.
    */
-  private findSafeAction(playerId: PlayerId): GameAction | null {
+  private findSafeActions(playerId: PlayerId): GameAction[] {
     const state = this.state;
-    if (!state) return null;
+    if (!state) return [];
+    const out: GameAction[] = [];
     /*
      * Guarded: this runs inside a timer callback, and the engine's lookups
      * throw on an unknown player id. An escaped throw would kill the timer
@@ -661,9 +674,9 @@ export class GameRoom {
      */
     try {
       const suggested = this.deps.engine.defaultActionFor?.(state, playerId);
-      if (suggested) return suggested;
+      if (suggested) out.push(suggested);
       for (const candidate of SAFE_DEFAULT_CANDIDATES) {
-        if (this.deps.engine.validateAction(state, playerId, candidate).ok) return candidate;
+        if (this.deps.engine.validateAction(state, playerId, candidate).ok) out.push(candidate);
       }
     } catch (err) {
       this.deps.logger.warn('Default-action resolution threw; treating as no safe action', {
@@ -673,7 +686,7 @@ export class GameRoom {
         error: err instanceof Error ? err.message : String(err),
       });
     }
-    return null;
+    return out;
   }
 
   /* ---------------------------------------------------------------- *

@@ -1,39 +1,130 @@
 /**
  * Default action resolution.
  *
- * Used in two situations where the game must proceed without a human decision:
- *   - a bot seat has to act.
- *
- * The contract is narrow but strict: **for any state where the engine is
+ * Used where the game must proceed without a human decision: a bot seat has to
+ * act. The contract is narrow but strict: **for any state where the engine is
  * waiting on this player, return an action the engine will accept.** Returning
- * null hangs the game.
+ * null hangs the game — and so does returning something illegal, because the
+ * server has nothing else to try.
  *
- * Passing is preferred wherever it is legal, because passing is the least
- * presumptuous choice we can make on someone's behalf. But passing is not
- * always legal — §6 requires every player to acquire a plant during the first
- * round, so there is no pass to fall back on. Every phase therefore needs a
- * concrete non-pass fallback, and this module supplies one.
+ * There are two layers here, and the split is deliberate:
+ *
+ *  - `bot.ts` decides what a competent player *wants* to do — buy a plant it
+ *    can afford to fuel, buy the fuel, connect the cities it can light. That is
+ *    a planner, and planners can be wrong about the rules at the margins.
+ *  - this module holds the safety net: the cheapest, most conservative legal
+ *    move in every phase, with no judgement in it at all. Passing is preferred
+ *    wherever it is legal — except that §6 makes passing illegal during the
+ *    first round's mandatory purchase, so every phase still needs a concrete
+ *    non-pass fallback.
+ *
+ * The planner's move is validated before it is offered, and anything that fails
+ * validation or throws falls through to the safety net. The anti-deadlock
+ * property therefore does not depend on the planner being correct.
  *
  * Rules knowledge lives here rather than in the server: the server proposes
  * nothing of its own, it just asks for an action and applies it.
  */
 
 import type { CityId, GameAction, GameState, PlayerId } from '../types.js';
-import { legalActions } from './legal.js';
+import { legalActions, type LegalActions } from './legal.js';
 import { getPlayer } from './state.js';
 import { getPlant } from '../data/plants.js';
+import { botActionFor } from './bot.js';
+import {
+  validateNominatePlant,
+  validatePassBid,
+  validatePassNomination,
+  validateScrapPlant,
+  validateSubmitBidRange,
+} from './auction.js';
+import { validateBuyResources } from './resources.js';
+import { validateBuildCity } from './building.js';
+import { validatePowerCities } from './bureaucracy.js';
+import { validateMarkStartCity, validatePlaceTrustHouse } from './setup.js';
 
 /**
- * Cheapest legal action for `playerId` in the current state, or null when the
+ * The action `playerId` should take in the current state, or null when the
  * engine is not waiting on them.
  *
- * "Cheapest" means: spend the least money, acquire the least, and change the
- * board as little as the rules permit.
+ * Prefers the planner's move; falls back to the conservative default whenever
+ * the planner declines, errs, or proposes something the engine would reject.
  */
 export function defaultActionFor(state: GameState, playerId: PlayerId): GameAction | null {
   const legal = legalActions(state, playerId);
   if (!legal.isActive) return null;
 
+  const planned = plannedAction(state, playerId, legal);
+  if (planned) return planned;
+
+  return safeActionFor(state, legal);
+}
+
+/** The planner's move, but only if the engine would actually accept it. */
+function plannedAction(
+  state: GameState,
+  playerId: PlayerId,
+  legal: LegalActions,
+): GameAction | null {
+  let action: GameAction | null;
+  try {
+    action = botActionFor(state, playerId, legal);
+  } catch {
+    /* A planner fault must never stall a table. Fall through to the safety net. */
+    return null;
+  }
+  if (!action) return null;
+  return isAcceptable(state, playerId, action) ? action : null;
+}
+
+/**
+ * Local re-validation, mirroring `validateAction` for the subset of actions the
+ * planner can propose. Written against the individual rule modules rather than
+ * the engine's public entry point, which imports this file.
+ */
+function isAcceptable(state: GameState, playerId: PlayerId, action: GameAction): boolean {
+  const active = state.activePlayerId === playerId;
+  switch (action.type) {
+    case 'markStartCity':
+      return validateMarkStartCity(state, playerId, action.cityId).ok;
+    case 'placeTrustHouse':
+      return validatePlaceTrustHouse(state, playerId, action.cityId).ok;
+    case 'nominatePlant':
+      return validateNominatePlant(state, playerId, action.plantId, action.bid, action.maxBid).ok;
+    case 'passNomination':
+      return validatePassNomination(state, playerId).ok;
+    case 'submitBidRange':
+      return validateSubmitBidRange(state, playerId, action.minBid, action.maxBid).ok;
+    case 'passBid':
+      return validatePassBid(state, playerId).ok;
+    case 'scrapPlant':
+      return validateScrapPlant(state, playerId, action.plantId).ok;
+    case 'buyResources':
+      return validateBuyResources(state, playerId, action.purchases).ok;
+    case 'passResources':
+      return state.phase === 'resources' && active;
+    case 'buildCity':
+      return validateBuildCity(state, playerId, action.cityId).ok;
+    case 'passBuilding':
+      return state.phase === 'building' && active;
+    case 'powerCities':
+      return validatePowerCities(state, playerId, action.decision).ok;
+    default:
+      return false;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * The safety net
+ * ------------------------------------------------------------------ */
+
+/**
+ * Cheapest legal action for the player the engine is waiting on.
+ *
+ * "Cheapest" means: spend the least money, acquire the least, and change the
+ * board as little as the rules permit.
+ */
+export function safeActionFor(state: GameState, legal: LegalActions): GameAction | null {
   switch (state.phase) {
     case 'setup':
       return setupDefault(state, legal);
@@ -56,7 +147,7 @@ export function defaultActionFor(state: GameState, playerId: PlayerId): GameActi
  * Phase 2 — auction (§6)
  * ------------------------------------------------------------------ */
 
-function auctionDefault(legal: ReturnType<typeof legalActions>): GameAction | null {
+function auctionDefault(legal: LegalActions): GameAction | null {
   /* A pending scrap must be resolved before anything else can happen. Discard
      the least capable plant, measured by cities powered then by number, so the
      automatic choice is defensible rather than arbitrary. §6. */
@@ -69,7 +160,7 @@ function auctionDefault(legal: ReturnType<typeof legalActions>): GameAction | nu
     return { type: 'scrapPlant', plantId: worst };
   }
 
-  /* Mid-auction: decline to raise. Never bids up a plant on someone's behalf. */
+  /* Mid-auction: decline to raise. Never bids up a plant as a fallback. */
   if (legal.bidding) return { type: 'passBid' };
 
   /* Nominating: pass if the rules allow it. */
@@ -93,7 +184,7 @@ function auctionDefault(legal: ReturnType<typeof legalActions>): GameAction | nu
  * Phase 5 — bureaucracy (§9.1)
  * ------------------------------------------------------------------ */
 
-function bureaucracyDefault(legal: ReturnType<typeof legalActions>): GameAction | null {
+function bureaucracyDefault(legal: LegalActions): GameAction | null {
   /* Power as many cities as possible. Unlike bidding or building, this costs
      the player nothing they would want to keep — stored fuel exists to be
      burnt, and supplying fewer cities only forfeits income. Picking the
@@ -117,10 +208,7 @@ function bureaucracyDefault(legal: ReturnType<typeof legalActions>): GameAction 
  * Setup (§2)
  * ------------------------------------------------------------------ */
 
-function setupDefault(
-  state: GameState,
-  legal: ReturnType<typeof legalActions>,
-): GameAction | null {
+function setupDefault(state: GameState, legal: LegalActions): GameAction | null {
   /*
    * Zone selection MUST have a default. If the host drops between starting the
    * game and picking the zone, nobody else is permitted to choose (§2 gives it
