@@ -1,0 +1,224 @@
+@charset "UTF-8";
+@use 'mixins' as *;
+
+/* =====================================================================
+ * SCREEN SHELLS
+ * ---------------------------------------------------------------------
+ * The frame every screen on the platform sits in, and the handful of
+ * layout primitives that are true of any game: the route container, the
+ * full-bleed screen, the top bar, a stat readout, a summary list, the
+ * inline error and the crash fallback.
+ *
+ * Anything that names a map, a phase or a plant belongs in that game's
+ * own stylesheet, not here.
+ * ===================================================================== */
+
+/*
+ * <GameTheme> wrapper. A pure custom-property carrier: it must not introduce a
+ * box of its own, or every screen inside it would lose its full-height frame.
+ */
+.tt-theme {
+  height: 100%;
+  min-height: 0;
+}
+
+.tt-route {
+  position: absolute;
+  inset: 0;
+  /* A transitioning screen must never be able to grow the document. `clip`
+     contains any transform overshoot without creating a scroll container the
+     way `hidden` would (quality bar V8/V9: no unintended scrollbars). */
+  overflow: clip;
+}
+
+.tt-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: radial-gradient(135% 105% at 50% 0%, #0d151f 0%, #070b10 55%, #04070a 100%);
+}
+
+.tt-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--tt-z-background);
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------------ *
+ * Shared chrome
+ * ------------------------------------------------------------------ */
+.tt-topbar {
+  position: relative;
+  z-index: var(--tt-z-content);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--tt-space-4);
+  padding: var(--tt-space-4) var(--tt-gutter);
+  flex: none;
+
+  > :first-child {
+    justify-self: start;
+  }
+  > :last-child {
+    justify-self: end;
+  }
+}
+
+.tt-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tt-stat__value {
+  font-family: var(--tt-font-display);
+  font-size: var(--tt-text-xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--tt-text-bright);
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+}
+.tt-stat__label {
+  font-family: var(--tt-font-display);
+  font-size: var(--tt-text-3xs);
+  letter-spacing: var(--tt-tracking-widest);
+  text-transform: uppercase;
+  color: var(--tt-text-muted);
+}
+
+
+.tt-inline-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tt-space-3);
+  padding: var(--tt-space-3) var(--tt-space-4);
+  border-radius: var(--tt-radius-md);
+  border: 1px solid rgba(255, 85, 99, 0.35);
+  background: rgba(255, 85, 99, 0.08);
+  color: var(--tt-text-secondary);
+  font-size: var(--tt-text-xs);
+  line-height: var(--tt-leading-normal);
+
+  svg {
+    width: 15px;
+    height: 15px;
+    flex: none;
+    margin-top: 1px;
+    color: var(--tt-danger);
+  }
+  strong {
+    color: var(--tt-danger);
+    font-family: var(--tt-font-display);
+    letter-spacing: var(--tt-tracking-wide);
+    text-transform: uppercase;
+  }
+}
+
+
+.tt-summary {
+  display: flex;
+  flex-direction: column;
+}
+.tt-summary__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tt-space-4);
+  padding: var(--tt-space-2) 0;
+  border-bottom: 1px solid var(--tt-line-hairline);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+.tt-summary__label {
+  font-size: var(--tt-text-xs);
+  color: var(--tt-text-muted);
+  letter-spacing: var(--tt-tracking-wide);
+}
+.tt-summary__value {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--tt-font-display);
+  font-size: var(--tt-text-sm);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--tt-text-bright);
+
+  svg {
+    width: 12px;
+    height: 12px;
+    color: var(--tt-cyan);
+  }
+  &.is-on {
+    color: var(--tt-cyan-bright);
+  }
+}
+
+/* ==================================================================== *
+ * CRASH SCREEN (ErrorBoundary fallback)
+ * ==================================================================== */
+.tt-crash {
+  display: grid;
+  place-items: center;
+  padding: var(--tt-gutter);
+}
+.tt-crash__panel {
+  width: min(100%, 540px);
+  text-align: center;
+}
+.tt-crash__icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto var(--tt-space-5);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 85, 99, 0.4);
+  background: rgba(255, 85, 99, 0.1);
+  color: var(--tt-danger);
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+.tt-crash__detail {
+  margin: var(--tt-space-5) 0;
+  padding: var(--tt-space-3);
+  border-radius: var(--tt-radius-md);
+  @include well(var(--tt-radius-md));
+  font-family: var(--tt-font-mono);
+  font-size: var(--tt-text-xs);
+  color: var(--tt-text-muted);
+  text-align: left;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.tt-crash__actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--tt-space-3);
+}
+
+
+/* ==================================================================== *
+ * SMALL FRAMES
+ * -------------------------------------------------------------------- *
+ * Below the supported floor we degrade rather than break.
+ * ==================================================================== */
+@include down('md') {
+  .tt-topbar {
+    padding: var(--tt-space-3) var(--tt-space-4);
+  }
+}

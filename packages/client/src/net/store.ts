@@ -1,13 +1,5 @@
+import type { GameKey, LobbyState, PlayerId, SeatColor, ServerMessage } from '@tt/core';
 import { create } from 'zustand';
-import type {
-  GameAction,
-  GameSettings,
-  GameState,
-  LobbyState,
-  PlayerColor,
-  PlayerId,
-  ServerMessage,
-} from '@pg/shared';
 
 import {
   GameSocket,
@@ -16,7 +8,7 @@ import {
   savePlayerName,
   saveSessionToken,
 } from './socket';
-import type { ConnectionStatus, OutboundMessage, Route, Toast, ToastInput } from './types';
+import type { ConnectionStatus, Toast, ToastInput } from './types';
 
 /* ------------------------------------------------------------------ *
  * Chat
@@ -46,10 +38,24 @@ export interface GameStore {
 
   /* --- server state --- */
   lobby: LobbyState | null;
-  gameState: GameState | null;
+  /**
+   * Which game this browser is seated in, or `null` when it is seated in none.
+   *
+   * Tracked separately from `lobby` because `welcome` arrives first and a
+   * `state` frame can arrive before any lobby: it is what tells the shell
+   * which game UI module to load.
+   */
+  gameKey: GameKey | null;
+  /**
+   * The latest authoritative snapshot, still opaque.
+   *
+   * The platform deliberately cannot read inside this. Narrowing it is the
+   * job of the game UI named by `gameKey`, which is the only code that knows
+   * what shape the game's own state has.
+   */
+  state: unknown;
 
   /* --- shell state --- */
-  route: Route;
   toasts: Toast[];
   chat: ChatLine[];
   /** Last protocol-level error, surfaced inline on the screen that caused it. */
@@ -58,7 +64,6 @@ export interface GameStore {
   pending: boolean;
 
   /* --- actions --- */
-  setRoute: (route: Route) => void;
   setPlayerName: (name: string) => void;
   pushToast: (toast: ToastInput) => string;
   dismissToast: (id: string) => void;
@@ -83,15 +88,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   playerName: loadPlayerName() ?? '',
 
   lobby: null,
-  gameState: null,
+  gameKey: null,
+  state: null,
 
-  route: 'menu',
   toasts: [],
   chat: [],
   lastError: null,
   pending: false,
-
-  setRoute: (route) => set({ route, lastError: null }),
 
   setPlayerName: (name) => {
     savePlayerName(name);
@@ -120,7 +123,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
    * The single reducer for everything the server says.
    *
    * Keeping this in the store (rather than in the socket) means the transport
-   * is replaceable and the reducer is directly unit-testable.
+   * is replaceable and the reducer is directly unit-testable. Note what it
+   * does *not* do: it never inspects `state`, and it never branches on
+   * `gameKey`. Both are carried, not read.
    */
   applyServerMessage: (message) => {
     switch (message.t) {
@@ -128,7 +133,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // The token is our seat. Persisting it is what makes a refresh, a tab
         // close, or a full server restart recoverable.
         saveSessionToken(message.sessionToken);
-        set({ myPlayerId: message.playerId });
+        set({ myPlayerId: message.playerId, gameKey: message.gameKey });
         break;
       }
 
@@ -136,10 +141,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const previous = get().lobby;
         set({
           lobby: message.lobby,
+          gameKey: message.lobby.gameKey,
           pending: false,
           lastError: null,
-          // Only take over the route when we are not already in the match.
-          route: message.lobby.started ? get().route : 'lobby',
         });
 
         // Announce arrivals/departures once we already had a roster to compare.
@@ -163,19 +167,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
 
       case 'state': {
-        set({ gameState: message.state, pending: false, route: 'game', lastError: null });
-        break;
-      }
-
-      case 'patch': {
-        /*
-         * Incremental updates. The server currently broadcasts full `state`
-         * snapshots; `patch` is reserved for the delta channel that the
-         * engine package will start emitting. Until the op format is pinned
-         * down in @pg/shared (`ops` is `unknown[]`), the client cannot apply
-         * them safely, so it deliberately ignores them and continues to
-         * render the last authoritative snapshot rather than guessing.
-         */
+        set({
+          state: message.state,
+          gameKey: message.gameKey,
+          pending: false,
+          lastError: null,
+        });
         break;
       }
 
@@ -184,7 +181,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
          * `noSession` and `unknownSession` are the *expected* answers to the
          * handshake when this browser has no live seat — a first visit, or a
          * token that outlived its game. They are not failures, so we quietly
-         * drop the stale token and stay on the menu rather than alarming the
+         * drop the stale token and stay on the portal rather than alarming the
          * player. Every other code is a genuine error.
          */
         if (message.code === 'noSession' || message.code === 'unknownSession') {
@@ -222,7 +219,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         break;
 
       default: {
-        // Exhaustiveness guard: adding a ServerMessage variant to @pg/shared
+        // Exhaustiveness guard: adding a ServerMessage variant to @tt/core
         // without handling it here becomes a compile error.
         const never: never = message;
         void never;
@@ -242,16 +239,24 @@ let offlineToastId: string | null = null;
 const socket = new GameSocket({
   onMessage: (message) => useGameStore.getState().applyServerMessage(message),
 
+  onReplaced: () => {
+    useGameStore.getState().pushToast({
+      tone: 'warning',
+      title: 'Seat taken over',
+      message: 'You opened this game in another tab. This one is now a spectator.',
+      duration: 0,
+    });
+  },
+
   onStatus: (status, attempt) => {
     const previous = useGameStore.getState().connectionStatus;
     useGameStore.setState({ connectionStatus: status, reconnectAttempt: attempt });
 
     // Only talk about the connection when it actually changes character —
-    // a silent recovery is the good case and should stay silent.
-    // Only worth announcing when there was a seat to restore — recovering a
-    // connection while sitting on the main menu is not news.
+    // a silent recovery is the good case and should stay silent, and
+    // recovering while sitting on the portal is not news either.
     const hadGame =
-      useGameStore.getState().lobby !== null || useGameStore.getState().gameState !== null;
+      useGameStore.getState().lobby !== null || useGameStore.getState().state !== null;
     if (
       status === 'connected' &&
       hadGame &&
@@ -290,8 +295,10 @@ const socket = new GameSocket({
 /**
  * The application's entire outbound surface.
  *
- * Screens never touch the socket or build wire frames by hand; they call these,
- * which keeps every outgoing message type-checked against `ClientMessage`.
+ * Screens never touch the socket or build wire frames by hand; they call
+ * these, which keeps every outgoing message type-checked against
+ * `ClientMessage`. `settings` and `action` are `unknown` on the wire, so the
+ * game UI is what supplies a real payload — this layer only routes it.
  */
 export const net = {
   /** Opens the connection. Safe to call repeatedly. */
@@ -312,10 +319,10 @@ export const net = {
     socket.send({ t: 'hello', sessionToken: loadSessionToken() ?? undefined });
   },
 
-  createGame(name: string, settings: Omit<GameSettings, 'seed'> & { seed?: string }): void {
+  createGame(gameKey: GameKey, name: string, settings: unknown): void {
     useGameStore.getState().setPlayerName(name);
-    useGameStore.setState({ pending: true, lastError: null });
-    socket.send({ t: 'createGame', name, settings });
+    useGameStore.setState({ pending: true, lastError: null, gameKey });
+    socket.send({ t: 'createGame', gameKey, name, settings });
   },
 
   joinGame(code: string, name: string): void {
@@ -334,10 +341,10 @@ export const net = {
     saveSessionToken(null);
     useGameStore.setState({
       lobby: null,
-      gameState: null,
+      gameKey: null,
+      state: null,
       chat: [],
       lastError: null,
-      route: 'menu',
     });
   },
 
@@ -346,11 +353,11 @@ export const net = {
   },
 
   /**
-   * Seat colour. Accepted by the server's protocol parser as an extra message
-   * type; the server rejects a colour already claimed by another seat, so the
-   * swatch list is disabled optimistically *and* validated authoritatively.
+   * Seat colour. The server rejects a colour already claimed by another seat,
+   * so the swatch list is disabled optimistically *and* validated
+   * authoritatively.
    */
-  setColor(color: PlayerColor): void {
+  setColor(color: SeatColor): void {
     socket.send({ t: 'setColor', color });
   },
 
@@ -360,7 +367,7 @@ export const net = {
     socket.send({ t: 'setName', name });
   },
 
-  updateSettings(settings: Partial<GameSettings>): void {
+  updateSettings(settings: unknown): void {
     socket.send({ t: 'updateSettings', settings });
   },
 
@@ -376,7 +383,7 @@ export const net = {
     socket.send({ t: 'startGame' });
   },
 
-  action(action: GameAction, nonce?: string): void {
+  action(action: unknown, nonce?: string): void {
     socket.send({ t: 'action', action, nonce });
   },
 
@@ -386,11 +393,6 @@ export const net = {
 
   ping(): void {
     socket.send({ t: 'ping' });
-  },
-
-  /** Escape hatch for future message types; still typed against the union. */
-  raw(message: OutboundMessage): void {
-    socket.send(message);
   },
 } as const;
 
@@ -405,3 +407,16 @@ export const selectMyLobbyPlayer = (state: GameStore) =>
   state.lobby?.players.find((p) => p.id === state.myPlayerId) ?? null;
 
 export const selectOnline = (state: GameStore): boolean => state.connectionStatus === 'connected';
+
+/**
+ * Live presence for a seat.
+ *
+ * The lobby is the platform's source of truth for who is actually connected —
+ * a game state may or may not carry presence, and if it does it is only ever a
+ * copy. Anything drawing a "connected" dot should read it from here.
+ */
+export const selectConnectedSeats = (state: GameStore): Record<PlayerId, boolean> => {
+  const out: Record<PlayerId, boolean> = {};
+  for (const seat of state.lobby?.players ?? []) out[seat.id] = seat.isBot || seat.connected;
+  return out;
+};

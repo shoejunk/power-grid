@@ -47,10 +47,10 @@ export function App(): JSX.Element {
      * every transform/layout animation in the app collapses to an opacity
      * fade when the OS asks for reduced motion, while opacity and colour
      * transitions still run so state changes stay legible. The SCSS side
-     * mirrors this through the --pg-dur-* tokens (quality bar M5).
+     * mirrors this through the --tt-dur-* tokens (quality bar M5).
      */
     <MotionConfig reducedMotion="user">
-      <a className="pg-skip-link" href="#pg-main">
+      <a className="tt-skip-link" href="#pg-main">
         Skip to main content
       </a>
 
@@ -60,7 +60,7 @@ export function App(): JSX.Element {
         Both were correctness hazards under React StrictMode's double-invoke,
         and both were measured rather than suspected:
 
-        · With AnimatePresence, two `.pg-route` elements stayed mounted
+        · With AnimatePresence, two `.tt-route` elements stayed mounted
           indefinitely — the OUTGOING screen stranded at opacity 1 and the
           INCOMING one stuck at opacity 0. Clicking "Create game" left the menu
           on screen forever. The exit also scaled past 1.0, costing 3px of
@@ -74,7 +74,7 @@ export function App(): JSX.Element {
         (quality bar M1) — the wrapper simply cannot wedge them any more.
       */}
       <ErrorBoundary>
-        <div key={route} id="pg-main" className="pg-route">
+        <div key={route} id="pg-main" className="tt-route">
           {renderRoute(route)}
         </div>
       </ErrorBoundary>

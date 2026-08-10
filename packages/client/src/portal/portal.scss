@@ -1,0 +1,415 @@
+@charset "UTF-8";
+@use 'mixins' as *;
+
+/* =====================================================================
+ * PORTAL SCREENS
+ * ---------------------------------------------------------------------
+ * The game-agnostic half of the product: the home page that lists every
+ * title, the create/join shells, and the lobby. None of it may name a
+ * map, a phase or a resource — a game contributes those through its own
+ * settings component, which the shells render in a slot.
+ *
+ * Every accent below resolves through --tt-accent, which <GameTheme>
+ * rebinds per title, so one stylesheet renders in each game's identity.
+ * ===================================================================== */
+
+/* ==================================================================== *
+ * CREATE GAME
+ * ==================================================================== */
+/*
+ * ONE scroll container for the whole form.
+ *
+ * This used to be two columns that each scrolled independently inside a grid
+ * that did not. On a 720p or 768p laptop that put the "Advanced / Setup seed"
+ * panel behind a scrollbar in the right-hand column that nothing on screen
+ * advertised — the form looked simply truncated, and the seed field was
+ * effectively unreachable. The document root is `overflow: hidden` (reset.scss),
+ * so if this element does not scroll, nothing does.
+ */
+.pg-setup__grid {
+  position: relative;
+  z-index: var(--tt-z-content);
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 460px);
+  gap: clamp(18px, 2vw, 36px);
+  padding: 0 var(--tt-gutter) var(--tt-space-6);
+  /* Narrower than the shell ceiling: a setup form stretched to 2200px reads
+     as unfinished, not spacious. */
+  max-width: min(1720px, 92vw);
+  width: 100%;
+  margin: 0 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Anchor the columns to the top so a short column does not stretch and
+     strand its sticky footer halfway down an empty box. */
+  align-content: start;
+
+  @include down('lg') {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.pg-setup__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-4);
+  min-height: 0;
+  padding-bottom: var(--tt-space-4);
+  padding-right: 4px;
+}
+
+/*
+ * Short frames (720p / 768p laptops) reflow rather than just scroll.
+ *
+ * The right-hand column is four stacked panels and it is the one that runs off
+ * the bottom — "Advanced / Setup seed" is its third panel, which is why the
+ * seed field was the control that disappeared. Splitting that column in two
+ * brings the whole form back to roughly one screen; the grid still scrolls, so
+ * nothing depends on the reflow being perfect at every width.
+ */
+@media (max-height: 820px) and (min-width: 1180px) {
+  .pg-setup__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(500px, 1.06fr);
+  }
+  .pg-setup__col:last-child {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(230px, 1fr));
+    align-content: start;
+    gap: var(--tt-space-4);
+  }
+  .pg-setup__col:last-child > .pg-setup__submit,
+  .pg-setup__col:last-child > .tt-inline-error {
+    grid-column: 1 / -1;
+  }
+}
+
+.pg-setup__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: var(--tt-space-1);
+}
+
+
+.pg-setup__submit {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--tt-z-sticky);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--tt-space-3);
+  margin-top: auto;
+  padding: var(--tt-space-3) var(--tt-space-3) var(--tt-space-2);
+  border-radius: var(--tt-radius-lg);
+  background: linear-gradient(180deg, rgba(7, 11, 16, 0) 0%, rgba(7, 11, 16, 0.88) 38%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+
+/* ==================================================================== *
+ * JOIN GAME
+ * ==================================================================== */
+.pg-join__main {
+  position: relative;
+  z-index: var(--tt-z-content);
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: var(--tt-space-4) var(--tt-gutter) var(--tt-space-10);
+  min-height: 0;
+  overflow-y: auto;
+}
+.pg-join__card {
+  width: min(100%, 560px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-5);
+}
+.pg-join__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-2);
+  text-align: center;
+  align-items: center;
+}
+.pg-join__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-5);
+}
+.pg-join__codewrap {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tt-space-3);
+
+  > .tt-field {
+    flex: 1;
+  }
+  > .tt-hint {
+    margin-top: 28px;
+  }
+}
+.pg-join__alt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tt-space-3);
+}
+
+
+/* ==================================================================== *
+ * LOBBY
+ * ==================================================================== */
+.pg-lobby__grid {
+  position: relative;
+  z-index: var(--tt-z-content);
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr) minmax(300px, 0.8fr);
+  gap: clamp(16px, 1.6vw, 28px);
+  padding: 0 var(--tt-gutter) var(--tt-space-6);
+  max-width: var(--tt-max-content);
+  width: 100%;
+  margin: 0 auto;
+  /* Same rule as the setup screen: the lobby owns exactly one scroll
+     container, and it is this one. A column that scrolls on its own inside a
+     frame that cannot is how a control ends up unreachable. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-content: start;
+
+  @include down('xl') {
+    grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.8fr);
+  }
+  @include down('lg') {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.pg-lobby__roster,
+.pg-lobby__share,
+.pg-lobby__settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-4);
+  min-height: 0;
+}
+
+/*
+ * 720p and other short frames: the chat is the one panel a player can live
+ * without, and dropping it is far better than clipping a seat row. The roster
+ * then takes the column it vacates.
+ */
+@media (max-height: 780px) {
+  /* Scoped with `.pg-lobby` so these win over the unconditional rules further
+     down the file, which carry the same specificity. */
+  .pg-lobby .pg-lobby__chat {
+    display: none;
+  }
+  .pg-lobby .pg-lobby__rosterpanel {
+    flex: 1 1 auto;
+  }
+}
+
+.pg-lobby__settings {
+  @include down('xl') {
+    display: none;
+  }
+}
+
+/* All three columns finish on the same baseline: the last panel in each
+   absorbs the slack, so the lobby reads as one composed frame rather than
+   three stacks of cards floating at different heights. */
+.pg-lobby__next,
+.pg-lobby__settings > .tt-panel:last-child {
+  flex: 1 1 auto;
+}
+
+/* The roster sizes to its seats and only shrinks under real pressure; the chat
+   below absorbs whatever height is left, so the column never ends in a void —
+   and a seat row is never left half-cut at the panel edge. */
+.pg-lobby__rosterpanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 0 1 auto;
+
+  .tt-panel__header {
+    padding: var(--tt-space-4) var(--tt-space-5) var(--tt-space-3);
+    margin-bottom: 0;
+  }
+}
+
+.pg-lobby__list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+  padding: var(--tt-space-2) var(--tt-space-3) var(--tt-space-3);
+  gap: 6px;
+}
+
+.pg-seat {
+  display: flex;
+  align-items: center;
+  gap: var(--tt-space-3);
+  padding: var(--tt-space-2) var(--tt-space-3);
+  border-radius: var(--tt-radius-md);
+  border: 1px solid var(--tt-line-hairline);
+  background: linear-gradient(180deg, rgba(38, 51, 66, 0.32), rgba(14, 20, 28, 0.4));
+  transition: border-color var(--tt-dur-fast) linear, background-color var(--tt-dur-fast) linear;
+
+  &[data-me='true'] {
+    border-color: color-mix(in srgb, var(--tt-pc) 45%, transparent);
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--tt-pc) 14%, transparent) 0%,
+      rgba(14, 20, 28, 0.45) 55%
+    );
+  }
+}
+.pg-seat--empty {
+  border-style: dashed;
+  border-color: var(--tt-line-subtle);
+  background: rgba(255, 255, 255, 0.014);
+  min-height: 58px;
+}
+.pg-seat__slot {
+  font-size: var(--tt-text-xs);
+  color: var(--tt-text-faint);
+  letter-spacing: var(--tt-tracking-wide);
+  flex: none;
+  width: 22px;
+}
+.pg-seat__chip {
+  flex: 1;
+  min-width: 0;
+}
+.pg-seat__right {
+  display: flex;
+  align-items: center;
+  gap: var(--tt-space-3);
+  flex: none;
+}
+.pg-seat__waiting {
+  flex: 1;
+  font-size: var(--tt-text-xs);
+  color: var(--tt-text-faint);
+  font-style: italic;
+}
+
+.pg-lobby__chat {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 148px;
+}
+.pg-lobby__chatlog {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: var(--tt-space-2) 0;
+}
+.pg-lobby__chatempty {
+  margin: auto;
+  text-align: center;
+  max-width: 34ch;
+}
+.pg-chatline {
+  display: flex;
+  gap: var(--tt-space-3);
+  align-items: baseline;
+  font-size: var(--tt-text-sm);
+  line-height: var(--tt-leading-normal);
+  padding: 2px 0;
+}
+.pg-chatline__name {
+  flex: none;
+  min-width: 88px;
+  font-family: var(--tt-font-display);
+  font-size: var(--tt-text-2xs);
+  letter-spacing: var(--tt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--tt-text-muted);
+  text-align: right;
+}
+.pg-chatline[data-me='true'] .pg-chatline__name {
+  color: var(--tt-cyan);
+}
+.pg-chatline__text {
+  color: var(--tt-text-secondary);
+  overflow-wrap: anywhere;
+}
+.pg-lobby__chatform {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tt-space-2);
+  padding-top: var(--tt-space-2);
+  border-top: 1px solid var(--tt-line-hairline);
+
+  > .tt-field {
+    flex: 1;
+  }
+  > .tt-btn {
+    height: 44px;
+  }
+}
+
+.pg-lobby__readybar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tt-space-4);
+  padding: var(--tt-space-3) var(--tt-space-4);
+  @include glass(var(--tt-radius-lg));
+  flex: none;
+}
+.pg-lobby__readyhint {
+  display: flex;
+  align-items: center;
+  gap: var(--tt-space-2);
+
+  svg {
+    width: 15px;
+    height: 15px;
+    color: var(--tt-success);
+  }
+}
+
+.pg-lobby__sharenote {
+  margin-top: var(--tt-space-3);
+}
+.pg-lobby__hostrow {
+  display: flex;
+  gap: var(--tt-space-3);
+  margin-bottom: var(--tt-space-4);
+
+  > * {
+    flex: 1;
+  }
+}
+.pg-lobby__startwrap {
+  display: block;
+}
+.pg-lobby__blocked {
+  margin-top: var(--tt-space-3);
+  text-align: center;
+  color: var(--tt-warning);
+}
+
+
+@include down('md') {
+  .pg-setup__grid,
+  .pg-lobby__grid {
+    padding-left: var(--tt-space-4);
+    padding-right: var(--tt-space-4);
+  }
+}

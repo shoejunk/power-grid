@@ -112,10 +112,10 @@ export function CreateGame(): JSX.Element {
   };
 
   return (
-    <div className="pg-screen pg-setup">
+    <div className="tt-screen pg-setup">
       <AmbientBackdrop />
 
-      <header className="pg-topbar">
+      <header className="tt-topbar">
         <Button variant="ghost" size="sm" icon={<IconChevronLeft />} onClick={() => setRoute('menu')}>
           Back
         </Button>
@@ -132,8 +132,8 @@ export function CreateGame(): JSX.Element {
         {/* ---------------- configuration ---------------- */}
         <motion.div variants={staggerItem} className="pg-setup__col">
           <div className="pg-setup__heading">
-            <h1 className="pg-h2">New game</h1>
-            <p className="pg-caption">
+            <h1 className="tt-h2">New game</h1>
+            <p className="tt-caption">
               Pick a board and a table size. You can still change everything in the lobby.
             </p>
           </div>
@@ -245,11 +245,11 @@ export function CreateGame(): JSX.Element {
             <div className="pg-derived">
               {derived.map((item) => (
                 <div key={item.label} className="pg-derived__cell">
-                  <span className="pg-overline">{item.label}</span>
+                  <span className="tt-overline">{item.label}</span>
                   <AnimatePresence mode="popLayout" initial={false}>
                     <motion.span
                       key={item.value}
-                      className="pg-derived__value pg-numeral"
+                      className="pg-derived__value tt-numeral"
                       initial={{ y: 10, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: -10, opacity: 0 }}
@@ -273,7 +273,7 @@ export function CreateGame(): JSX.Element {
               adornment={<Hint {...RULES.experiencedStart!} placement="left" />}
             />
 
-            <div className="pg-rule" />
+            <div className="tt-rule" />
 
             <Tooltip
               placement="left"
@@ -315,7 +315,7 @@ export function CreateGame(): JSX.Element {
 
           {lastError !== null ? (
             <motion.div
-              className="pg-inline-error"
+              className="tt-inline-error"
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={springSnappy}

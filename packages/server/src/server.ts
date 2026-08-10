@@ -1,30 +1,30 @@
 /**
- * Composition root: wires config → persistence → rules engine → hub → HTTP +
+ * Composition root: wires config → persistence → game registry → hub → HTTP +
  * WebSocket, and hands back a handle the caller (CLI or test) can shut down.
  *
  * Everything is injectable. The integration tests use that to bind an
- * ephemeral port, point the store at a throwaway directory, and supply a
- * deterministic engine — the exact same code path production runs.
+ * ephemeral port, point the store at a throwaway directory, and register a
+ * deterministic fake game — the exact same code path production runs.
  */
 
 import http from 'node:http';
+import { GameRegistry } from '@tt/core';
 import { WebSocketServer } from 'ws';
 import { loadConfig, type ServerConfig } from './config.js';
-import { loadEngine } from './engine/loadEngine.js';
-import type { RulesEngine } from './engine/types.js';
+import { createRegistry } from './games.js';
 import { GameHub } from './hub.js';
 import { createHttpApp } from './httpApp.js';
 import { createLogger, type Logger } from './logger.js';
 import { createStore } from './persistence/index.js';
 import type { GameStore } from './persistence/types.js';
 import { parseClientMessage } from './protocol.js';
-import { Connection } from './wire.js';
+import { CLOSE, Connection } from './wire.js';
 
 export interface StartServerOptions extends Partial<ServerConfig> {
   /** Pre-built store. When supplied, `storeKind`/`dataDir` are ignored. */
   store?: GameStore;
-  /** Pre-built engine. When supplied, the dynamic engine lookup is skipped. */
-  engine?: RulesEngine;
+  /** Pre-built registry. When supplied, the built-in game list is skipped. */
+  registry?: GameRegistry;
   logger?: Logger;
 }
 
@@ -36,8 +36,7 @@ export interface RunningServer {
   readonly wsUrl: string;
   readonly hub: GameHub;
   readonly store: GameStore;
-  readonly engine: RulesEngine;
-  readonly engineIsFallback: boolean;
+  readonly registry: GameRegistry;
   close(): Promise<void>;
 }
 
@@ -47,33 +46,21 @@ export const WS_PATH = '/ws';
 export async function startServer(options: StartServerOptions = {}): Promise<RunningServer> {
   const startedAt = Date.now();
   const config: ServerConfig = { ...loadConfig(), ...stripInjectables(options) };
-  const logger = options.logger ?? createLogger(config.logLevel, 'pg');
+  const logger = options.logger ?? createLogger(config.logLevel, 'tt');
 
   const store = options.store ?? (await createStore(config, logger));
+  const registry = options.registry ?? createRegistry();
 
-  let engine: RulesEngine;
-  let engineIsFallback = false;
-  let engineName: string;
-  if (options.engine) {
-    engine = options.engine;
-    engineName = options.engine.name ?? 'injected';
-  } else {
-    const loaded = await loadEngine(logger);
-    engine = loaded.engine;
-    engineIsFallback = loaded.isFallback;
-    engineName = loaded.engine.name ?? loaded.source;
-  }
-
-  const hub = new GameHub({ store, engine, config, logger });
+  const hub = new GameHub({ store, registry, config, logger });
   hub.load();
 
-  const app = createHttpApp({ config, hub, store, logger, engineName, engineIsFallback, startedAt });
+  const app = createHttpApp({ config, hub, store, logger, startedAt });
   const httpServer = http.createServer(app);
 
   /**
-   * `maxPayload` gives us the bounded message size required by requirement 10
-   * at the protocol level — an oversized frame is rejected by `ws` before a
-   * single byte reaches our parser.
+   * `maxPayload` gives us a bounded message size at the protocol level — an
+   * oversized frame is rejected by `ws` before a single byte reaches our
+   * parser.
    */
   const wss = new WebSocketServer({
     server: httpServer,
@@ -140,9 +127,9 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
   });
 
   /**
-   * Heartbeat (requirement 10). A socket that misses one full interval is
-   * considered dead and terminated — TCP alone will happily keep a
-   * half-open connection around for many minutes.
+   * Heartbeat. A socket that misses one full interval is considered dead and
+   * terminated — TCP alone will happily keep a half-open connection around for
+   * many minutes.
    */
   const heartbeat = setInterval(() => {
     for (const conn of connections) {
@@ -160,10 +147,10 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
 
   const port = await listen(httpServer, config.port, config.host);
   const url = `http://localhost:${port}`;
-  logger.info('Power Grid server listening', {
+  logger.info('Tabletop server listening', {
     url,
     ws: `${url.replace('http', 'ws')}${WS_PATH}`,
-    engine: engineName,
+    games: registry.keys,
     persistence: store.kind,
   });
 
@@ -173,12 +160,12 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
     closed = true;
     clearInterval(heartbeat);
     hub.shutdown();
-    for (const conn of connections) conn.terminate();
+    for (const conn of connections) conn.close(CLOSE.SHUTDOWN, 'server shutting down');
     connections.clear();
     await new Promise<void>((resolve) => wss.close(() => resolve()));
     await new Promise<void>((resolve) => httpServer.close(() => resolve()));
     store.close();
-    logger.info('Power Grid server stopped');
+    logger.info('Tabletop server stopped');
   };
 
   return {
@@ -188,8 +175,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
     wsUrl: `${url.replace('http', 'ws')}${WS_PATH}`,
     hub,
     store,
-    engine,
-    engineIsFallback,
+    registry,
     close,
   };
 }
@@ -211,6 +197,6 @@ function listen(server: http.Server, port: number, host: string): Promise<number
 
 /** Removes the non-config injectables so they cannot pollute `ServerConfig`. */
 function stripInjectables(options: StartServerOptions): Partial<ServerConfig> {
-  const { store: _store, engine: _engine, logger: _logger, ...rest } = options;
+  const { store: _store, registry: _registry, logger: _logger, ...rest } = options;
   return rest;
 }

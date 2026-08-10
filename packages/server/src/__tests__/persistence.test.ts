@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { GameState } from '@pg/shared';
+import type { StubState } from './stubGame.js';
 import type { RunningServer } from '../server.js';
 import { boot, closeAll, createGame, joinGame, makeDataDir, normaliseState, removeDataDir } from './helpers.js';
 import { TestClient } from './testClient.js';
@@ -39,9 +39,9 @@ describe('persistence across a full server restart', () => {
     await guest.client.wait('state');
 
     // A real move, so the persisted state is distinguishable from a fresh setup.
-    host.client.send({ t: 'action', action: { type: 'nominatePlant', plantId: 6, bid: 9 } });
-    const before: GameState = (await guest.client.waitState((s) => s.activePlayerId === guest.playerId)).state;
-    expect(before.players[host.playerId]?.money).toBe(41);
+    host.client.send({ t: 'action', action: { type: 'claim', itemId: 6, cost: 9 } });
+    const before: StubState = (await guest.client.waitState((s) => s.activePlayerId === guest.playerId)).state;
+    expect(before.players[host.playerId]?.credits).toBe(41);
     expect(before.round).toBe(1);
 
     const code = host.code;
@@ -68,7 +68,7 @@ describe('persistence across a full server restart', () => {
       expect(Object.values(restored?.state?.players ?? {}).every((p) => !p.connected)).toBe(true);
 
       // The code lookup survives too.
-      const lookup = await (await fetch(`${second.url}/api/games/${code}`)).json();
+      const lookup = await (await fetch(`${second.url}/api/games/code/${code}`)).json();
       expect(lookup).toMatchObject({ ok: true, started: true, players: 2 });
 
       // Both players come back with the tokens they were issued before the restart.
@@ -80,20 +80,18 @@ describe('persistence across a full server restart', () => {
       const guestBack = await TestClient.connect(second.wsUrl);
       guestBack.send({ t: 'rejoin', sessionToken: guestToken });
       expect((await guestBack.wait('welcome')).playerId).toBe(guest.playerId);
-      const after: GameState = (await guestBack.wait('state')).state;
+      const after: StubState = (await guestBack.wait('state')).state;
 
       // The headline assertion: byte-for-byte the same game.
       expect(normaliseState(after)).toEqual(normaliseState(before));
-      expect(after.players[host.playerId]?.money).toBe(41);
-      expect(after.players[host.playerId]?.plants).toEqual([
-        { plantId: 6, stored: { coal: 0, oil: 0, garbage: 0, uranium: 0 } },
-      ]);
+      expect(after.players[host.playerId]?.credits).toBe(41);
+      expect(after.players[host.playerId]?.claimed).toEqual([6]);
       expect(after.activePlayerId).toBe(guest.playerId);
 
       // …and play continues exactly where it left off.
       guestBack.clear();
       hostBack.clear();
-      guestBack.send({ t: 'action', action: { type: 'passNomination' } });
+      guestBack.send({ t: 'action', action: { type: 'pass' } });
       const resumedPlay = await hostBack.waitState((s) => s.round === 2);
       expect(resumedPlay.state.activePlayerId).toBe(host.playerId);
 
@@ -105,7 +103,7 @@ describe('persistence across a full server restart', () => {
 
   it('restores a lobby that had not started yet, including chat and settings', async () => {
     const first = await boot({ dataDir });
-    const host = await createGame(first, 'Ada', { mapId: 'usa', playerCount: 3 });
+    const host = await createGame(first, 'Ada', { variant: 'spiced', tableSize: 3 });
     const guest = await joinGame(first, host.code, 'Grace');
     guest.client.send({ t: 'setReady', ready: true });
     await host.client.waitLobby((l) => l.players.every((p) => p.ready || p.isHost));
@@ -126,8 +124,8 @@ describe('persistence across a full server restart', () => {
 
       expect(lobby.code).toBe(code);
       expect(lobby.started).toBe(false);
-      expect(lobby.settings.mapId).toBe('usa');
-      expect(lobby.settings.playerCount).toBe(3);
+      expect((lobby.settings as StubSettings).variant).toBe('spiced');
+      expect((lobby.settings as StubSettings).tableSize).toBe(3);
       expect(lobby.players.map((p) => p.name)).toEqual(['Ada', 'Grace']);
       expect(lobby.players.find((p) => p.id === guest.playerId)?.ready).toBe(true);
 
@@ -143,7 +141,7 @@ describe('persistence across a full server restart', () => {
       hostBack.clear();
       hostBack.send({ t: 'startGame' });
       const state = await hostBack.wait('state');
-      expect(state.state.playerOrder).toHaveLength(2);
+      expect(state.state.order).toHaveLength(2);
 
       await closeAll(back, hostBack);
     } finally {
@@ -159,12 +157,12 @@ describe('persistence across a full server restart', () => {
     await host.client.waitLobby((l) => l.players.every((p) => p.ready || p.isHost));
     host.client.send({ t: 'startGame' });
     await host.client.wait('state');
-    host.client.send({ t: 'action', action: { type: 'nominatePlant', plantId: 3, bid: 3 } });
+    host.client.send({ t: 'action', action: { type: 'claim', itemId: 3, cost: 3 } });
     await guest.client.waitState((s) => s.activePlayerId === guest.playerId);
 
     // Read the store directly — the write has already happened.
     const record = server.store.loadGames().find((g) => g.code === host.code);
-    expect(record?.state?.players[host.playerId]?.money).toBe(47);
+    expect(record?.state?.players[host.playerId]?.credits).toBe(47);
     expect(record?.started).toBe(true);
     expect(record?.seats).toHaveLength(2);
 

@@ -1,0 +1,506 @@
+@charset "UTF-8";
+
+/* =====================================================================
+ * GAME BOARD
+ * ---------------------------------------------------------------------
+ * Owned by the board renderer. Every colour, radius, shadow and duration
+ * comes from the design tokens in `styles/tokens.scss`, so the board and
+ * the DOM chrome cannot drift apart (QUALITY-BAR V5).
+ *
+ * The root fills its grid cell exactly and never scrolls — the board pans
+ * and zooms inside a fixed viewport, per the GameScreen mount contract.
+ * ===================================================================== */
+
+.pgb-root {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--tt-radius-lg);
+  background:
+    radial-gradient(128% 96% at 50% 8%, #0d1721 0%, #060a0f 62%, #04070a 100%);
+  box-shadow:
+    inset 0 1px 0 var(--tt-bevel-light),
+    inset 0 0 0 1px var(--tt-line-hairline),
+    inset 0 -26px 60px rgba(0, 0, 0, 0.55),
+    var(--tt-elev-3);
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:focus-visible {
+    box-shadow:
+      inset 0 1px 0 var(--tt-bevel-light),
+      var(--tt-elev-3),
+      var(--tt-focus-ring-tight);
+  }
+
+  /* Scanline-free film grain over the whole viewport, tying the board to the
+     panel language of the rest of the UI. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: radial-gradient(126% 94% at 50% 42%, rgba(0, 0, 0, 0) 58%, rgba(2, 5, 9, 0.34) 100%);
+  }
+}
+
+.pgb-root--empty {
+  background: var(--tt-surface-sunken);
+}
+
+.pgb-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* Terrain is a painted raster: smooth it rather than showing texel edges. */
+  image-rendering: auto;
+  shape-rendering: geometricPrecision;
+  user-select: none;
+}
+
+/* ---------------------------------------------------------------
+ * Board typography
+ * --------------------------------------------------------------- */
+
+.pgb-name {
+  font-family: var(--tt-font-display);
+  font-weight: 500;
+  letter-spacing: 0.028em;
+  pointer-events: none;
+}
+
+.pgb-cost,
+.pgb-badge-text {
+  font-family: var(--tt-font-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  pointer-events: none;
+}
+
+.pgb-cost {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.pgb-badge-text {
+  font-weight: 700;
+  letter-spacing: 0.006em;
+}
+
+/*
+ * §1 region label. Full opacity on purpose: at 0.72 the fill blended back into
+ * the scrim underneath and measured 2.09-3.15:1, which fails V4 outright. The
+ * dark halo stroke in `layers.tsx` is what keeps it separated from the terrain,
+ * so the fill does not need to be faded as well.
+ */
+.pgb-outzone-label {
+  font-family: var(--tt-font-display);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------
+ * Hit targets — the only pointer-aware SVG in the tree
+ * --------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------
+ * Scaled groups
+ * ---------------------------------------------------------------
+ * framer-motion animates SVG scale through `style.transform`, and a CSS
+ * transform overrides the SVG `transform` attribute on the same element.
+ * These groups therefore carry ONLY the scale; placement lives on a static
+ * parent <g>. `fill-box` makes them scale about their own centre, which is
+ * what "the house lands with weight" and "the node lifts on hover" need.
+ * --------------------------------------------------------------- */
+.pgb-node__scale {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
+.pgb-hit {
+  cursor: default;
+
+  &[data-interactive] {
+    cursor: pointer;
+  }
+
+  /* §1: out-of-zone areas are unusable all game — say so on the cursor too. */
+  &[data-dead] {
+    cursor: not-allowed;
+  }
+}
+
+.pgb-nodes,
+.pgb-regions,
+.pgb-routes,
+.pgb-badges,
+.pgb-preview {
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------
+ * Step legend
+ * --------------------------------------------------------------- */
+
+.pgb-legend {
+  position: absolute;
+  top: var(--tt-space-3);
+  left: var(--tt-space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--tt-space-2);
+  padding: 5px 10px 5px 8px;
+  border-radius: var(--tt-radius-pill);
+  background: var(--tt-glass-bg-strong);
+  backdrop-filter: blur(var(--tt-glass-blur-soft));
+  border: 1px solid var(--tt-line-subtle);
+  box-shadow: var(--tt-elev-2), inset 0 1px 0 var(--tt-bevel-light);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.pgb-legend__step {
+  font-family: var(--tt-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--tt-cyan);
+  padding: 1px 7px;
+  border-radius: var(--tt-radius-pill);
+  background: var(--tt-cyan-wash);
+  box-shadow: inset 0 0 0 1px rgba(70, 226, 255, 0.28);
+}
+
+.pgb-legend__rule {
+  font-family: var(--tt-font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--tt-text-secondary);
+}
+
+.pgb-legend__slots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.pgb-legend__slot {
+  min-width: 20px;
+  text-align: center;
+  font-family: var(--tt-font-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 3px;
+  border-radius: var(--tt-radius-xs);
+  color: var(--tt-text-faint);
+  background: rgba(0, 0, 0, 0.42);
+  box-shadow: inset 0 0 0 1px var(--tt-line-hairline);
+
+  &[data-open='true'] {
+    color: var(--pg-elektro);
+    background: rgba(255, 209, 102, 0.1);
+    box-shadow: inset 0 0 0 1px rgba(255, 209, 102, 0.3);
+  }
+}
+
+/* ---------------------------------------------------------------
+ * View controls — desktop-proportioned, never touch-sized (U4)
+ * --------------------------------------------------------------- */
+
+.pgb-controls {
+  position: absolute;
+  right: var(--tt-space-3);
+  bottom: var(--tt-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+}
+
+.pgb-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 34px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--tt-line-subtle);
+  border-radius: var(--tt-radius-md);
+  background: var(--tt-glass-bg-strong);
+  backdrop-filter: blur(var(--tt-glass-blur-soft));
+  color: var(--tt-text-secondary);
+  box-shadow: var(--tt-elev-2), inset 0 1px 0 var(--tt-bevel-light);
+  cursor: pointer;
+  transition:
+    background var(--tt-dur-fast) var(--tt-ease-out),
+    color var(--tt-dur-fast) var(--tt-ease-out),
+    transform var(--tt-dur-fast) var(--tt-ease-snap),
+    box-shadow var(--tt-dur-fast) var(--tt-ease-out);
+
+  svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &:hover {
+    color: var(--tt-text-bright);
+    background: var(--tt-surface-overlay);
+    border-color: var(--tt-line);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.97);
+    box-shadow: var(--tt-elev-1), inset 0 2px 5px rgba(0, 0, 0, 0.5);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--tt-focus-ring-tight);
+  }
+}
+
+.pgb-btn--reset[data-active='true'] {
+  color: var(--tt-cyan);
+  border-color: var(--tt-line-accent);
+}
+
+.pgb-btn__zoom {
+  font-family: var(--tt-font-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ---------------------------------------------------------------
+ * Cost preview tooltip (U3) / rule reason (U2)
+ * --------------------------------------------------------------- */
+
+.pgb-tip {
+  position: absolute;
+  z-index: var(--tt-z-tooltip);
+  transform: translate(-50%, 0);
+  min-width: 172px;
+  max-width: 258px;
+  padding: 9px 11px 8px;
+  border-radius: var(--tt-radius-md);
+  background: var(--tt-glass-bg-strong);
+  backdrop-filter: blur(var(--tt-glass-blur));
+  border: 1px solid var(--tt-line);
+  box-shadow: var(--tt-elev-4), inset 0 1px 0 var(--tt-bevel-light);
+  pointer-events: none;
+
+  &[data-side='above'] {
+    transform: translate(-50%, -100%);
+  }
+
+  &[data-tone='go'] {
+    border-color: rgba(70, 226, 255, 0.45);
+    box-shadow: var(--tt-elev-4), 0 0 26px rgba(70, 226, 255, 0.14),
+      inset 0 1px 0 var(--tt-bevel-light);
+  }
+
+  &[data-tone='no'] {
+    border-color: rgba(255, 85, 99, 0.34);
+  }
+}
+
+.pgb-tip__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--tt-space-2);
+  margin-bottom: 6px;
+}
+
+.pgb-tip__name {
+  font-family: var(--tt-font-display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.012em;
+  color: var(--tt-text-bright);
+}
+
+.pgb-tip__area {
+  font-family: var(--tt-font-display);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tt-text-faint);
+}
+
+.pgb-tip__cost {
+  margin: 0 0 6px;
+  display: grid;
+  gap: 2px;
+  padding: 5px 7px;
+  border-radius: var(--tt-radius-sm);
+  background: rgba(0, 0, 0, 0.34);
+  box-shadow: inset 0 0 0 1px var(--tt-line-hairline);
+
+  > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--tt-space-3);
+  }
+
+  dt {
+    font-family: var(--tt-font-ui);
+    font-size: 11px;
+    color: var(--tt-text-secondary);
+  }
+
+  dd {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--tt-text-primary);
+
+    &::after {
+      content: ' ₤';
+      font-size: 0.82em;
+      color: var(--pg-elektro-dim);
+    }
+  }
+}
+
+.pgb-tip__total {
+  margin-top: 3px;
+  padding-top: 4px;
+  border-top: 1px solid var(--tt-line-subtle);
+
+  dt {
+    color: var(--tt-text-bright) !important;
+    font-weight: 600;
+  }
+
+  dd {
+    font-size: 15px !important;
+    color: var(--pg-elektro) !important;
+
+    &::after {
+      color: var(--pg-elektro) !important;
+      opacity: 0.7;
+    }
+  }
+}
+
+.pgb-tip__reason {
+  margin: 0 0 6px;
+  padding: 5px 7px 5px 9px;
+  border-radius: var(--tt-radius-sm);
+  border-left: 2px solid var(--tt-danger);
+  background: rgba(255, 85, 99, 0.09);
+  font-family: var(--tt-font-ui);
+  font-size: 11px;
+  line-height: 1.38;
+  color: var(--tt-text-primary);
+}
+
+.pgb-tip__cta {
+  margin: 0 0 6px;
+  font-family: var(--tt-font-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tt-cyan);
+}
+
+.pgb-tip__slots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+
+  li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    padding: 3px 2px;
+    border-radius: var(--tt-radius-xs);
+    background: rgba(0, 0, 0, 0.34);
+    box-shadow: inset 0 0 0 1px var(--tt-line-hairline);
+    opacity: 0.5;
+
+    &[data-open='true'] {
+      opacity: 1;
+    }
+
+    &[data-taken='true'] {
+      opacity: 1;
+      background: color-mix(in srgb, var(--pgb-seat) 22%, transparent);
+      box-shadow: inset 0 0 0 1px var(--pgb-seat);
+    }
+  }
+}
+
+.pgb-tip__slotcost {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tt-text-primary);
+}
+
+.pgb-tip__slotwho {
+  font-family: var(--tt-font-ui);
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  color: var(--tt-text-muted);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------
+ * Diagnostics — only with ?boarddebug
+ * --------------------------------------------------------------- */
+
+.pgb-debug {
+  position: absolute;
+  left: var(--tt-space-3);
+  bottom: var(--tt-space-3);
+  padding: 3px 8px;
+  border-radius: var(--tt-radius-sm);
+  background: rgba(4, 7, 10, 0.82);
+  border: 1px solid var(--tt-line-subtle);
+  font-family: var(--tt-font-mono);
+  font-size: 10px;
+  color: var(--tt-text-muted);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pgb-btn {
+    transition: none;
+
+    &:hover,
+    &:active {
+      transform: none;
+    }
+  }
+}

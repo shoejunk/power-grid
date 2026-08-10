@@ -27,9 +27,13 @@
     "types": ["vite/client"],
 
     "baseUrl": ".",
+    "//": "Source aliases, not build output. The client emits nothing, so pointing at the workspace sources keeps one copy of the truth and removes the 'did you rebuild the engine?' failure mode. Vite carries the same aliases.",
     "paths": {
       "@/*": ["./src/*"],
-      "@pg/shared": ["../shared/src/index.ts"]
+      "@tt/core": ["../core/src/index.ts"],
+      "@tt/ui": ["../ui/src/index.ts"],
+      "@tt/ui/*": ["../ui/src/*"],
+      "@game/power-grid": ["../games/power-grid/src/index.ts"]
     }
   },
   "include": ["src", "vite.config.ts"]

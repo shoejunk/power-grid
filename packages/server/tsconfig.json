@@ -1,10 +1,14 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2023"],
+    "lib": [
+      "ES2023"
+    ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -20,8 +24,26 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "composite": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/__tests__/**", "dist", "node_modules"]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "src/__tests__/**",
+    "dist",
+    "node_modules"
+  ],
+  "references": [
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../games/power-grid"
+    },
+    {
+      "path": "../games/dead-of-winter"
+    }
+  ]
 }

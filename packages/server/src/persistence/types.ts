@@ -1,27 +1,23 @@
 /**
  * Persistence contract.
  *
- * Requirement 4: *every* game — lobby or in progress — survives a full server
- * restart. The store is therefore the source of truth on boot; the in-memory
- * `GameHub` is a cache rebuilt from it.
+ * Every game — lobby or in progress — survives a full server restart. The
+ * store is therefore the source of truth on boot; the in-memory `GameHub` is a
+ * cache rebuilt from it.
  *
- * Anything that is genuinely runtime-only (an open socket, a bot turn timer,
- * whether a player is connected *right now*) is intentionally NOT persisted:
- * after a restart every player is disconnected until they reconnect.
+ * Anything genuinely runtime-only (an open socket, a bot turn timer, whether a
+ * player is connected *right now*) is intentionally NOT persisted: after a
+ * restart every player is disconnected until they reconnect.
+ *
+ * Note what this file does *not* import: no game package, no rules types. A
+ * row knows which game it belongs to (`gameKey`) and carries that game's
+ * settings and state as opaque JSON. The store can round-trip a game it has
+ * never heard of, which is what lets a new title ship without a migration.
  */
 
-import type { GameSettings, GameState, PlayerColor, PlayerId } from '@pg/shared';
+import type { GameKey, PlayerId, Seat } from '@tt/core';
 
-/** A seat at a table. Survives disconnects, restarts and game start. */
-export interface Seat {
-  playerId: PlayerId;
-  name: string;
-  color: PlayerColor;
-  isBot: boolean;
-  ready: boolean;
-  /** Used to promote "the longest-seated connected player" to host. */
-  joinedAt: number;
-}
+export type { Seat };
 
 export interface ChatEntry {
   from: PlayerId;
@@ -32,13 +28,16 @@ export interface ChatEntry {
 
 export interface PersistedGame {
   gameId: string;
-  /** Short join code. Unique across live games. */
+  /** Which game is being played. Selects the plugin on load. */
+  gameKey: GameKey;
+  /** Short join code. Unique across live games, across all titles. */
   code: string;
   hostId: PlayerId;
-  settings: GameSettings;
+  /** Opaque to the platform; shaped by the owning game plugin. */
+  settings: unknown;
   seats: Seat[];
-  /** Null while the game is still in the lobby. */
-  state: GameState | null;
+  /** Null while the game is still in the lobby. Opaque to the platform. */
+  state: unknown;
   started: boolean;
   chat: ChatEntry[];
   createdAt: number;
@@ -70,3 +69,10 @@ export interface GameStore {
 
   close(): void;
 }
+
+/**
+ * The key assumed for rows written before the server hosted more than one
+ * game. Those rows have no `gameKey` column value, and every one of them is a
+ * Power Grid table by construction.
+ */
+export const LEGACY_GAME_KEY: GameKey = 'power-grid';

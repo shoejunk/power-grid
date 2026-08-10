@@ -40,6 +40,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
-  console.error('Failed to start the Power Grid server:', err);
+  console.error('Failed to start the Tabletop server:', err);
   process.exit(1);
 });

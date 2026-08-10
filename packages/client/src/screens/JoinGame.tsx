@@ -57,10 +57,10 @@ export function JoinGame(): JSX.Element {
   };
 
   return (
-    <div className="pg-screen pg-join">
+    <div className="tt-screen pg-join">
       <AmbientBackdrop />
 
-      <header className="pg-topbar">
+      <header className="tt-topbar">
         <Button variant="ghost" size="sm" icon={<IconChevronLeft />} onClick={() => setRoute('menu')}>
           Back
         </Button>
@@ -76,9 +76,9 @@ export function JoinGame(): JSX.Element {
           animate="visible"
         >
           <motion.div variants={staggerItem} className="pg-join__heading">
-            <span className="pg-overline">Join an existing table</span>
-            <h1 className="pg-h2">Enter the game code</h1>
-            <p className="pg-caption">
+            <span className="tt-overline">Join an existing table</span>
+            <h1 className="tt-h2">Enter the game code</h1>
+            <p className="tt-caption">
               Six characters from the host&rsquo;s lobby. Case does not matter.
             </p>
           </motion.div>
@@ -131,7 +131,7 @@ export function JoinGame(): JSX.Element {
 
                 {lastError !== null ? (
                   <motion.div
-                    className="pg-inline-error"
+                    className="tt-inline-error"
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={springSnappy}
@@ -160,7 +160,7 @@ export function JoinGame(): JSX.Element {
           </motion.div>
 
           <motion.div variants={staggerItem} className="pg-join__alt">
-            <span className="pg-caption">No code?</span>
+            <span className="tt-caption">No code?</span>
             <Button variant="ghost" size="sm" icon={<IconPlus />} onClick={() => setRoute('create')}>
               Host your own
             </Button>

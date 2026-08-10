@@ -46,7 +46,7 @@ export function MainMenu(): JSX.Element {
   const hasSession = loadSessionToken() !== null;
 
   return (
-    <div className="pg-screen pg-menu">
+    <div className="tt-screen pg-menu">
       <AmbientBackdrop pylons grid />
 
       <div className="pg-menu__inner">
@@ -57,11 +57,11 @@ export function MainMenu(): JSX.Element {
           animate="visible"
         >
           <motion.div variants={staggerItem} className="pg-menu__eyebrow">
-            <span className="pg-overline">Friedemann Friese</span>
+            <span className="tt-overline">Friedemann Friese</span>
             <span className="pg-menu__eyebrow-dot" />
-            <span className="pg-overline">2&ndash;6 Players</span>
+            <span className="tt-overline">2&ndash;6 Players</span>
             <span className="pg-menu__eyebrow-dot" />
-            <span className="pg-overline">Germany</span>
+            <span className="tt-overline">Germany</span>
           </motion.div>
 
           <Wordmark />
@@ -114,26 +114,26 @@ export function MainMenu(): JSX.Element {
           </motion.div>
 
           <motion.div variants={staggerItem} className="pg-menu__stats">
-            <div className="pg-stat">
-              <span className="pg-stat__value pg-numeral">5</span>
-              <span className="pg-stat__label">Phases per round</span>
+            <div className="tt-stat">
+              <span className="tt-stat__value tt-numeral">5</span>
+              <span className="tt-stat__label">Phases per round</span>
             </div>
-            <div className="pg-rule pg-rule--v" />
-            <div className="pg-stat">
-              <span className="pg-stat__value">
+            <div className="tt-rule tt-rule--v" />
+            <div className="tt-stat">
+              <span className="tt-stat__value">
                 <Money value={STARTING_MONEY} size="lg" />
               </span>
-              <span className="pg-stat__label">Starting bank</span>
+              <span className="tt-stat__label">Starting bank</span>
             </div>
-            <div className="pg-rule pg-rule--v" />
-            <div className="pg-stat">
-              <span className="pg-stat__value pg-numeral">{HOUSES_PER_PLAYER}</span>
-              <span className="pg-stat__label">Houses each</span>
+            <div className="tt-rule tt-rule--v" />
+            <div className="tt-stat">
+              <span className="tt-stat__value tt-numeral">{HOUSES_PER_PLAYER}</span>
+              <span className="tt-stat__label">Houses each</span>
             </div>
-            <div className="pg-rule pg-rule--v" />
-            <div className="pg-stat">
-              <span className="pg-stat__value pg-numeral">{MAX_PLANTS_PER_PLAYER}</span>
-              <span className="pg-stat__label">Plant limit</span>
+            <div className="tt-rule tt-rule--v" />
+            <div className="tt-stat">
+              <span className="tt-stat__value tt-numeral">{MAX_PLANTS_PER_PLAYER}</span>
+              <span className="tt-stat__label">Plant limit</span>
             </div>
           </motion.div>
         </motion.div>
@@ -154,7 +154,7 @@ export function MainMenu(): JSX.Element {
             <ol className="pg-phaselist">
               {PHASES.map((phase) => (
                 <li key={phase.key} className="pg-phaselist__item">
-                  <span className="pg-phaselist__index pg-numeral">
+                  <span className="pg-phaselist__index tt-numeral">
                     {String(phase.index).padStart(2, '0')}
                   </span>
                   <span className="pg-phaselist__body">
@@ -224,7 +224,7 @@ export function MainMenu(): JSX.Element {
       </div>
 
       <footer className="pg-menu__footer">
-        <span className="pg-overline">Power Grid &mdash; Web Edition</span>
+        <span className="tt-overline">Power Grid &mdash; Web Edition</span>
         <ConnectionPill />
       </footer>
 
@@ -258,8 +258,8 @@ function HowToPlay({ open, onClose }: { open: boolean; onClose: () => void }): J
     >
       <div className="pg-howto">
         <section>
-          <h3 className="pg-h4">The goal</h3>
-          <p className="pg-body">
+          <h3 className="tt-h4">The goal</h3>
+          <p className="tt-body">
             The game ends the moment any player connects{' '}
             <strong>{END_GAME_CITIES[4]} cities</strong> (fewer with more players). But the
             winner is whoever can <em>supply</em> the most cities in the final scoring &mdash;
@@ -271,11 +271,11 @@ function HowToPlay({ open, onClose }: { open: boolean; onClose: () => void }): J
         </section>
 
         <section>
-          <h3 className="pg-h4">A round, step by step</h3>
+          <h3 className="tt-h4">A round, step by step</h3>
           <ol className="pg-phaselist pg-phaselist--roomy">
             {PHASES.map((phase) => (
               <li key={phase.key} className="pg-phaselist__item">
-                <span className="pg-phaselist__index pg-numeral">
+                <span className="pg-phaselist__index tt-numeral">
                   {String(phase.index).padStart(2, '0')}
                 </span>
                 <span className="pg-phaselist__body">
@@ -288,7 +288,7 @@ function HowToPlay({ open, onClose }: { open: boolean; onClose: () => void }): J
         </section>
 
         <section>
-          <h3 className="pg-h4">Three things that catch new players out</h3>
+          <h3 className="tt-h4">Three things that catch new players out</h3>
           <ul className="pg-bullets">
             <li>
               <IconBolt />

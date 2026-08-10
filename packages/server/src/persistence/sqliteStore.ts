@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import type { DatabaseSync as DatabaseSyncType } from 'node:sqlite';
-import type { GameStore, PersistedGame, SessionRecord } from './types.js';
+import { LEGACY_GAME_KEY, type GameStore, type PersistedGame, type SessionRecord } from './types.js';
 
 /**
  * `node:sqlite` is loaded through `createRequire` rather than a static import.
@@ -35,6 +35,7 @@ const { DatabaseSync } = nodeRequire('node:sqlite') as {
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS games (
   gameId    TEXT PRIMARY KEY,
+  gameKey   TEXT NOT NULL DEFAULT '${LEGACY_GAME_KEY}',
   code      TEXT NOT NULL UNIQUE,
   hostId    TEXT NOT NULL,
   settings  TEXT NOT NULL,
@@ -46,6 +47,9 @@ CREATE TABLE IF NOT EXISTS games (
   updatedAt INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_games_updated ON games(updatedAt);
+/* The gameKey index is created in migrate(), not here: on a database written
+   by the single-game server the CREATE TABLE above is a no-op, so the column
+   does not exist yet and indexing it would fail before the ALTER can run. */
 
 CREATE TABLE IF NOT EXISTS sessions (
   token     TEXT PRIMARY KEY,
@@ -59,6 +63,7 @@ CREATE INDEX IF NOT EXISTS idx_sessions_game ON sessions(gameId);
 
 interface GameRow {
   gameId: string;
+  gameKey: string | null;
   code: string;
   hostId: string;
   settings: string;
@@ -96,6 +101,32 @@ export class SqliteGameStore implements GameStore {
       /* :memory: and some filesystems reject WAL — not fatal. */
     }
     this.db.exec(SCHEMA);
+    this.migrate();
+  }
+
+  /**
+   * Forward-only schema migrations.
+   *
+   * `CREATE TABLE IF NOT EXISTS` does nothing to a table that already exists,
+   * so a database written by the single-game server keeps its old column set
+   * until it is altered here. Every migration must be safe to run repeatedly
+   * and must never lose a row: an in-progress game is somebody's evening.
+   */
+  private migrate(): void {
+    const columns = new Set(
+      (this.db.prepare('PRAGMA table_info(games)').all() as unknown as { name: string }[]).map(
+        (c) => c.name,
+      ),
+    );
+    if (!columns.has('gameKey')) {
+      // Every pre-existing row is a Power Grid table by construction: the
+      // server hosted nothing else when they were written.
+      this.db.exec(
+        `ALTER TABLE games ADD COLUMN gameKey TEXT NOT NULL DEFAULT '${LEGACY_GAME_KEY}'`,
+      );
+    }
+    // Safe to run every boot, and it must come after the ALTER above.
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_games_key ON games(gameKey)');
   }
 
   loadGames(): PersistedGame[] {
@@ -105,6 +136,7 @@ export class SqliteGameStore implements GameStore {
       try {
         games.push({
           gameId: row.gameId,
+          gameKey: row.gameKey ?? LEGACY_GAME_KEY,
           code: row.code,
           hostId: row.hostId,
           settings: JSON.parse(row.settings),
@@ -126,15 +158,16 @@ export class SqliteGameStore implements GameStore {
   saveGame(game: PersistedGame): void {
     this.db
       .prepare(
-        `INSERT INTO games (gameId, code, hostId, settings, seats, state, started, chat, createdAt, updatedAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO games (gameId, gameKey, code, hostId, settings, seats, state, started, chat, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(gameId) DO UPDATE SET
-           code=excluded.code, hostId=excluded.hostId, settings=excluded.settings,
-           seats=excluded.seats, state=excluded.state, started=excluded.started,
-           chat=excluded.chat, updatedAt=excluded.updatedAt`,
+           gameKey=excluded.gameKey, code=excluded.code, hostId=excluded.hostId,
+           settings=excluded.settings, seats=excluded.seats, state=excluded.state,
+           started=excluded.started, chat=excluded.chat, updatedAt=excluded.updatedAt`,
       )
       .run(
         game.gameId,
+        game.gameKey,
         game.code,
         game.hostId,
         JSON.stringify(game.settings),

@@ -1,0 +1,932 @@
+@charset "UTF-8";
+@use 'mixins' as *;
+@use 'tokens' as tokens;
+
+/* The seat list, mirrored from PLAYER_COLORS in @game/power-grid. */
+$pg-player-colors: ('red', 'blue', 'green', 'yellow', 'purple', 'black');
+
+/* =====================================================================
+ * POWER GRID — game-specific styling
+ * ---------------------------------------------------------------------
+ * Loaded with the Power Grid UI module, so a player who never opens this
+ * game never downloads it.
+ *
+ * Everything here names something only this game has: elektro, the six
+ * seat colours, the map picker, the five phases, the match grid. The
+ * platform design system in @tt/ui knows about none of it.
+ * ===================================================================== */
+
+.pg-pylons {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: min(34vh, 340px);
+  width: 100%;
+  opacity: 0.9;
+  mask-image: linear-gradient(180deg, transparent 0%, #000 42%, #000 100%);
+}
+
+/* ------------------------------------------------------------------ *
+ * Wordmark
+ * ------------------------------------------------------------------ */
+.pg-wordmark {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.1vw, 20px);
+  isolation: isolate;
+  font-family: var(--tt-font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 0.9;
+  user-select: none;
+}
+
+.pg-wordmark__power {
+  font-size: var(--tt-text-4xl);
+  background: linear-gradient(178deg, #ffd9b0 0%, #f0a45c 34%, #d9813f 62%, #9c5624 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.42)) drop-shadow(0 0 34px rgba(217, 129, 63, 0.34));
+}
+
+.pg-wordmark__grid {
+  font-size: var(--tt-text-4xl);
+  font-weight: 300;
+  color: var(--tt-text-bright);
+  text-shadow: 0 0 30px rgba(70, 226, 255, 0.35), 0 3px 0 rgba(0, 0, 0, 0.4);
+}
+
+.pg-wordmark__bar {
+  position: relative;
+  align-self: stretch;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, transparent, var(--tt-cyan), transparent);
+  box-shadow: 0 0 16px var(--tt-cyan-glow);
+  transform-origin: center;
+}
+
+.pg-wordmark__bolt {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(20px, 2vw, 34px);
+  height: clamp(20px, 2vw, 34px);
+  /* The parent rule is 2px wide and the global reset caps every svg at
+     `max-width: 100%`, which would squash this to 2px. Opt out explicitly. */
+  max-width: none;
+  transform: translate(-50%, -50%);
+  color: var(--tt-cyan-bright);
+  filter: drop-shadow(0 0 14px var(--tt-cyan-glow)) drop-shadow(0 0 3px rgba(255, 255, 255, 0.7));
+}
+
+.pg-wordmark--compact {
+  gap: 7px;
+  .pg-wordmark__power,
+  .pg-wordmark__grid {
+    font-size: var(--tt-text-lg);
+    filter: none;
+    text-shadow: none;
+  }
+  .pg-wordmark__grid {
+    color: var(--tt-cyan-bright);
+    font-weight: 400;
+    letter-spacing: var(--tt-tracking-wide);
+  }
+}
+
+.pg-menu__maps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-3);
+}
+.pg-menu__map {
+  display: flex;
+  align-items: center;
+  gap: var(--tt-space-4);
+  padding: var(--tt-space-2);
+  border-radius: var(--tt-radius-md);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--tt-line-hairline);
+}
+.pg-menu__mapart {
+  width: 92px;
+  height: 64px;
+  flex: none;
+  border-radius: var(--tt-radius-sm);
+  overflow: hidden;
+  background: radial-gradient(90% 90% at 40% 20%, #16202c, #090f16);
+  box-shadow: var(--tt-elev-inset);
+  display: grid;
+  place-items: center;
+
+  .pg-mapthumb {
+    width: 100%;
+    height: 100%;
+    padding: 4px;
+  }
+}
+.pg-menu__map-name {
+  font-family: var(--tt-font-display);
+  font-size: var(--tt-text-sm);
+  letter-spacing: var(--tt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--tt-text-bright);
+}
+.pg-menu__map-meta {
+  font-size: var(--tt-text-2xs);
+  color: var(--tt-text-muted);
+  letter-spacing: var(--tt-tracking-wide);
+}
+.pg-menu__map-rule {
+  margin-top: 4px;
+  font-size: var(--tt-text-3xs);
+  letter-spacing: var(--tt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--tt-warning);
+}
+
+.pg-menu__variants {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-3);
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-left: var(--tt-space-3);
+    border-left: 2px solid var(--tt-copper-dim);
+  }
+}
+.pg-menu__variant-name {
+  font-family: var(--tt-font-display);
+  font-size: var(--tt-text-xs);
+  letter-spacing: var(--tt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--tt-text-primary);
+}
+.pg-menu__variant-note {
+  font-size: var(--tt-text-xs);
+  line-height: var(--tt-leading-normal);
+  color: var(--tt-text-muted);
+}
+
+/* Phase list — reused by the menu aside and the how-to-play sheet. */
+.pg-phaselist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-1);
+}
+.pg-phaselist__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tt-space-3);
+  padding: var(--tt-space-2) var(--tt-space-2) var(--tt-space-2) 0;
+  border-bottom: 1px solid var(--tt-line-hairline);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+.pg-phaselist--roomy .pg-phaselist__item {
+  padding: var(--tt-space-3) 0;
+}
+.pg-phaselist__index {
+  font-size: var(--tt-text-sm);
+  color: var(--tt-copper-bright);
+  min-width: 22px;
+  padding-top: 1px;
+  text-shadow: 0 0 12px var(--tt-copper-glow);
+}
+.pg-phaselist__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.pg-phaselist__name {
+  font-family: var(--tt-font-display);
+  font-size: var(--tt-text-sm);
+  letter-spacing: var(--tt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--tt-text-primary);
+}
+.pg-phaselist__summary {
+  font-size: var(--tt-text-xs);
+  line-height: var(--tt-leading-normal);
+  color: var(--tt-text-muted);
+}
+
+/* How-to-play sheet */
+.pg-howto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-7);
+
+  section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tt-space-3);
+    align-items: flex-start;
+  }
+  strong {
+    color: var(--tt-text-bright);
+  }
+  em {
+    font-style: normal;
+    color: var(--tt-cyan-bright);
+  }
+}
+.pg-bullets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-4);
+
+  li {
+    display: flex;
+    gap: var(--tt-space-3);
+    font-size: var(--tt-text-sm);
+    line-height: var(--tt-leading-relaxed);
+    color: var(--tt-text-secondary);
+  }
+  svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    margin-top: 3px;
+    color: var(--tt-copper-bright);
+  }
+}
+
+.pg-mapgrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--tt-space-3);
+}
+
+.pg-mapcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-3);
+  padding: var(--tt-space-3);
+  border-radius: var(--tt-radius-lg);
+  border: 1px solid var(--tt-line-hairline);
+  background: linear-gradient(180deg, rgba(38, 51, 66, 0.5), rgba(14, 20, 28, 0.6));
+  text-align: left;
+  transition: border-color var(--tt-dur-fast) linear, background-color var(--tt-dur-fast) linear,
+    box-shadow var(--tt-dur-base) var(--tt-ease-out);
+  @include focus-ring(2px);
+
+  &:hover {
+    border-color: var(--tt-line);
+    box-shadow: var(--tt-elev-2);
+  }
+  &[data-selected='true'] {
+    border-color: rgba(70, 226, 255, 0.4);
+    background: linear-gradient(180deg, rgba(20, 66, 82, 0.55), rgba(12, 22, 32, 0.7));
+    box-shadow: var(--tt-elev-3), inset 0 0 40px rgba(70, 226, 255, 0.08);
+  }
+}
+.pg-mapcard__ring {
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--tt-radius-lg);
+  border: 1px solid var(--tt-cyan);
+  box-shadow: 0 0 26px rgba(70, 226, 255, 0.28);
+  pointer-events: none;
+}
+.pg-mapcard__art {
+  position: relative;
+  width: 100%;
+  border-radius: var(--tt-radius-md);
+  overflow: hidden;
+  background: radial-gradient(90% 90% at 40% 20%, #16202c, #0a1017);
+  box-shadow: var(--tt-elev-inset);
+  display: grid;
+  place-items: center;
+  /* Grows into the space a 1080p frame leaves over, without ever letting a
+     portrait board (Germany, 0.78) tower over a landscape one (USA, 1.55). */
+  max-height: clamp(112px, 25vh, 300px);
+
+  .pg-mapthumb {
+    width: 100%;
+    height: 100%;
+    padding: 6px;
+  }
+}
+/* Menu entries for content that exists in the engine but is not yet surfaced.
+   Dimmed and desaturated so it reads as deliberately forthcoming. */
+.pg-menu__map[data-unavailable='true'],
+.pg-menu__variants li[data-unavailable='true'] {
+  filter: saturate(0.3);
+  opacity: 0.45;
+}
+
+/* A board that is implemented in the engine but not yet surfaced. Reads as
+   deliberately withheld rather than broken: dimmed and desaturated, cursor
+   unavailable, but still legible so players can see what is coming. */
+.pg-mapcard[data-unavailable='true'] {
+  cursor: not-allowed;
+  filter: saturate(0.35);
+  opacity: 0.5;
+
+  &:hover {
+    transform: none;
+  }
+}
+.pg-mapcard__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pg-mapcard__name {
+  display: flex;
+  align-items: center;
+  gap: var(--tt-space-2);
+  font-family: var(--tt-font-display);
+  font-size: var(--tt-text-md);
+  letter-spacing: var(--tt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--tt-text-bright);
+
+  svg {
+    width: 15px;
+    height: 15px;
+    color: var(--tt-copper-bright);
+  }
+}
+.pg-mapcard__blurb {
+  font-size: var(--tt-text-xs);
+  line-height: var(--tt-leading-normal);
+  color: var(--tt-text-muted);
+}
+
+.pg-setup__rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-3);
+  margin-top: var(--tt-space-4);
+  padding-top: var(--tt-space-4);
+  border-top: 1px solid var(--tt-line-hairline);
+}
+.pg-setup__rule {
+  display: flex;
+  gap: var(--tt-space-3);
+
+  > svg {
+    width: 15px;
+    height: 15px;
+    flex: none;
+    margin-top: 2px;
+    color: var(--tt-warning);
+    filter: drop-shadow(0 0 8px var(--tt-warning-glow));
+  }
+  strong {
+    display: block;
+    font-family: var(--tt-font-display);
+    font-size: var(--tt-text-xs);
+    letter-spacing: var(--tt-tracking-wider);
+    text-transform: uppercase;
+    color: var(--tt-text-primary);
+  }
+  p {
+    margin-top: 3px;
+    font-size: var(--tt-text-xs);
+    line-height: var(--tt-leading-normal);
+    color: var(--tt-text-muted);
+  }
+}
+
+.pg-derived {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--tt-space-2);
+  margin-top: var(--tt-space-5);
+}
+.pg-derived__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--tt-space-3);
+  border-radius: var(--tt-radius-md);
+  @include well(var(--tt-radius-md));
+}
+.pg-derived__value {
+  font-size: var(--tt-text-md);
+  color: var(--tt-cyan-bright);
+  text-shadow: 0 0 16px var(--tt-cyan-glow);
+  line-height: 1.1;
+}
+.pg-derived__note {
+  font-size: var(--tt-text-3xs);
+  color: var(--tt-text-faint);
+  letter-spacing: var(--tt-tracking-wide);
+}
+
+/* The primary CTA is pinned to the bottom of its column: the setup form can
+   scroll on a laptop, but "Create lobby" must never be below the fold. */
+
+.pg-lobby__map {
+  display: flex;
+  gap: var(--tt-space-4);
+  align-items: center;
+  margin-bottom: var(--tt-space-4);
+}
+.pg-lobby__mapart {
+  width: 108px;
+  flex: none;
+  border-radius: var(--tt-radius-md);
+  overflow: hidden;
+  background: radial-gradient(90% 90% at 40% 20%, #16202c, #0a1017);
+  box-shadow: var(--tt-elev-inset);
+  display: grid;
+  place-items: center;
+
+  .pg-mapthumb {
+    width: 100%;
+    height: 100%;
+    padding: 5px;
+  }
+}
+
+.pg-lobby__specials {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-3);
+  margin-top: var(--tt-space-4);
+  padding-top: var(--tt-space-4);
+  border-top: 1px solid var(--tt-line-hairline);
+}
+
+/* ==================================================================== *
+ * GAME SCREEN (frame only — mounts are filled by later agents)
+ * ==================================================================== */
+.pg-game__chrome {
+  position: relative;
+  z-index: var(--tt-z-hud);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--tt-space-5);
+  padding: var(--tt-space-2) var(--tt-space-5);
+  height: 56px;
+  flex: none;
+  border-bottom: 1px solid var(--tt-line-subtle);
+  background: linear-gradient(180deg, rgba(24, 34, 46, 0.92), rgba(12, 18, 26, 0.92));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+.pg-game__chrome-left,
+.pg-game__chrome-right {
+  display: flex;
+  align-items: center;
+  gap: var(--tt-space-3);
+  min-width: 0;
+}
+.pg-game__chrome-right {
+  justify-content: flex-end;
+}
+
+.pg-game__phaserail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: var(--tt-radius-md);
+  @include well(var(--tt-radius-md));
+}
+.pg-phasepip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: var(--tt-radius-sm);
+  font-family: var(--tt-font-display);
+  font-size: var(--tt-text-3xs);
+  letter-spacing: var(--tt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--tt-text-faint);
+  white-space: nowrap;
+
+  &[data-active='true'] {
+    color: var(--tt-text-bright);
+  }
+}
+.pg-phasepip__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--tt-radius-sm);
+  background: linear-gradient(180deg, rgba(70, 226, 255, 0.24), rgba(70, 226, 255, 0.08));
+  border: 1px solid rgba(70, 226, 255, 0.45);
+  box-shadow: 0 0 20px rgba(70, 226, 255, 0.24);
+  z-index: -1;
+}
+.pg-phasepip__index {
+  color: var(--tt-cyan);
+  font-size: var(--tt-text-2xs);
+}
+
+/*
+ * The match grid.
+ *
+ * Germany is a PORTRAIT board (aspect 0.78). The previous layout handed it a
+ * landscape cell — a full-width centre column with the rules log stacked under
+ * it — and `preserveAspectRatio: meet` then letterboxed the map into roughly
+ * half of that cell, which in turn starved the label solver of pixels and drove
+ * city names down to 8.2 px. Two changes fix it together:
+ *
+ *   1. The rules log moves under the turn-order rail, into the LEFT column, so
+ *      the board owns the full height of the frame instead of two thirds of it.
+ *   2. The centre column is sized to the map's own aspect ratio. `--pg-board-w`
+ *      is written every layout pass by the board renderer (it already measures
+ *      its own cell) as `round(cellHeight * mapAspect)`, so the map fills its
+ *      cell rather than sitting in a letterbox. The value below is only the
+ *      fallback used before the renderer has mounted.
+ *
+ * The two rails split whatever is left over as `fr`, so a bigger monitor buys
+ * information density — the log gets wider, the markets get wider — rather than
+ * a bigger empty margin around a fixed-size map. That is the benchmark's
+ * documented weakness and we do not want to reproduce it.
+ */
+.pg-game__grid {
+  position: relative;
+  z-index: var(--tt-z-content);
+  flex: 1;
+  min-height: 0;
+  display: grid;
+
+  /* Rail minimums. The board renderer reads these back so its clamp and this
+     grid can never disagree about how narrow a rail may get. */
+  --pg-rail-min: 244px;
+  --pg-phase-min: 356px;
+  /* Overwritten with a px length by the board renderer. Used as a growth
+     limit, so a stale value can never push the rails past their minimums. */
+  --pg-board-w: 1.5fr;
+
+  grid-template-columns:
+    minmax(var(--pg-rail-min), 1fr)
+    minmax(0, var(--pg-board-w))
+    minmax(var(--pg-phase-min), 1.32fr);
+  grid-template-rows: auto auto minmax(150px, 1fr);
+  grid-template-areas:
+    'hud  hud   hud'
+    'rail board phase'
+    'log  board phase';
+  gap: var(--tt-space-3);
+  padding: var(--tt-space-3);
+
+  @include down('xl') {
+    --pg-rail-min: 212px;
+    --pg-phase-min: 320px;
+  }
+}
+
+.pg-mount--hud {
+  grid-area: hud;
+  min-height: 68px;
+}
+.pg-game__rail {
+  grid-area: rail;
+  min-height: 0;
+  display: flex;
+  /*
+   * Bounded, so the rules log underneath always gets a usable share of the
+   * column whatever the seat count. The rail scrolls internally past this.
+   */
+  max-height: clamp(168px, 32vh, 420px);
+}
+.pg-game__railpanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.pg-mount--board {
+  grid-area: board;
+  min-height: 0;
+}
+.pg-game__log {
+  grid-area: log;
+  min-height: 0;
+  display: flex;
+
+  > .tt-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+}
+.pg-game__logbody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.pg-logline {
+  display: flex;
+  gap: var(--tt-space-3);
+  padding: 3px 0;
+  font-size: var(--tt-text-xs);
+  border-bottom: 1px solid var(--tt-line-hairline);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+.pg-logline__cat {
+  flex: none;
+  width: 78px;
+  font-family: var(--tt-font-display);
+  font-size: var(--tt-text-3xs);
+  letter-spacing: var(--tt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--tt-copper-bright);
+  padding-top: 2px;
+}
+.pg-logline__text {
+  color: var(--tt-text-secondary);
+  line-height: var(--tt-leading-normal);
+}
+.pg-mount--phase {
+  grid-area: phase;
+  min-height: 0;
+}
+
+/* Mount placeholders — visible scaffolding, deliberately marked as such. */
+.pg-mount {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+.pg-mount__placeholder {
+  position: relative;
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  border-radius: var(--tt-radius-lg);
+  border: 1px dashed var(--tt-line-subtle);
+  background: repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.016) 0px,
+      rgba(255, 255, 255, 0.016) 10px,
+      transparent 10px,
+      transparent 20px
+    ),
+    linear-gradient(180deg, rgba(20, 29, 40, 0.55), rgba(10, 16, 24, 0.7));
+
+  &.is-inline {
+    border-radius: var(--tt-radius-md);
+  }
+}
+.pg-mount__label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  text-align: center;
+  padding: var(--tt-space-4);
+}
+.pg-mount__title {
+  font-family: var(--tt-font-display);
+  font-size: var(--tt-text-md);
+  letter-spacing: var(--tt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--tt-text-secondary);
+}
+.pg-mount__code {
+  font-family: var(--tt-font-mono);
+  font-size: var(--tt-text-2xs);
+  color: var(--tt-cyan-dim);
+  padding: 2px 7px;
+  border-radius: var(--tt-radius-xs);
+  background: rgba(70, 226, 255, 0.07);
+  border: 1px solid rgba(70, 226, 255, 0.18);
+}
+.pg-mount__ticks {
+  position: absolute;
+  inset: 8px;
+  border-radius: var(--tt-radius-md);
+  background-image: linear-gradient(var(--tt-line-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--tt-line-subtle) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(70% 70% at 50% 50%, #000, transparent 80%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+
+/* ==================================================================== *
+ * SHORT VIEWPORTS (1366x768 and laptop 16:10)
+ * ==================================================================== */
+@include short-viewport {
+  .pg-wordmark__power,
+  .pg-wordmark__grid {
+    font-size: clamp(3rem, 5.4vw, 4.4rem);
+  }
+  .pg-mapcard__art {
+    max-height: 118px;
+  }
+  .pg-game__grid {
+    /* Shorter frames give the turn-order rail less room and the rules log
+       proportionally more — the log is the panel that rewards height. */
+    grid-template-rows: auto auto minmax(132px, 1fr);
+  }
+  .pg-game__rail {
+    max-height: clamp(150px, 30vh, 300px);
+  }
+}
+
+/* Below the supported floor we still degrade rather than break. */
+@include down('md') {
+  .pg-mapgrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pg-game__grid {
+    --pg-board-w: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(320px, 1fr) auto auto;
+    grid-template-areas:
+      'hud'
+      'board'
+      'phase'
+      'log';
+    overflow-y: auto;
+  }
+  .pg-game__rail {
+    display: none;
+  }
+  .pg-game__log {
+    min-height: 220px;
+  }
+}
+
+
+/* ==================================================================== *
+ * TOKENS — the values only this game has
+ * -------------------------------------------------------------------- *
+ * Declared on :root rather than scoped to the match screen: the seat
+ * colours are also needed by the lobby roster, which the platform draws.
+ * Loading this stylesheet is what makes them exist at all.
+ * ==================================================================== */
+:root {
+  /* Elektro (the game currency) always reads as struck brass.          */
+  --pg-elektro: #ffd166;
+  --pg-elektro-dim: #a37820;
+  --pg-elektro-glow: rgba(255, 209, 102, 0.4);
+
+  /* ---------------------------------------------------------------
+   * 6. PLAYER COLOURS  (PlayerColor union from @pg/shared)
+   * ---------------------------------------------------------------
+   * Solved, not asserted. The six seats were optimised against the
+   * Machado (2009) severity-1.0 simulations for deuteranopia,
+   * protanopia and tritanopia; the objective was to maximise the
+   * SMALLEST pairwise CIE76 ΔE across all 15 pairs in all three
+   * simulations, then to spread L*.
+   *
+   * Result — worst pair of 45 is blue/purple under protanopia at
+   * ΔE 26.1, against a floor of 20. Measured L* under simulation:
+   *
+   *   seat     hex      L* normal  deut  prot  trit
+   *   blue     #1f4cd0     37.9    38.4  43.5  42.9
+   *   red      #d3232d     46.0    51.0  36.1  48.9
+   *   purple   #bf61c9     55.9    57.7  53.4  56.6
+   *   black    #929ca7     63.9    63.7  64.4  63.9
+   *   green    #3bc872     71.9    69.9  74.3  71.7
+   *   yellow   #ffca46     83.9    85.7  80.8  81.1
+   *
+   * Smallest L* gap between any two seats, in any simulation, is 5.9 —
+   * so lightness alone orders the seats even with no hue perception.
+   * The previous palette failed this badly: blue #3d8bff vs purple
+   * #b06bff were ΔE 6.5 (deut) / 7.5 (prot) with L* 56 / 59, i.e. one
+   * seat to a deuteranope. Re-run the check with
+   * src/art/generate/harness.html before touching any value here.
+   *
+   * `-ink` is the foreground for text drawn ON the seat colour (avatar
+   * initials, player-chip glyphs). Each was picked to clear 4.5:1
+   * against the whole avatar ramp (base +8% white → base −6% black);
+   * worst is purple at 4.73:1.
+   *
+   * Every surface that encodes ownership by colour ALSO carries the
+   * player's sigil glyph, so colour is never the only cue.
+   * --------------------------------------------------------------- */
+  --pg-player-red: #d3232d;
+  --pg-player-red-light: #f5808a;
+  --pg-player-red-dark: #7a1017;
+  --pg-player-red-glow: rgba(211, 35, 45, 0.5);
+  --pg-player-red-ink: #ffffff;
+
+  --pg-player-blue: #1f4cd0;
+  --pg-player-blue-light: #7f9bf0;
+  --pg-player-blue-dark: #10276e;
+  --pg-player-blue-glow: rgba(31, 76, 208, 0.5);
+  --pg-player-blue-ink: #ffffff;
+
+  --pg-player-green: #3bc872;
+  --pg-player-green-light: #7ee3a0;
+  --pg-player-green-dark: #10613a;
+  --pg-player-green-glow: rgba(59, 200, 114, 0.5);
+  --pg-player-green-ink: #0b0f14;
+
+  --pg-player-yellow: #ffca46;
+  --pg-player-yellow-light: #ffe395;
+  --pg-player-yellow-dark: #8a6a12;
+  --pg-player-yellow-glow: rgba(255, 202, 70, 0.5);
+  --pg-player-yellow-ink: #0b0f14;
+
+  --pg-player-purple: #bf61c9;
+  --pg-player-purple-light: #e0a3e8;
+  --pg-player-purple-dark: #5a2262;
+  --pg-player-purple-glow: rgba(191, 97, 201, 0.5);
+  --pg-player-purple-ink: #0b0f14;
+
+  /* "Black" reads as pewter so it stays visible on a dark board. */
+  --pg-player-black: #929ca7;
+  --pg-player-black-light: #c3ccd6;
+  --pg-player-black-dark: #3a4048;
+  --pg-player-black-glow: rgba(146, 156, 167, 0.5);
+  --pg-player-black-ink: #0b0f14;
+
+  /* The Trust (2p variant) is deliberately outside the player palette. */
+  --pg-trust: #93a2b5;
+  --pg-trust-glow: rgba(147, 162, 181, 0.35);
+
+}
+
+/* ==================================================================== *
+ * SEAT COLOURS
+ * -------------------------------------------------------------------- *
+ * @tt/ui's avatar and player chip render from --tt-pc*; this is where the
+ * six Power Grid seats bind those to real values. A game with a different
+ * palette publishes its own block and reuses the same components.
+ * ==================================================================== */
+/* Per-colour custom properties, generated from the PlayerColor union. */
+@each $c in tokens.$pg-player-colors {
+  [data-player-color='#{$c}'] {
+    --tt-pc: var(--tt-player-#{$c});
+    --tt-pc-light: var(--tt-player-#{$c}-light);
+    --tt-pc-dark: var(--tt-player-#{$c}-dark);
+    --tt-pc-glow: var(--tt-player-#{$c}-glow);
+    --tt-pc-ink: var(--tt-player-#{$c}-ink);
+  }
+}
+
+/* =====================================================================
+ * MONEY / ELEKTRO
+ * ===================================================================== */
+.pg-money {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: var(--tt-font-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1;
+  color: var(--pg-elektro);
+  font-weight: 600;
+  letter-spacing: var(--tt-tracking-tight);
+  line-height: 1;
+  text-shadow: 0 0 16px var(--pg-elektro-glow);
+  transition: color var(--tt-dur-base) linear;
+
+  &.pg-money--sm {
+    font-size: var(--tt-text-sm);
+  }
+  &.pg-money--md {
+    font-size: var(--tt-text-lg);
+  }
+  &.pg-money--lg {
+    font-size: var(--tt-text-2xl);
+  }
+  &.pg-money--muted {
+    color: var(--tt-text-secondary);
+    text-shadow: none;
+  }
+  &.pg-money--gain {
+    color: var(--tt-success);
+    text-shadow: 0 0 16px var(--tt-success-glow);
+  }
+  &.pg-money--loss {
+    color: var(--tt-danger);
+    text-shadow: 0 0 16px var(--tt-danger-glow);
+  }
+}
+.pg-money__unit {
+  font-size: 0.6em;
+  font-weight: 500;
+  opacity: 0.72;
+  letter-spacing: var(--tt-tracking-wide);
+  text-transform: uppercase;
+}
+.pg-money__digits {
+  display: inline-block;
+}
+

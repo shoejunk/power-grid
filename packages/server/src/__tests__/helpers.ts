@@ -1,19 +1,23 @@
 /**
  * Shared harness for the integration tests: boots a real server on an
  * ephemeral port with a throwaway on-disk database, and tears it down.
+ *
+ * The registry injected here holds only the stub game, so the tests exercise
+ * the server against a title it knows nothing about. That is the point — a
+ * server that had grown knowledge of a shipping game would fail here.
  */
 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { GameState, LobbyState } from '@pg/shared';
+import { erase, GameRegistry, type LobbyState } from '@tt/core';
 import { silentLogger } from '../logger.js';
 import { startServer, type RunningServer, type StartServerOptions } from '../server.js';
-import { stubEngine } from './stubEngine.js';
+import { STUB_GAME_KEY, stubGame, type StubState } from './stubGame.js';
 import { TestClient } from './testClient.js';
 
 export function makeDataDir(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'pg-server-test-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'tt-server-test-'));
 }
 
 export function removeDataDir(dir: string): void {
@@ -24,6 +28,10 @@ export function removeDataDir(dir: string): void {
   }
 }
 
+export function stubRegistry(): GameRegistry {
+  return new GameRegistry([erase(stubGame)]);
+}
+
 /** Boots the real server. Everything except the injected bits is production code. */
 export function boot(overrides: StartServerOptions = {}): Promise<RunningServer> {
   return startServer({
@@ -32,7 +40,7 @@ export function boot(overrides: StartServerOptions = {}): Promise<RunningServer>
     serveClient: false,
     storeKind: 'sqlite',
     dbFile: 'test.db',
-    engine: stubEngine,
+    registry: stubRegistry(),
     logger: silentLogger,
     // Long enough that no test races the timers unless it opts in.
     heartbeatMs: 60_000,
@@ -52,19 +60,14 @@ export async function createGame(
   server: RunningServer,
   name = 'Host',
   settings: Record<string, unknown> = {},
+  gameKey: string = STUB_GAME_KEY,
 ): Promise<SeatedClient & { code: string; lobby: LobbyState }> {
   const client = await TestClient.connect(server.wsUrl);
   client.send({
     t: 'createGame',
+    gameKey,
     name,
-    settings: {
-      mapId: 'germany',
-      playerCount: 4,
-      experiencedStart: false,
-      againstTheTrust: false,
-      seed: 'TEST-SEED',
-      ...settings,
-    },
+    settings: { tableSize: 4, variant: 'plain', seed: 'TEST-SEED', ...settings },
   });
   const welcome = await client.wait('welcome');
   const lobby = await client.wait('lobby');
@@ -94,10 +97,11 @@ export async function joinGame(
  * Normalises the volatile presence fields so two snapshots taken at different
  * moments can be compared for genuine equality of *game* state.
  */
-export function normaliseState(state: GameState): GameState {
+export function normaliseState(state: StubState): StubState {
   const copy = structuredClone(state);
   for (const player of Object.values(copy.players)) {
     player.lastSeen = 0;
+    player.connected = false;
   }
   return copy;
 }

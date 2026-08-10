@@ -1,0 +1,19 @@
+@charset "UTF-8";
+
+/* =====================================================================
+ * @tt/ui — design system entry point
+ * ---------------------------------------------------------------------
+ * Import order matters: tokens define the custom properties everything
+ * else consumes, then the reset, then the type system, then the shared
+ * effects, then components, then the screen shells.
+ *
+ * The app imports this once; a game's own stylesheet is loaded lazily
+ * alongside that game's UI, and layers on top.
+ * ===================================================================== */
+
+@use 'tokens';
+@use 'reset';
+@use 'typography';
+@use 'effects';
+@use 'components';
+@use 'screens';

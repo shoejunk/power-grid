@@ -1,25 +1,33 @@
 /**
  * The hub owns every table on this server and routes client messages to them.
  *
- * On boot it rehydrates itself completely from the store — rooms, seats,
- * `GameState`s, chat and session tokens — so a restart is invisible to
- * players beyond a dropped socket (requirement 4). Nothing in here holds
- * game-rules knowledge; it is pure routing, identity and lifecycle.
+ * On boot it rehydrates itself completely from the store — rooms, seats, game
+ * states, chat and session tokens — so a restart is invisible to players
+ * beyond a dropped socket. Nothing in here holds game-rules knowledge; it is
+ * pure routing, identity and lifecycle.
+ *
+ * The one game-shaped thing it does is resolve a table's `gameKey` to a plugin
+ * and hand that plugin to the room. Join codes are unique across every title,
+ * so a player only ever needs the code — never the game's name as well.
  */
 
 import { randomBytes, randomUUID } from 'node:crypto';
-import { makeGameCode, type GameSettings, type PlayerId } from '@pg/shared';
+import {
+  makeGameCode,
+  type ClientMessage,
+  type GameKey,
+  type GameRegistry,
+  type PlayerId,
+} from '@tt/core';
 import type { ServerConfig } from './config.js';
-import type { RulesEngine } from './engine/types.js';
 import type { Logger } from './logger.js';
 import type { GameStore, PersistedGame, SessionRecord } from './persistence/types.js';
-import type { AnyClientMessage } from './protocol.js';
-import { GameRoom, MAX_PLAYERS, MIN_PLAYERS } from './room.js';
+import { GameRoom } from './room.js';
 import type { Connection } from './wire.js';
 
 export interface HubDeps {
   store: GameStore;
-  engine: RulesEngine;
+  registry: GameRegistry;
   config: ServerConfig;
   logger: Logger;
 }
@@ -37,6 +45,32 @@ export class GameHub {
     this.logger = deps.logger.child('hub');
   }
 
+  get registry(): GameRegistry {
+    return this.deps.registry;
+  }
+
+  /**
+   * Builds a live room around a persisted record, binding it to the plugin
+   * named by `record.gameKey`.
+   *
+   * Returns null for a game this build does not host — a table written by a
+   * deployment with an extra title, or one whose game has since been removed.
+   * Such a record is deliberately left untouched on disk rather than deleted,
+   * so re-adding the game brings the table back with its state intact.
+   */
+  private buildRoom(record: PersistedGame): GameRoom | null {
+    const plugin = this.deps.registry.get(record.gameKey);
+    if (!plugin) {
+      this.logger.warn('Skipping a game this server does not host', {
+        gameId: record.gameId,
+        code: record.code,
+        gameKey: record.gameKey,
+      });
+      return null;
+    }
+    return new GameRoom({ ...this.deps, plugin, logger: this.logger.child(record.code) }, record);
+  }
+
   /* ---------------------------------------------------------------- *
    * Boot
    * ---------------------------------------------------------------- */
@@ -45,6 +79,7 @@ export class GameHub {
   load(): void {
     const cutoff = Date.now() - this.deps.config.gameTtlMs;
     let pruned = 0;
+    let skipped = 0;
 
     for (const record of this.deps.store.loadGames()) {
       if (record.updatedAt < cutoff) {
@@ -62,11 +97,16 @@ export class GameHub {
         this.deps.store.deleteGame(record.gameId);
         continue;
       }
-      const room = new GameRoom({ ...this.deps, logger: this.logger.child(record.code) }, record);
-      // Nobody is connected immediately after a restart.
-      if (room.state) {
-        for (const p of Object.values(room.state.players)) p.connected = false;
+      const room = this.buildRoom(record);
+      if (!room) {
+        skipped += 1;
+        continue;
       }
+      /*
+       * Nobody is connected immediately after a restart. The room folds that
+       * into the game state through the plugin's presence hook the first time
+       * it broadcasts, so the server never has to touch a player record.
+       */
       this.rooms.set(room.gameId, room);
       this.roomsByCode.set(room.code, room.gameId);
     }
@@ -81,6 +121,7 @@ export class GameHub {
       games: this.rooms.size,
       sessions: this.sessions.size,
       pruned,
+      skipped,
       backend: this.deps.store.kind,
     });
 
@@ -105,14 +146,22 @@ export class GameHub {
     return this.rooms.get(gameId);
   }
 
-  stats(): { games: number; started: number; seats: number; sessions: number } {
+  stats(): {
+    games: number;
+    started: number;
+    seats: number;
+    sessions: number;
+    byGame: Record<GameKey, number>;
+  } {
     let started = 0;
     let seats = 0;
+    const byGame: Record<GameKey, number> = {};
     for (const room of this.rooms.values()) {
       if (room.started) started += 1;
       seats += room.seats.length;
+      byGame[room.gameKey] = (byGame[room.gameKey] ?? 0) + 1;
     }
-    return { games: this.rooms.size, started, seats, sessions: this.sessions.size };
+    return { games: this.rooms.size, started, seats, sessions: this.sessions.size, byGame };
   }
 
   /* ---------------------------------------------------------------- *
@@ -120,10 +169,11 @@ export class GameHub {
    * ---------------------------------------------------------------- */
 
   /**
-   * Mints a join code that no live game is using. `makeGameCode` already
-   * avoids ambiguous glyphs (no O/0/I/1); this adds the uniqueness guarantee
-   * required by requirement 2 and, as a last resort, widens the code so we
-   * can never fail to create a game.
+   * Mints a join code that no live game is using — across every title, so a
+   * player never has to say which game their code is for. `makeGameCode`
+   * already avoids ambiguous glyphs (no O/0/I/1); this adds the uniqueness
+   * guarantee and, as a last resort, widens the code so we can never fail to
+   * create a game.
    */
   private mintCode(): string {
     for (let i = 0; i < 200; i++) {
@@ -174,7 +224,7 @@ export class GameHub {
    * Message dispatch
    * ---------------------------------------------------------------- */
 
-  handleMessage(conn: Connection, message: AnyClientMessage): void {
+  handleMessage(conn: Connection, message: ClientMessage): void {
     switch (message.t) {
       case 'ping':
         conn.send({ t: 'pong' });
@@ -186,7 +236,7 @@ export class GameHub {
         this.onRejoin(conn, message.sessionToken);
         return;
       case 'createGame':
-        this.onCreateGame(conn, message.name, message.settings);
+        this.onCreateGame(conn, message.gameKey, message.name, message.settings);
         return;
       case 'joinGame':
         this.onJoinGame(conn, message.code, message.name);
@@ -200,7 +250,7 @@ export class GameHub {
   }
 
   /** Every message below this point requires an authenticated seat. */
-  private onSeatedMessage(conn: Connection, message: AnyClientMessage): void {
+  private onSeatedMessage(conn: Connection, message: ClientMessage): void {
     const bound = this.boundRoom(conn);
     if (!bound) {
       conn.error('notInGame', 'Join or create a game first.');
@@ -209,26 +259,21 @@ export class GameHub {
     const { room, playerId } = bound;
 
     switch (message.t) {
-      case 'setReady': {
+      case 'setReady':
         this.applyLobbyChange(conn, room, room.setReady(playerId, message.ready));
         return;
-      }
-      case 'setColor': {
+      case 'setColor':
         this.applyLobbyChange(conn, room, room.setColor(playerId, message.color));
         return;
-      }
-      case 'setName': {
+      case 'setName':
         this.applyLobbyChange(conn, room, room.setName(playerId, message.name));
         return;
-      }
-      case 'updateSettings': {
+      case 'updateSettings':
         this.applyLobbyChange(conn, room, room.updateSettings(playerId, message.settings));
         return;
-      }
-      case 'addBot': {
+      case 'addBot':
         this.applyLobbyChange(conn, room, room.addBot(playerId));
         return;
-      }
       case 'removePlayer': {
         const target = message.playerId;
         const result = room.removePlayer(playerId, target);
@@ -257,8 +302,8 @@ export class GameHub {
           });
           this.logger.debug('Action rejected', {
             gameId: room.gameId,
+            gameKey: room.gameKey,
             playerId,
-            action: message.action.type,
             reason: result.message,
           });
           return;
@@ -268,17 +313,20 @@ export class GameHub {
         room.rescheduleAutoAction();
         return;
       }
-      case 'chat': {
+      case 'chat':
         room.postChat(playerId, message.text);
         room.persist();
         return;
-      }
       default:
         conn.error('unknownMessage', 'Unsupported message for a seated player.');
     }
   }
 
-  private applyLobbyChange(conn: Connection, room: GameRoom, result: { ok: boolean; code?: string; message?: string }): void {
+  private applyLobbyChange(
+    conn: Connection,
+    room: GameRoom,
+    result: { ok: boolean; code?: string; message?: string },
+  ): void {
     if (!result.ok) {
       conn.error(result.code ?? 'rejected', result.message ?? 'Rejected.');
       return;
@@ -301,7 +349,7 @@ export class GameHub {
 
   private onHello(conn: Connection, token?: string): void {
     if (token && this.resume(conn, token)) return;
-    // No usable session: the client should show create/join.
+    // No usable session: the client should show the game picker.
     conn.error('noSession', 'No active session. Create or join a game.');
   }
 
@@ -313,7 +361,6 @@ export class GameHub {
   /**
    * Re-attaches a socket to an existing seat and replays the full current
    * state — lobby or mid-game, including when it is that player's turn.
-   * Requirement 5.
    */
   private resume(conn: Connection, token: string): boolean {
     const session = this.sessions.get(token);
@@ -335,7 +382,12 @@ export class GameHub {
     conn.sessionToken = token;
     room.attach(session.playerId, conn);
 
-    conn.send({ t: 'welcome', sessionToken: token, playerId: session.playerId });
+    conn.send({
+      t: 'welcome',
+      sessionToken: token,
+      playerId: session.playerId,
+      gameKey: room.gameKey,
+    });
     room.sendSnapshot(session.playerId, conn);
     // Everyone else needs to see them light up again.
     room.broadcast();
@@ -343,20 +395,39 @@ export class GameHub {
 
     this.logger.info('Player resumed', {
       gameId: room.gameId,
+      gameKey: room.gameKey,
       code: room.code,
       playerId: session.playerId,
       name: seat.name,
       started: room.started,
-      theirTurn: room.state?.activePlayerId === session.playerId,
     });
     return true;
   }
 
   private onCreateGame(
     conn: Connection,
+    gameKey: GameKey,
     name: string,
-    settings: Omit<GameSettings, 'seed'> & { seed?: string },
+    rawSettings: unknown,
   ): void {
+    const plugin = this.deps.registry.get(gameKey);
+    if (!plugin) {
+      conn.error('noSuchGame', `This server does not host '${gameKey}'.`);
+      return;
+    }
+
+    /*
+     * Settings arrive as an untrusted patch over the game's own defaults, so a
+     * client that sends nothing gets a playable table and a client that sends
+     * junk gets rejected here rather than at start time.
+     */
+    const patch = plugin.parseSettingsPatch(rawSettings);
+    if (!patch) {
+      conn.error('badSettings', 'Those settings are not valid for this game.');
+      return;
+    }
+    const settings = { ...(plugin.defaultSettings() as object), ...(patch as object) };
+
     // A socket can only be at one table; creating implies leaving.
     this.detachFromCurrentRoom(conn, 'switched tables');
 
@@ -364,7 +435,9 @@ export class GameHub {
     try {
       code = this.mintCode();
     } catch (err) {
-      this.logger.error('Join-code exhaustion', { error: err instanceof Error ? err.message : String(err) });
+      this.logger.error('Join-code exhaustion', {
+        error: err instanceof Error ? err.message : String(err),
+      });
       conn.error('codeExhausted', 'The server could not allocate a join code. Try again.');
       return;
     }
@@ -372,19 +445,13 @@ export class GameHub {
     const now = Date.now();
     const gameId = randomUUID();
     const hostId = randomUUID();
-    const playerCount = Math.min(Math.max(settings.playerCount ?? 4, MIN_PLAYERS), MAX_PLAYERS);
 
     const record: PersistedGame = {
       gameId,
+      gameKey,
       code,
       hostId,
-      settings: {
-        mapId: settings.mapId,
-        playerCount,
-        experiencedStart: settings.experiencedStart,
-        againstTheTrust: settings.againstTheTrust,
-        seed: settings.seed ?? `${code}-${now}`,
-      },
+      settings,
       seats: [],
       state: null,
       started: false,
@@ -393,7 +460,11 @@ export class GameHub {
       updatedAt: now,
     };
 
-    const room = new GameRoom({ ...this.deps, logger: this.logger.child(code) }, record);
+    const room = this.buildRoom(record);
+    if (!room) {
+      conn.error('noSuchGame', `This server does not host '${gameKey}'.`);
+      return;
+    }
     const seat = room.addSeat({ playerId: hostId, name, isBot: false, ready: true });
     if (!seat) {
       conn.error('noColors', 'Could not seat the host.');
@@ -407,10 +478,10 @@ export class GameHub {
     const session = this.issueSession(gameId, hostId);
     conn.sessionToken = session.token;
     room.attach(hostId, conn);
-    conn.send({ t: 'welcome', sessionToken: session.token, playerId: hostId });
+    conn.send({ t: 'welcome', sessionToken: session.token, playerId: hostId, gameKey });
     room.sendSnapshot(hostId, conn);
 
-    this.logger.info('Game created', { gameId, code, host: name, settings: room.settings });
+    this.logger.info('Game created', { gameId, gameKey, code, host: name });
   }
 
   private onJoinGame(conn: Connection, code: string, name: string): void {
@@ -420,12 +491,11 @@ export class GameHub {
       return;
     }
     if (room.started) {
-      // Requirement 9: a started game accepts reconnections by token, never
-      // brand-new joiners.
+      // A started game accepts reconnections by token, never brand-new joiners.
       conn.error('gameStarted', 'That game has already started. Rejoin with your session link instead.');
       return;
     }
-    if (room.seats.length >= room.settings.playerCount) {
+    if (room.seats.length >= room.capacity) {
       conn.error('gameFull', 'That game is full.');
       return;
     }
@@ -443,16 +513,27 @@ export class GameHub {
     conn.sessionToken = session.token;
     room.persist();
     room.attach(playerId, conn);
-    conn.send({ t: 'welcome', sessionToken: session.token, playerId });
+    conn.send({
+      t: 'welcome',
+      sessionToken: session.token,
+      playerId,
+      gameKey: room.gameKey,
+    });
     room.sendSnapshot(playerId, conn);
     room.broadcast();
 
-    this.logger.info('Player joined', { gameId: room.gameId, code: room.code, name, playerId });
+    this.logger.info('Player joined', {
+      gameId: room.gameId,
+      gameKey: room.gameKey,
+      code: room.code,
+      name,
+      playerId,
+    });
   }
 
   /**
    * Explicit "leave". In a lobby the seat is released; in a live game the seat
-   * is *kept* (requirement 5) and the player simply goes offline.
+   * is *kept* and the player simply goes offline.
    */
   private onLeaveGame(conn: Connection): void {
     const bound = this.boundRoom(conn);
@@ -490,21 +571,15 @@ export class GameHub {
 
     this.logger.info('Player disconnected', {
       gameId: room.gameId,
+      gameKey: room.gameKey,
       code: room.code,
       playerId,
       started: room.started,
     });
 
-    // An abandoned, never-started lobby is garbage; a started game is not.
-    if (!room.started && room.humanSeats.every((s) => !room.isConnected(s.playerId))) {
-      room.persist();
-      room.broadcast();
-      return;
-    }
-
     room.persist();
     room.broadcast();
-    room.rescheduleAutoAction();
+    if (room.started) room.rescheduleAutoAction();
   }
 
   private detachFromCurrentRoom(conn: Connection, reason: string): void {

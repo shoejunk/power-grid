@@ -1,0 +1,30 @@
+{
+  "name": "@tt/ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "//": "Source-only. The consuming app's bundler compiles this package; there is no separate build step, which is what keeps the design system editable without a watch task.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles/*": "./src/styles/*",
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "framer-motion": "*",
+    "react": "*",
+    "react-dom": "*"
+  },
+  "dependencies": {
+    "@tt/core": "*"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "typescript": "^5.6.3"
+  }
+}

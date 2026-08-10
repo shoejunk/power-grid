@@ -1,16 +1,18 @@
 /**
  * Integration tests. Every one of these boots the real HTTP + WebSocket server
  * on an ephemeral port with a real on-disk SQLite database and drives it with
- * real `ws` clients. Nothing is mocked except the rules engine, which is
- * injected so the tests assert *server* behaviour rather than Power Grid rules.
+ * real `ws` clients. Nothing is mocked except the game itself, which is a
+ * fixture the server has never heard of, so the tests assert *server* behaviour
+ * rather than any particular title's rules.
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { RunningServer } from '../server.js';
 import { boot, closeAll, createGame, joinGame, makeDataDir, normaliseState, removeDataDir } from './helpers.js';
+import type { StubSettings, StubState } from './stubGame.js';
 import { TestClient } from './testClient.js';
 
-describe('Power Grid multiplayer server', () => {
+describe('multiplayer server', () => {
   let dataDir: string;
   let server: RunningServer;
   const openClients: TestClient[] = [];
@@ -69,7 +71,7 @@ describe('Power Grid multiplayer server', () => {
     });
 
     it('rejects an unknown code, a full table, and a game already started', async () => {
-      const host = track(await createGame(server, 'Ada', { playerCount: 2 }));
+      const host = track(await createGame(server, 'Ada', { tableSize: 2 }));
 
       const stranger = await TestClient.connect(server.wsUrl);
       openClients.push(stranger);
@@ -88,14 +90,14 @@ describe('Power Grid multiplayer server', () => {
 
       // A non-host cannot change settings.
       guest.client.clear();
-      guest.client.send({ t: 'updateSettings', settings: { mapId: 'usa' } });
+      guest.client.send({ t: 'updateSettings', settings: { variant: 'spiced' } });
       expect((await guest.client.wait('error')).code).toBe('notHost');
 
       // The host can.
       host.client.clear();
-      host.client.send({ t: 'updateSettings', settings: { mapId: 'usa', experiencedStart: true } });
-      const settingsLobby = await host.client.waitLobby((l) => l.settings.mapId === 'usa');
-      expect(settingsLobby.lobby.settings.experiencedStart).toBe(true);
+      host.client.send({ t: 'updateSettings', settings: { variant: 'spiced' } });
+      const settingsLobby = await host.client.waitLobby((l) => (l.settings as StubSettings).variant === 'spiced');
+      expect((settingsLobby.lobby.settings as StubSettings).variant).toBe('spiced');
 
       // Ready flags propagate.
       host.client.clear();
@@ -137,7 +139,7 @@ describe('Power Grid multiplayer server', () => {
       const hostState = await host.client.wait('state');
       const guestState = await guest.client.wait('state');
       expect(hostState.state.code).toBe(host.code);
-      expect(hostState.state.playerOrder).toHaveLength(2);
+      expect(hostState.state.order).toHaveLength(2);
       expect(guestState.state.activePlayerId).toBe(hostState.state.activePlayerId);
       expect(Object.keys(hostState.state.players)).toContain(guest.playerId);
 
@@ -162,11 +164,11 @@ describe('Power Grid multiplayer server', () => {
       expect((await guest.client.wait('error')).code).toBe('colorTaken');
 
       guest.client.clear();
-      guest.client.send({ t: 'setColor', color: 'purple' });
+      guest.client.send({ t: 'setColor', color: 'gamma' });
       const lobby = await guest.client.waitLobby((l) =>
-        l.players.some((p) => p.id === guest.playerId && p.color === 'purple'),
+        l.players.some((p) => p.id === guest.playerId && p.color === 'gamma'),
       );
-      expect(lobby.lobby.players.find((p) => p.id === guest.playerId)?.color).toBe('purple');
+      expect(lobby.lobby.players.find((p) => p.id === guest.playerId)?.color).toBe('gamma');
     });
 
     it('mints unique join codes across many games', async () => {
@@ -199,11 +201,11 @@ describe('Power Grid multiplayer server', () => {
 
     it('rejects an action from a player when it is not their turn', async () => {
       const { host, guest, state } = await startedGame();
-      // The stub engine seats the host first.
+      // The stub game seats the host first.
       expect(state.activePlayerId).toBe(host.playerId);
 
       guest.client.clear();
-      guest.client.send({ t: 'action', action: { type: 'passNomination' }, nonce: 'n-42' });
+      guest.client.send({ t: 'action', action: { type: 'pass' }, nonce: 'n-42' });
 
       const rejected = await guest.client.wait('actionRejected');
       expect(rejected.nonce).toBe('n-42');
@@ -213,55 +215,53 @@ describe('Power Grid multiplayer server', () => {
     it('accepts simultaneous sealed bids out of turn and redacts every other range', async () => {
       const { host, guest } = await startedGame();
       const room = server.hub.roomByCode(host.code)!;
-      room.state!.activePlayerId = host.playerId;
-      room.state!.auction = {
-        plantId: 4,
-        auctioneerId: host.playerId,
-        currentBid: 3,
-        highBidderId: null,
-        activeBidders: [host.playerId, guest.playerId],
-        currentBidderId: guest.playerId,
-        discounted: false,
-        eligibleBidders: [host.playerId, guest.playerId],
-        commitments: {
-          [host.playerId]: { status: 'bid', minBid: 4, maxBid: 9 },
-        },
+      const state = room.state as StubState;
+      // The host holds the clock, so the guest answering at all proves the
+      // out-of-turn path — and the redaction proves nobody reads the answers.
+      state.activePlayerId = host.playerId;
+      state.ballot = {
+        topic: 'exile',
+        eligible: [host.playerId, guest.playerId],
+        answers: { [host.playerId]: { status: 'for', weight: 9 } },
       };
 
       host.client.clear();
       guest.client.clear();
       guest.client.send({
         t: 'action',
-        action: { type: 'submitBidRange', minBid: 5, maxBid: 12 },
+        action: { type: 'castBallot', support: true, weight: 5 },
       });
 
-      const hostView = (await host.client.wait('state')).state.auction!;
-      const guestView = (await guest.client.wait('state')).state.auction!;
-      expect(hostView.commitments[host.playerId]).toEqual({ status: 'bid', minBid: 4, maxBid: 9 });
-      expect(hostView.commitments[guest.playerId]).toEqual({ status: 'submitted' });
-      expect(guestView.commitments[host.playerId]).toEqual({ status: 'submitted' });
-      expect(guestView.commitments[guest.playerId]).toEqual({ status: 'bid', minBid: 5, maxBid: 12 });
-      expect(room.state!.auction!.commitments[guest.playerId]).toEqual({
-        status: 'bid',
-        minBid: 5,
-        maxBid: 12,
+      const hostView = (await host.client.wait('state')).state.ballot!;
+      const guestView = (await guest.client.wait('state')).state.ballot!;
+
+      // Each player sees their own answer in full...
+      expect(hostView.answers[host.playerId]).toEqual({ status: 'for', weight: 9 });
+      expect(guestView.answers[guest.playerId]).toEqual({ status: 'for', weight: 5 });
+      // ...and only the *fact* that the other has answered.
+      expect(hostView.answers[guest.playerId]).toEqual({ status: 'sealed' });
+      expect(guestView.answers[host.playerId]).toEqual({ status: 'sealed' });
+      // The server's own copy is unredacted.
+      expect((room.state as StubState).ballot!.answers[guest.playerId]).toEqual({
+        status: 'for',
+        weight: 5,
       });
     });
 
-    it('rejects an action that the engine says is illegal, with the engine reason', async () => {
+    it('rejects an action that the game says is illegal, with the game reason', async () => {
       const { host } = await startedGame();
       host.client.clear();
-      // Plant 99 is not in the market.
-      host.client.send({ t: 'action', action: { type: 'nominatePlant', plantId: 99, bid: 99 }, nonce: 'n-1' });
+      // Item 99 is not on the market.
+      host.client.send({ t: 'action', action: { type: 'claim', itemId: 99, cost: 99 }, nonce: 'n-1' });
       const rejected = await host.client.wait('actionRejected');
       expect(rejected.nonce).toBe('n-1');
-      expect(rejected.reason).toMatch(/not in the current market/i);
+      expect(rejected.reason).toMatch(/not on the market/i);
     });
 
     it('rejects actions from a socket that is not in any game', async () => {
       const stranger = await TestClient.connect(server.wsUrl);
       openClients.push(stranger);
-      stranger.send({ t: 'action', action: { type: 'passNomination' } });
+      stranger.send({ t: 'action', action: { type: 'pass' } });
       expect((await stranger.wait('error')).code).toBe('notInGame');
     });
 
@@ -269,25 +269,25 @@ describe('Power Grid multiplayer server', () => {
       const { host, guest } = await startedGame();
       host.client.clear();
       guest.client.clear();
-      host.client.send({ t: 'action', action: { type: 'nominatePlant', plantId: 4, bid: 4 } });
+      host.client.send({ t: 'action', action: { type: 'claim', itemId: 4, cost: 4 } });
 
       const hostState = await host.client.waitState((s) => s.activePlayerId === guest.playerId);
       const guestState = await guest.client.waitState((s) => s.activePlayerId === guest.playerId);
-      expect(hostState.state.players[host.playerId]?.money).toBe(46);
-      expect(guestState.state.players[host.playerId]?.plants).toHaveLength(1);
+      expect(hostState.state.players[host.playerId]?.credits).toBe(46);
+      expect(guestState.state.players[host.playerId]?.claimed).toHaveLength(1);
     });
 
-    it('redacts the face-down plant stack before broadcasting', async () => {
+    it('redacts the face-down deck before broadcasting', async () => {
       const { host } = await startedGame();
       const state = host.client.received.find((m) => m.t === 'state');
       expect(state).toBeDefined();
       if (state?.t !== 'state') throw new Error('unreachable');
       // Length is public; identities are not.
-      expect(state.state.plantMarket.stack.length).toBe(5);
-      expect(state.state.plantMarket.stack.every((id) => id === -1)).toBe(true);
+      expect(state.state.deck.length).toBe(5);
+      expect(state.state.deck.every((id) => id === -1)).toBe(true);
       // The server's own copy still knows the real cards.
       const room = server.hub.roomByCode(host.code);
-      expect(room?.state?.plantMarket.stack).toEqual([20, 21, 22, 23, 24]);
+      expect(room?.state?.deck).toEqual([20, 21, 22, 23, 24]);
     });
 
     it('relays chat to every seated player', async () => {
@@ -314,9 +314,9 @@ describe('Power Grid multiplayer server', () => {
       await guest.client.wait('state');
 
       // Host acts, so it becomes the guest's turn and the state is non-trivial.
-      host.client.send({ t: 'action', action: { type: 'nominatePlant', plantId: 5, bid: 7 } });
+      host.client.send({ t: 'action', action: { type: 'claim', itemId: 5, cost: 7 } });
       const before = (await guest.client.waitState((s) => s.activePlayerId === guest.playerId)).state;
-      expect(before.players[host.playerId]?.money).toBe(43);
+      expect(before.players[host.playerId]?.credits).toBe(43);
 
       // Tab crash: no close frame, just a dead socket, while it is their turn.
       guest.client.kill();
@@ -337,7 +337,7 @@ describe('Power Grid multiplayer server', () => {
 
       // And they can act immediately — the seat never lost the turn.
       resumed.clear();
-      resumed.send({ t: 'action', action: { type: 'passNomination' } });
+      resumed.send({ t: 'action', action: { type: 'pass' } });
       const acted = await resumed.waitState((s) => s.activePlayerId === host.playerId);
       expect(acted.state.round).toBe(2);
     });
@@ -350,7 +350,7 @@ describe('Power Grid multiplayer server', () => {
       host.client.send({ t: 'startGame' });
       await host.client.wait('state');
       await guest.client.wait('state');
-      host.client.send({ t: 'action', action: { type: 'nominatePlant', plantId: 3, bid: 3 } });
+      host.client.send({ t: 'action', action: { type: 'claim', itemId: 3, cost: 3 } });
       await guest.client.waitState((s) => s.activePlayerId === guest.playerId);
 
       await guest.client.close();
@@ -362,7 +362,7 @@ describe('Power Grid multiplayer server', () => {
 
       const room = server.hub.roomByCode(host.code);
       expect(room?.seat(guest.playerId)).toBeDefined();
-      expect(room?.state?.players[host.playerId]?.money).toBe(47);
+      expect(room?.state?.players[host.playerId]?.credits).toBe(47);
       expect(room?.state?.activePlayerId).toBe(guest.playerId);
     });
 
@@ -447,7 +447,7 @@ describe('Power Grid multiplayer server', () => {
 
       // A disconnected host has not left, so another player cannot use host powers.
       first.client.clear();
-      first.client.send({ t: 'updateSettings', settings: { mapId: 'usa' } });
+      first.client.send({ t: 'updateSettings', settings: { variant: 'spiced' } });
       expect((await first.client.wait('error')).code).toBe('notHost');
     });
 
@@ -510,7 +510,7 @@ describe('Power Grid multiplayer server', () => {
 
   describe('async disconnected turns', () => {
     it('waits indefinitely for a disconnected player instead of auto-playing', async () => {
-      const host = track(await createGame(server, 'Ada', { playerCount: 2 }));
+      const host = track(await createGame(server, 'Ada', { tableSize: 2 }));
       const guest = track(await joinGame(server, host.code, 'Grace'));
       guest.client.send({ t: 'setReady', ready: true });
       await host.client.waitLobby((l) => l.players.every((p) => p.ready || p.isHost));
@@ -528,7 +528,7 @@ describe('Power Grid multiplayer server', () => {
       await new Promise((r) => setTimeout(r, 300));
       const roomState = server.hub.roomByCode(host.code)?.state;
       expect(roomState?.activePlayerId).toBe(host.playerId);
-      expect(roomState?.players[host.playerId]?.phaseStatus).not.toBe('passed');
+      expect(roomState?.players[host.playerId]?.status).not.toBe('passed');
     });
   });
 
@@ -553,8 +553,14 @@ describe('Power Grid multiplayer server', () => {
       expect((await c.wait('error')).code).toBe('unknownMessage');
 
       c.clear();
-      c.sendRaw(JSON.stringify({ t: 'action', action: { type: 'buildCity' } }));
+      c.sendRaw(JSON.stringify({ t: 'action' }));
       expect((await c.wait('error')).code).toBe('badAction');
+
+      // A well-formed envelope from a socket with no seat is refused for the
+      // right reason: without a table there is no game to parse the payload.
+      c.clear();
+      c.sendRaw(JSON.stringify({ t: 'action', action: { type: 'whatever' } }));
+      expect((await c.wait('error')).code).toBe('notInGame');
 
       // Still alive and well.
       c.clear();
@@ -570,7 +576,7 @@ describe('Power Grid multiplayer server', () => {
       expect(health.persistence.backend).toBe('sqlite');
       expect(health.games).toBeGreaterThanOrEqual(1);
 
-      const lookup = await (await fetch(`${server.url}/api/games/${host.code}`)).json();
+      const lookup = await (await fetch(`${server.url}/api/games/code/${host.code}`)).json();
       expect(lookup).toMatchObject({ ok: true, code: host.code, started: false, joinable: true });
 
       const missing = await fetch(`${server.url}/api/games/ZZZZZZ`);

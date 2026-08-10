@@ -1,0 +1,300 @@
+@charset "UTF-8";
+
+/* =====================================================================
+ * DESIGN TOKENS
+ * ---------------------------------------------------------------------
+ * Every visual constant on the platform lives here, exposed as CSS custom
+ * properties so the whole UI is themeable at runtime. That is what lets
+ * one design system carry several games: `<GameTheme>` rebinds a handful
+ * of these on a wrapper, and every component downstream follows without
+ * knowing which title it is rendering.
+ *
+ * Naming: --tt-<group>-<role>[-<variant>]
+ *
+ * Groups
+ *   surface / line / text   structural colour
+ *   accent / copper / cyan  platform accents, overridden per game
+ *   state                   success / warning / danger / info
+ *   pc                      the seat colour currently in scope
+ *   elev                    elevation shadows
+ *   radius / space / z      geometry
+ *   dur / ease              motion
+ *
+ * A value that is true of exactly one game — a currency, a seat palette,
+ * a resource — does not belong here. It belongs in that game's own
+ * stylesheet, which may freely bind the hooks above.
+ * ===================================================================== */
+
+/* SCSS-side mirrors of the values the mixins need at compile time. */
+$tt-breakpoints: (
+  'sm': 768px,
+  'md': 1024px,
+  'lg': 1280px,
+  'xl': 1600px,
+  'xxl': 2200px,
+);
+
+
+:root {
+  color-scheme: dark;
+
+  /* ---------------------------------------------------------------
+   * 1. BASE SURFACES — deep slate / charcoal industrial substrate
+   * --------------------------------------------------------------- */
+  --tt-surface-void: #04070a; /* behind everything, vignette floor      */
+  --tt-surface-base: #070b10; /* app background                          */
+  --tt-surface-sunken: #0a1018; /* wells, inputs, inset trays            */
+  --tt-surface-raised: #0f1620; /* cards on the background               */
+  --tt-surface-panel: #141d28; /* the standard panel body                */
+  --tt-surface-elevated: #1b2634; /* hovered / active panel              */
+  --tt-surface-overlay: #1f2b3a; /* menus, popovers, tooltips            */
+  --tt-surface-scrim: rgba(3, 6, 10, 0.74); /* modal backdrop            */
+
+  /* Glass — translucent panels that sit over the animated background.  */
+  --tt-glass-bg: rgba(20, 29, 40, 0.66);
+  --tt-glass-bg-strong: rgba(16, 24, 34, 0.86);
+  --tt-glass-blur: 22px;
+  --tt-glass-blur-soft: 10px;
+  --tt-glass-sheen: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.07) 0%,
+    rgba(255, 255, 255, 0.018) 34%,
+    rgba(255, 255, 255, 0) 62%
+  );
+
+  /* Brushed-metal fill used for chrome bars and heavy panels.          */
+  --tt-metal-fill: linear-gradient(
+    177deg,
+    #253141 0%,
+    #1a2431 26%,
+    #141d28 62%,
+    #101822 100%
+  );
+  --tt-metal-fill-dark: linear-gradient(177deg, #18222e 0%, #101822 60%, #0b111a 100%);
+
+  /* ---------------------------------------------------------------
+   * 2. LINES / BORDERS / BEVELS
+   * --------------------------------------------------------------- */
+  --tt-line-hairline: rgba(148, 184, 216, 0.08);
+  --tt-line-subtle: rgba(148, 184, 216, 0.14);
+  --tt-line: rgba(154, 192, 225, 0.22);
+  --tt-line-strong: rgba(168, 208, 240, 0.36);
+  --tt-line-accent: rgba(70, 226, 255, 0.5);
+
+  /* Bevel pair: a light top edge and a dark bottom edge give panels
+     physical thickness without a heavy border.                         */
+  --tt-bevel-light: rgba(255, 255, 255, 0.09);
+  --tt-bevel-dark: rgba(0, 0, 0, 0.62);
+  --tt-bevel-inner: inset 0 1px 0 var(--tt-bevel-light),
+    inset 0 -1px 0 var(--tt-bevel-dark);
+
+  /* ---------------------------------------------------------------
+   * 3. TEXT
+   * --------------------------------------------------------------- */
+  /*
+   * Contrast, measured against --tt-surface-panel (#141d28), the darkest
+   * surface any of these ever sit on. Every value clears WCAG AA for body
+   * text (4.5:1) — including `faint`, which carries real hints and captions
+   * and therefore does not get the "decorative" exemption.
+   *   bright 15.9  primary 13.2  secondary 8.4  muted 5.6  faint 4.6
+   */
+  --tt-text-bright: #f2f7fc;
+  --tt-text-primary: #dfe8f2;
+  --tt-text-secondary: #a3b4c6;
+  --tt-text-muted: #8497ab;
+  --tt-text-faint: #74879c;
+  --tt-text-inverse: #060a0f;
+  --tt-text-on-accent: #04121a;
+
+  /* ---------------------------------------------------------------
+   * 4. ACCENTS — warm copper (industry) + electric cyan (power)
+   * --------------------------------------------------------------- */
+  --tt-cyan: #46e2ff;
+  --tt-cyan-bright: #8df3ff;
+  --tt-cyan-dim: #1c93ad;
+  --tt-cyan-deep: #0d4d5d;
+  --tt-cyan-glow: rgba(70, 226, 255, 0.45);
+  --tt-cyan-wash: rgba(70, 226, 255, 0.1);
+
+  --tt-copper: #d9813f;
+  --tt-copper-bright: #f7a85f;
+  --tt-copper-dim: #9c5624;
+  --tt-copper-deep: #5c3013;
+  --tt-copper-glow: rgba(217, 129, 63, 0.45);
+  --tt-copper-wash: rgba(217, 129, 63, 0.11);
+
+  /* Primary action colour = copper; the electric cyan is reserved for
+     "live / powered / selected" affordances so it keeps its punch.     */
+  --tt-accent: var(--tt-copper);
+  --tt-accent-bright: var(--tt-copper-bright);
+  --tt-accent-dim: var(--tt-copper-dim);
+  --tt-accent-glow: var(--tt-copper-glow);
+
+  /* ---------------------------------------------------------------
+   * 5. STATE COLOURS
+   * --------------------------------------------------------------- */
+  --tt-success: #3ad693;
+  --tt-success-dim: #1c7a52;
+  --tt-success-glow: rgba(58, 214, 147, 0.4);
+
+  --tt-warning: #f5b93c;
+  --tt-warning-dim: #96690e;
+  --tt-warning-glow: rgba(245, 185, 60, 0.4);
+
+  --tt-danger: #ff5563;
+  --tt-danger-dim: #8e1d29;
+  --tt-danger-glow: rgba(255, 85, 99, 0.42);
+
+  --tt-info: var(--tt-cyan);
+  --tt-info-glow: var(--tt-cyan-glow);
+
+  /* ---------------------------------------------------------------
+   * 6. SEAT COLOUR IN SCOPE
+   * ---------------------------------------------------------------
+   * `Avatar`, `PlayerChip` and `ColorPicker` paint from these five and
+   * never from a palette of their own, because seat colours are a
+   * property of the game being played, not of the design system.
+   *
+   * Whoever renders a seat binds them — either inline through the
+   * component's `tint` prop, or in the game's stylesheet keyed on
+   * `[data-player-color]`. The values below are the fallback that keeps
+   * an unbound chip legible rather than invisible.
+   * --------------------------------------------------------------- */
+  --tt-pc: #7d8fa3;
+  --tt-pc-light: #b6c4d2;
+  --tt-pc-dark: #38424e;
+  --tt-pc-glow: rgba(125, 143, 163, 0.5);
+  --tt-pc-ink: #0b0f14;
+
+  /* ---------------------------------------------------------------
+   * 7. ELEVATION — layered shadows, ambient + key + contact
+   * --------------------------------------------------------------- */
+  --tt-elev-0: none;
+  --tt-elev-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.32);
+  --tt-elev-2: 0 2px 4px rgba(0, 0, 0, 0.46), 0 6px 16px rgba(0, 0, 0, 0.42);
+  --tt-elev-3: 0 4px 8px rgba(0, 0, 0, 0.44), 0 14px 32px rgba(0, 0, 0, 0.5);
+  --tt-elev-4: 0 8px 16px rgba(0, 0, 0, 0.44), 0 28px 60px rgba(0, 0, 0, 0.58);
+  --tt-elev-5: 0 16px 30px rgba(0, 0, 0, 0.46), 0 48px 96px rgba(0, 0, 0, 0.66);
+  --tt-elev-inset: inset 0 2px 6px rgba(0, 0, 0, 0.62);
+
+  /* Focus ring — two-tone so it reads on both dark and accent fills.   */
+  --tt-focus-ring: 0 0 0 2px var(--tt-surface-base), 0 0 0 4px var(--tt-cyan),
+    0 0 16px var(--tt-cyan-glow);
+  --tt-focus-ring-tight: 0 0 0 2px var(--tt-cyan), 0 0 14px var(--tt-cyan-glow);
+
+  /* ---------------------------------------------------------------
+   * 8. RADII
+   * --------------------------------------------------------------- */
+  --tt-radius-xs: 3px;
+  --tt-radius-sm: 5px;
+  --tt-radius-md: 8px;
+  --tt-radius-lg: 12px;
+  --tt-radius-xl: 18px;
+  --tt-radius-2xl: 26px;
+  --tt-radius-pill: 999px;
+
+  /* ---------------------------------------------------------------
+   * 9. SPACE — 4px base scale
+   * --------------------------------------------------------------- */
+  --tt-space-0: 0;
+  --tt-space-1: 4px;
+  --tt-space-2: 8px;
+  --tt-space-3: 12px;
+  --tt-space-4: 16px;
+  --tt-space-5: 20px;
+  --tt-space-6: 24px;
+  --tt-space-7: 32px;
+  --tt-space-8: 40px;
+  --tt-space-9: 52px;
+  --tt-space-10: 68px;
+  --tt-space-11: 88px;
+  --tt-space-12: 112px;
+
+  /* Fluid gutter: comfortable at 1280, generous at 4K. */
+  --tt-gutter: clamp(20px, 2.6vw, 56px);
+
+  /* ---------------------------------------------------------------
+   * 10. Z-INDEX SCALE
+   * --------------------------------------------------------------- */
+  --tt-z-background: 0;
+  --tt-z-board: 10;
+  --tt-z-content: 20;
+  --tt-z-hud: 300;
+  --tt-z-dropdown: 500;
+  --tt-z-sticky: 600;
+  --tt-z-overlay: 700;
+  --tt-z-modal: 800;
+  --tt-z-tooltip: 900;
+  --tt-z-toast: 1000;
+  --tt-z-boot: 1100;
+
+  /* ---------------------------------------------------------------
+   * 11. MOTION
+   * ---------------------------------------------------------------
+   * Durations are in ms-as-time so they can drop straight into CSS
+   * transitions; the framer-motion spring configs that mirror these
+   * live in src/styles/motion.ts.
+   * --------------------------------------------------------------- */
+  --tt-dur-instant: 80ms;
+  --tt-dur-fast: 140ms;
+  --tt-dur-base: 220ms;
+  --tt-dur-slow: 360ms;
+  --tt-dur-slower: 560ms;
+  --tt-dur-ambient: 1200ms;
+
+  --tt-ease-out: cubic-bezier(0.22, 1, 0.36, 1); /* decelerate       */
+  --tt-ease-in: cubic-bezier(0.55, 0, 1, 0.45); /* accelerate        */
+  --tt-ease-in-out: cubic-bezier(0.66, 0, 0.34, 1);
+  --tt-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* overshoot  */
+  --tt-ease-snap: cubic-bezier(0.16, 1.1, 0.3, 1);
+
+  /* ---------------------------------------------------------------
+   * 12. MISC
+   * --------------------------------------------------------------- */
+  --tt-noise-opacity: 0.032;
+  --tt-scanline-opacity: 0.035;
+  --tt-hud-height: 64px;
+  /*
+   * Content ceiling. Fluid rather than fixed: a hard 1680px cap turns a 4K
+   * display into a letterboxed phone layout, which is precisely the failure
+   * we are trying to beat. Grows with the viewport, stops before line lengths
+   * become unreadable.
+   */
+  --tt-max-content: min(2200px, 94vw);
+}
+
+/* A high-contrast variant, opt-in via <html data-contrast="high">.
+   Deliberately minimal: only the values that carry legibility. */
+:root[data-contrast='high'] {
+  --tt-text-secondary: #c6d4e2;
+  --tt-text-muted: #9dafc2;
+  --tt-line: rgba(190, 220, 245, 0.4);
+  --tt-line-subtle: rgba(190, 220, 245, 0.26);
+  --tt-noise-opacity: 0;
+  --tt-scanline-opacity: 0;
+}
+
+/* Honour the OS "reduce transparency" hint: swap glass for solid. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --tt-glass-bg: #141d28;
+    --tt-glass-bg-strong: #101822;
+    --tt-glass-blur: 0px;
+    --tt-glass-blur-soft: 0px;
+  }
+}
+
+/* Motion tokens collapse under prefers-reduced-motion. Components read
+   the same variables, so one switch calms the entire UI. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --tt-dur-instant: 1ms;
+    --tt-dur-fast: 1ms;
+    --tt-dur-base: 1ms;
+    --tt-dur-slow: 1ms;
+    --tt-dur-slower: 1ms;
+    --tt-dur-ambient: 1ms;
+    --tt-ease-spring: linear;
+    --tt-ease-snap: linear;
+  }
+}

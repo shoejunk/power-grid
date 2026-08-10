@@ -1,18 +1,20 @@
 {
-  "name": "power-grid",
+  "name": "tabletop",
   "version": "1.0.0",
   "private": true,
-  "description": "Power Grid — web implementation with persistent multiplayer",
+  "description": "A site for playing board games online, with persistent multiplayer",
   "workspaces": [
-    "packages/shared",
+    "packages/core",
+    "packages/ui",
+    "packages/games/*",
     "packages/server",
     "packages/client"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=@pg/server & npm run dev --workspace=@pg/client",
-    "dev:server": "npm run dev --workspace=@pg/server",
-    "dev:client": "npm run dev --workspace=@pg/client",
-    "build": "npm run build --workspace=@pg/shared && npm run build --workspace=@pg/server && npm run build --workspace=@pg/client",
+    "dev": "npm run dev --workspace=@tt/server & npm run dev --workspace=@tt/client",
+    "dev:server": "npm run dev --workspace=@tt/server",
+    "dev:client": "npm run dev --workspace=@tt/client",
+    "build": "npm run build -w @tt/core && npm run build -w @game/power-grid && npm run build -w @game/dead-of-winter && npm run build -w @tt/server && npm run build -w @tt/client",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   },

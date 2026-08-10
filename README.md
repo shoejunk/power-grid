@@ -1,26 +1,64 @@
-# Power Grid
+# Tabletop
 
-A web implementation of the board game **Power Grid**, with persistent multiplayer.
+A site for playing board games online, with persistent multiplayer.
 
-Built to the specification in [`power-grid-gameplay-requirements.md`](./power-grid-gameplay-requirements.md),
-against the visual and UX bar set out in [`docs/QUALITY-BAR.md`](./docs/QUALITY-BAR.md).
+Two games ship today:
+
+| Game | Players | Spec | Quality bar |
+| --- | --- | --- | --- |
+| **Power Grid** | 2–6 | [`power-grid-gameplay-requirements.md`](./power-grid-gameplay-requirements.md) | [`docs/QUALITY-BAR.md`](./docs/QUALITY-BAR.md) |
+| **Dead of Winter** | 2–5 | [`dead-of-winter-gameplay-requirements.md`](./dead-of-winter-gameplay-requirements.md) | [`docs/QUALITY-BAR-DOW.md`](./docs/QUALITY-BAR-DOW.md) |
 
 ## Layout
 
 ```
 packages/
-  shared/    Domain model, canonical game data, and the pure rules engine.
-             Depends on nothing. Imported by both server and client.
-  server/    Authoritative game server. Lobbies, join codes, WebSocket
-             transport, SQLite persistence, reconnection.
-  client/    React + PixiJS front end. Design system, board renderer,
-             phase UI.
+  core/      @tt/core — the game-agnostic platform. Seats, lobbies, join codes,
+             the wire protocol, the seeded RNG, and the GamePlugin contract.
+             Depends on nothing. Knows about no game.
+  ui/        @tt/ui — the game-agnostic design system. Source-only; the client
+             bundles it. Themed per game through GameDescriptor.theme.
+  games/
+    power-grid/       @game/power-grid — rules engine, canonical data, plugin.
+    dead-of-winter/   @game/dead-of-winter — rules engine, content pack, plugin.
+  server/    @tt/server — authoritative host. Lobbies, join codes, WebSocket
+             transport, SQLite persistence, reconnection. Holds no game rules.
+  client/    @tt/client — the portal plus one UI per game.
 ```
 
-The rules engine is a **pure deterministic reducer** — `(state, action) -> state` — with no I/O, no
+The rule that keeps this honest: **nothing game-specific may appear in `core`, `ui`, `server`, or the
+client's `net/` and `portal/` layers.** If the server ever needs to branch on which game is being played,
+the branch belongs behind a new method on `GamePlugin` instead.
+
+### The plugin boundary
+
+`packages/core/src/plugin.ts` is the whole contract. The server hosts tables, mints codes, owns sockets,
+persists state and decides who may speak; it asks a `GamePlugin` everything else:
+
+| Question | Method |
+| --- | --- |
+| Is this settings payload well-formed? | `parseSettingsPatch` |
+| May this table start? | `validateSettings` |
+| How many seats does this table take? | `seatCapacity` |
+| Is this action well-formed? | `parseAction` |
+| Is it legal right now? | `validateAction` |
+| What happens next? | `applyAction` |
+| Whose input am I waiting on? | `activePlayerOf` |
+| May this player act out of turn? | `allowsOutOfTurn` |
+| What must I hide from this recipient? | `redactStateFor` |
+| What should a bot do? | `defaultActionFor` / `safeDefaultActions` |
+
+`redactStateFor` is the security-critical one: it is the only thing between a hidden-information game and
+a player reading the answer out of a WebSocket frame.
+
+Adding a game means writing a package under `packages/games/` and adding one line to
+[`packages/server/src/games.ts`](./packages/server/src/games.ts). Nothing else changes.
+
+### Determinism
+
+Every rules engine is a **pure deterministic reducer** — `(state, action) -> state` — with no I/O, no
 `Date.now()` and no `Math.random()`. All randomness flows through a seeded stream (`Rng`) whose cursor is
-part of the persisted state, so any game can be replayed exactly from its seed and action log
-(spec §14, "Determinism and auditability").
+part of the persisted state, so any game can be replayed exactly from its seed and action log.
 
 The server is the only place actions are validated and applied. The client renders state and proposes
 actions; it is never trusted.
@@ -53,6 +91,9 @@ npm run typecheck
 npm test
 ```
 
+`typecheck` and `build` both run `tsc -b`, so TypeScript project references resolve the build order
+across packages automatically.
+
 ## Deploying to Oracle Cloud
 
 Both halves run on **one OCI Compute instance**, which is the simplest correct topology here: the server
@@ -65,8 +106,8 @@ Compute instance and not Functions.
 
 ### 1. Create the instance
 
-An Always Free **Ampere A1 (ARM64)** shape is more than enough — this is a turn-based board game, not a
-simulation. Ubuntu 22.04 or later. The AMD micro shapes work too, but 1 GB of RAM makes the client build
+An Always Free **Ampere A1 (ARM64)** shape is more than enough — these are turn-based board games, not
+simulations. Ubuntu 22.04 or later. The AMD micro shapes work too, but 1 GB of RAM makes the client build
 tight; build elsewhere and copy `dist/` up if you use one.
 
 > **ARM note:** everything needed to build and run is pure JavaScript. `sharp` is a devDependency used
@@ -103,60 +144,62 @@ curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-ge
 ```
 
 ```bash
-git clone <your-repo-url> /opt/power-grid && cd /opt/power-grid && npm ci
+git clone <your-repo-url> /opt/tabletop && cd /opt/tabletop && npm ci
 ```
 
 ```bash
 npm run build
 ```
 
-`npm run build` builds all three packages in dependency order, and that order is load-bearing: `@pg/shared`
-publishes its compiled `dist` to Node, so the server genuinely cannot start until it exists. Run it from the
-repo root — this is an npm workspaces monorepo, and `@pg/shared` is only linked into the other two packages
-when the install and build happen from the top.
+Run it from the repo root — this is an npm workspaces monorepo, and the workspace packages are only linked
+into each other when the install and build happen from the top.
 
-(Development tooling resolves the TypeScript source instead, via the package's `development` export
-condition, so editing shared code needs no rebuild while you work.)
+(Development tooling resolves TypeScript source instead, via the `development` export condition, so editing
+a game's engine needs no rebuild while you work.)
 
 ### 4. Run it as a service
 
-Create `/etc/systemd/system/power-grid.service`:
+Create `/etc/systemd/system/tabletop.service`:
 
 ```ini
 [Unit]
-Description=Power Grid game server
+Description=Tabletop game server
 After=network.target
 
 [Service]
 Type=simple
 User=ubuntu
-WorkingDirectory=/opt/power-grid
+WorkingDirectory=/opt/tabletop
 ExecStart=/usr/bin/node packages/server/dist/index.js
 Restart=always
 RestartSec=3
 Environment=NODE_ENV=production
 Environment=PORT=8787
-Environment=PG_DATA_DIR=/var/lib/power-grid
+Environment=TT_DATA_DIR=/var/lib/tabletop
 
 [Install]
 WantedBy=multi-user.target
 ```
 
 ```bash
-sudo mkdir -p /var/lib/power-grid && sudo chown ubuntu:ubuntu /var/lib/power-grid
+sudo mkdir -p /var/lib/tabletop && sudo chown ubuntu:ubuntu /var/lib/tabletop
 ```
 
 ```bash
-sudo systemctl enable --now power-grid && sudo systemctl status power-grid
+sudo systemctl enable --now tabletop && sudo systemctl status tabletop
 ```
 
-`PG_DATA_DIR` is the important line. It defaults to `packages/server/data/` inside the checkout, which a
+`TT_DATA_DIR` is the important line. It defaults to `packages/server/data/` inside the checkout, which a
 `git clean` or a redeploy will happily delete — taking every in-progress game with it and quietly undoing
 the persistence guarantee the whole design rests on. Point it somewhere outside the working tree, and if
 you attach a block volume, point it there.
 
-`NODE_ENV=production` also switches `PG_SERVE_CLIENT` on by default, which is what makes the server serve
+`NODE_ENV=production` also switches `TT_SERVE_CLIENT` on by default, which is what makes the server serve
 `packages/client/dist` with a SPA fallback.
+
+> **Upgrading from the single-game deployment:** the old `PG_*` variables are still read as fallbacks, and
+> the SQLite schema migrates itself — a `gameKey` column is added on first boot and every existing row is
+> marked `power-grid`. In-progress games survive the upgrade.
 
 ### 5. Terminate TLS with nginx
 
@@ -164,7 +207,7 @@ you attach a block volume, point it there.
 sudo apt-get install -y nginx certbot python3-certbot-nginx
 ```
 
-Put this in `/etc/nginx/sites-available/power-grid` and symlink it into `sites-enabled`:
+Put this in `/etc/nginx/sites-available/tabletop` and symlink it into `sites-enabled`:
 
 ```nginx
 server {
@@ -210,28 +253,30 @@ Then open the site, create a game, and confirm the status pill reads **ONLINE**.
 *Reconnecting*, the WebSocket upgrade is not getting through — check the three `proxy_set_header` lines
 before anything else.
 
-To confirm persistence actually works, start a game, then `sudo systemctl restart power-grid` and reload
-the page. You should land back in the same seat with your money, plants and turn position intact. If you
-do not, `PG_DATA_DIR` is pointing somewhere ephemeral.
+To confirm persistence actually works, start a game, then `sudo systemctl restart tabletop` and reload
+the page. You should land back in the same seat with your position intact. If you do not, `TT_DATA_DIR`
+is pointing somewhere ephemeral.
 
 ### Updating
 
 ```bash
-cd /opt/power-grid && git pull && npm ci && npm run build && sudo systemctl restart power-grid
+cd /opt/tabletop && git pull && npm ci && npm run build && sudo systemctl restart tabletop
 ```
 
-Games survive the restart, provided `PG_DATA_DIR` lives outside the checkout.
+Games survive the restart, provided `TT_DATA_DIR` lives outside the checkout.
 
 ### Useful environment variables
+
+Each also accepts its legacy `PG_`-prefixed name.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PORT` | `8787` | TCP port |
-| `PG_DATA_DIR` | `packages/server/data` | Where the SQLite database lives — **override this** |
-| `PG_DB_FILE` | `power-grid.db` | Database filename |
-| `PG_SERVE_CLIENT` | on when `NODE_ENV=production` | Serve the built client |
-| `PG_CLIENT_DIST` | `packages/client/dist` | Where the client bundle is |
-| `PG_LOG_LEVEL` | `info` in production | `debug`, `info`, `warn`, `error` |
+| `TT_DATA_DIR` | `packages/server/data` | Where the SQLite database lives — **override this** |
+| `TT_DB_FILE` | `power-grid.db` | Database filename (unchanged, so existing deployments keep their data) |
+| `TT_SERVE_CLIENT` | on when `NODE_ENV=production` | Serve the built client |
+| `TT_CLIENT_DIST` | `packages/client/dist` | Where the client bundle is |
+| `TT_LOG_LEVEL` | `info` in production | `debug`, `info`, `warn`, `error` |
 
 ### Hosting the client separately
 
@@ -247,13 +292,21 @@ origin, which is what the single-instance setup above relies on.
 
 ## Multiplayer model
 
-One player creates a game and receives a six-character join code. Anyone with the code can take a seat until
-the host starts the match. Each seated player holds a session token in `localStorage`.
+One player picks a game and creates a table, receiving a six-character join code. Codes are unique across
+every title, so a player only ever needs the code — never the game's name as well. Anyone with the code can
+take a seat until the host starts the match. Each seated player holds a session token in `localStorage`.
 
 Games are persisted on every applied action. Closing the tab, losing the network, or restarting the server
-does not end a game — reconnecting with the session token restores the exact seat, hand, network, money and
-turn position.
+does not end a game — reconnecting with the session token restores the exact seat and position, including
+private information such as a hand of cards or a secret objective.
 
 Games are asynchronous: a human player's turn has no time limit. If they disconnect while active, the server
 waits indefinitely for them to reconnect and never takes a default action on their behalf. Bot seats remain
-automated.
+automated, in the games that have them.
+
+## Content
+
+Dead of Winter's card set ships as a **versioned content pack** rather than being hard-coded, and the pack
+version is pinned into each match so a later content patch cannot change an in-progress or replayed game.
+The bundled pack is original work written to the mechanical shape the spec describes; the published card
+text of the retail game is not reproduced here.

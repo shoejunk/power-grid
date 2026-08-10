@@ -3,12 +3,17 @@
  *
  * The tests deliberately drive the server the way a browser does — open a
  * socket, send JSON, wait for JSON — rather than calling internals. That is
- * the only way to prove requirements like "a player who closes the tab and
- * returns resumes exactly where they were".
+ * the only way to prove things like "a player who closes the tab and returns
+ * resumes exactly where they were".
+ *
+ * `state` payloads are `unknown` on the wire now that the server is
+ * game-agnostic, so the state-shaped helpers take a type parameter. It
+ * defaults to the stub game, which is what almost every test uses.
  */
 
-import type { ServerMessage } from '@pg/shared';
+import type { ServerMessage } from '@tt/core';
 import WebSocket from 'ws';
+import type { StubState } from './stubGame.js';
 
 type MessageOfType<T extends ServerMessage['t']> = Extract<ServerMessage, { t: T }>;
 
@@ -18,6 +23,9 @@ interface Waiter {
   reject: (err: Error) => void;
   timer: NodeJS.Timeout;
 }
+
+/** A `state` frame with its opaque payload narrowed to the game under test. */
+export type StateMessage<S = StubState> = { t: 'state'; gameKey: string; state: S };
 
 export class TestClient {
   /** Everything ever received, in order — handy for assertions after the fact. */
@@ -80,7 +88,11 @@ export class TestClient {
   }
 
   /** Waits for the next message satisfying `predicate`, consuming it. */
-  waitWhere(predicate: (m: ServerMessage) => boolean, timeoutMs = 4000, label = 'message'): Promise<ServerMessage> {
+  waitWhere(
+    predicate: (m: ServerMessage) => boolean,
+    timeoutMs = 4000,
+    label = 'message',
+  ): Promise<ServerMessage> {
     const idx = this.pending.findIndex(predicate);
     if (idx >= 0) {
       const [msg] = this.pending.splice(idx, 1);
@@ -107,17 +119,31 @@ export class TestClient {
     return this.waitWhere((m) => m.t === t, timeoutMs, `'${t}'`) as Promise<MessageOfType<T>>;
   }
 
+  /** Waits for the next `state` frame, with its payload narrowed. */
+  waitAnyState<S = StubState>(timeoutMs = 4000): Promise<StateMessage<S>> {
+    return this.waitWhere((m) => m.t === 'state', timeoutMs, "'state'") as Promise<StateMessage<S>>;
+  }
+
   /** Waits for a `state` message whose payload satisfies `predicate`. */
-  waitState(
-    predicate: (s: MessageOfType<'state'>['state']) => boolean,
+  waitState<S = StubState>(
+    predicate: (s: S) => boolean,
     timeoutMs = 4000,
     label = 'state',
-  ): Promise<MessageOfType<'state'>> {
+  ): Promise<StateMessage<S>> {
     return this.waitWhere(
-      (m) => m.t === 'state' && predicate((m as MessageOfType<'state'>).state),
+      (m) => m.t === 'state' && predicate((m as StateMessage<S>).state),
       timeoutMs,
       label,
-    ) as Promise<MessageOfType<'state'>>;
+    ) as Promise<StateMessage<S>>;
+  }
+
+  /** The most recent `state` frame received, with its payload narrowed. */
+  lastState<S = StubState>(): S | undefined {
+    for (let i = this.received.length - 1; i >= 0; i--) {
+      const m = this.received[i];
+      if (m?.t === 'state') return (m as StateMessage<S>).state;
+    }
+    return undefined;
   }
 
   /** Waits for a `lobby` message whose payload satisfies `predicate`. */

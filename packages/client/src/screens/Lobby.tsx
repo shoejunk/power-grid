@@ -80,7 +80,7 @@ export function Lobby(): JSX.Element {
 
   if (!lobby) {
     return (
-      <div className="pg-screen pg-lobby">
+      <div className="tt-screen pg-lobby">
         <AmbientBackdrop />
         <LoadingSpinner size="lg" label="Joining lobby" />
       </div>
@@ -103,10 +103,10 @@ export function Lobby(): JSX.Element {
         : undefined;
 
   return (
-    <div className="pg-screen pg-lobby">
+    <div className="tt-screen pg-lobby">
       <AmbientBackdrop />
 
-      <header className="pg-topbar">
+      <header className="tt-topbar">
         <Button
           variant="ghost"
           size="sm"
@@ -171,7 +171,7 @@ export function Lobby(): JSX.Element {
                   transition={springSoft}
                 >
                   <div className="pg-seat pg-seat--empty">
-                    <span className="pg-seat__slot pg-numeral">
+                    <span className="pg-seat__slot tt-numeral">
                       {String(seated + i + 1).padStart(2, '0')}
                     </span>
                     <span className="pg-seat__waiting">Waiting for a player…</span>
@@ -197,7 +197,7 @@ export function Lobby(): JSX.Element {
             <Tooltip {...RULES.ready!} placement="top">
               <div className="pg-lobby__readyhint">
                 <IconCheck />
-                <span className="pg-caption">
+                <span className="tt-caption">
                   {allReady
                     ? 'Everyone is ready.'
                     : `${lobby.players.filter((p) => !p.ready && !p.isBot).length} player(s) not ready.`}
@@ -223,8 +223,8 @@ export function Lobby(): JSX.Element {
             subtitle="Anyone with this code can take a seat"
             actions={<Hint {...RULES.gameCode!} placement="left" />}
           >
-            <div className="pg-gamecode">
-              <span className="pg-gamecode__value" aria-label={`Game code ${lobby.code.split('').join(' ')}`}>
+            <div className="tt-gamecode">
+              <span className="tt-gamecode__value" aria-label={`Game code ${lobby.code.split('').join(' ')}`}>
                 {lobby.code}
               </span>
               <IconButton
@@ -234,7 +234,7 @@ export function Lobby(): JSX.Element {
                 onClick={() => void copyCode()}
               />
             </div>
-            <p className="pg-caption pg-lobby__sharenote">
+            <p className="tt-caption pg-lobby__sharenote">
               Your seat is bound to this code. Close the tab, come back, and you resume
               exactly where you left off.
             </p>
@@ -291,7 +291,7 @@ export function Lobby(): JSX.Element {
             </Tooltip>
 
             {startBlockedReason !== undefined ? (
-              <p className="pg-caption pg-lobby__blocked">{startBlockedReason}</p>
+              <p className="tt-caption pg-lobby__blocked">{startBlockedReason}</p>
             ) : null}
           </Panel>
 
@@ -305,7 +305,7 @@ export function Lobby(): JSX.Element {
           >
             <ol className="pg-phaselist">
               <li className="pg-phaselist__item">
-                <span className="pg-phaselist__index pg-numeral">01</span>
+                <span className="pg-phaselist__index tt-numeral">01</span>
                 <span className="pg-phaselist__body">
                   <span className="pg-phaselist__name">Playing zone</span>
                   <span className="pg-phaselist__summary">
@@ -316,7 +316,7 @@ export function Lobby(): JSX.Element {
               </li>
               {settings.experiencedStart ? (
                 <li className="pg-phaselist__item">
-                  <span className="pg-phaselist__index pg-numeral">02</span>
+                  <span className="pg-phaselist__index tt-numeral">02</span>
                   <span className="pg-phaselist__body">
                     <span className="pg-phaselist__name">Starting cities</span>
                     <span className="pg-phaselist__summary">
@@ -327,7 +327,7 @@ export function Lobby(): JSX.Element {
               ) : null}
               {settings.againstTheTrust ? (
                 <li className="pg-phaselist__item">
-                  <span className="pg-phaselist__index pg-numeral">
+                  <span className="pg-phaselist__index tt-numeral">
                     {settings.experiencedStart ? '03' : '02'}
                   </span>
                   <span className="pg-phaselist__body">
@@ -340,7 +340,7 @@ export function Lobby(): JSX.Element {
                 </li>
               ) : null}
               <li className="pg-phaselist__item">
-                <span className="pg-phaselist__index pg-numeral">
+                <span className="pg-phaselist__index tt-numeral">
                   {String(
                     2 + (settings.experiencedStart ? 1 : 0) + (settings.againstTheTrust ? 1 : 0),
                   ).padStart(2, '0')}
@@ -372,7 +372,7 @@ export function Lobby(): JSX.Element {
               </div>
             </div>
 
-            <dl className="pg-summary">
+            <dl className="tt-summary">
               <SummaryRow label="Players" value={`${settings.playerCount}`} />
               <SummaryRow
                 label="Playing zone"
@@ -469,7 +469,7 @@ function LobbyChat(): JSX.Element {
     >
       <div className="pg-lobby__chatlog" ref={scrollRef} role="log" aria-live="polite">
         {lines.length === 0 ? (
-          <p className="pg-caption pg-lobby__chatempty">
+          <p className="tt-caption pg-lobby__chatempty">
             Messages you send here are visible to everyone at the table.
           </p>
         ) : (
@@ -519,7 +519,7 @@ interface SeatRowProps {
 function SeatRow({ player, index, isMe, isHost, takenColors }: SeatRowProps): JSX.Element {
   return (
     <div className="pg-seat" data-me={isMe} data-player-color={player.color}>
-      <span className="pg-seat__slot pg-numeral">{String(index + 1).padStart(2, '0')}</span>
+      <span className="pg-seat__slot tt-numeral">{String(index + 1).padStart(2, '0')}</span>
 
       <PlayerChip
         name={player.name}
@@ -602,9 +602,9 @@ function SummaryRow({
   tone?: 'neutral' | 'info';
 }): JSX.Element {
   return (
-    <div className="pg-summary__row">
-      <dt className="pg-summary__label">{label}</dt>
-      <dd className={`pg-summary__value${tone === 'info' ? ' is-on' : ''}`}>
+    <div className="tt-summary__row">
+      <dt className="tt-summary__label">{label}</dt>
+      <dd className={`tt-summary__value${tone === 'info' ? ' is-on' : ''}`}>
         {tone === 'info' ? <IconPlus /> : null}
         {value}
       </dd>

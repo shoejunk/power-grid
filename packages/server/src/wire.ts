@@ -11,21 +11,11 @@
  * session survive, so it simply reconnects and gets a fresh full state.
  */
 
-import type { ServerMessage } from '@pg/shared';
+import { CLOSE, type ServerMessage } from '@tt/core';
 import type { WebSocket } from 'ws';
 import type { Logger } from './logger.js';
 
-/** WebSocket close codes in the application range (4000-4999). */
-export const CLOSE = {
-  /** A newer socket claimed the same seat. */
-  REPLACED: 4001,
-  /** Socket buffered more than we are willing to hold. */
-  BACKPRESSURE: 4002,
-  /** Client flooded the server with messages. */
-  RATE_LIMIT: 4003,
-  /** Server is shutting down. */
-  SHUTDOWN: 4004,
-} as const;
+export { CLOSE } from '@tt/core';
 
 export interface ConnectionOptions {
   maxBufferedBytes: number;
@@ -106,7 +96,7 @@ export class Connection {
     this.windowCount += 1;
     if (this.windowCount > this.opts.maxMessagesPerSecond) {
       this.opts.logger.warn('Rate limit exceeded', { connection: this.id, playerId: this.playerId });
-      this.close(CLOSE.RATE_LIMIT, 'rate limit');
+      this.close(CLOSE.RATE_LIMITED, 'rate limit');
       return false;
     }
     return true;

@@ -1,0 +1,210 @@
+@charset "UTF-8";
+
+/* =====================================================================
+ * TYPOGRAPHY
+ * ---------------------------------------------------------------------
+ * Two self-hosted variable faces:
+ *   · Oswald — condensed industrial grotesque. Display, headings, big
+ *     numerals, buttons. Digits are naturally uniform-width.
+ *   · Inter  — the UI workhorse. Body copy, labels, inputs, help text.
+ *
+ * Every money / cost / count surface uses `font-variant-numeric:
+ * tabular-nums` so digits never jitter while a value animates.
+ * ===================================================================== */
+
+/* ---------------------------------------------------------------- *
+ * @font-face — variable woff2, latin + latin-ext
+ * ---------------------------------------------------------------- */
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 200 700;
+  font-display: swap;
+  src: url('/fonts/oswald-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 200 700;
+  font-display: swap;
+  src: url('/fonts/oswald-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ---------------------------------------------------------------- *
+ * Family / scale tokens
+ * ---------------------------------------------------------------- */
+:root {
+  --tt-font-display: 'Oswald', 'Arial Narrow', 'Roboto Condensed', 'Helvetica Neue',
+    system-ui, sans-serif;
+  --tt-font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --tt-font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'JetBrains Mono',
+    Consolas, monospace;
+
+  /* Type scale — fluid between the 1280px floor and the 2560px ceiling.
+     Ratio ≈ 1.25 (major third), tightened at the small end. */
+  --tt-text-3xs: 0.625rem; /* 10px — micro labels, keycaps          */
+  --tt-text-2xs: 0.6875rem; /* 11px — overline, table micro-copy    */
+  --tt-text-xs: 0.75rem; /* 12px — captions, help text              */
+  --tt-text-sm: 0.8125rem; /* 13px — dense UI, secondary            */
+  --tt-text-base: 0.9375rem; /* 15px — body                         */
+  --tt-text-md: 1.0625rem; /* 17px — lead paragraph                 */
+  --tt-text-lg: clamp(1.25rem, 0.95rem + 0.5vw, 1.5rem);
+  --tt-text-xl: clamp(1.5rem, 1.1rem + 0.8vw, 2rem);
+  --tt-text-2xl: clamp(2rem, 1.4rem + 1.3vw, 2.75rem);
+  --tt-text-3xl: clamp(2.75rem, 1.8rem + 2.2vw, 4rem);
+  --tt-text-4xl: clamp(3.75rem, 2.2rem + 4vw, 6.5rem);
+
+  --tt-leading-tight: 1.05;
+  --tt-leading-snug: 1.2;
+  --tt-leading-normal: 1.5;
+  --tt-leading-relaxed: 1.68;
+
+  --tt-tracking-tighter: -0.02em;
+  --tt-tracking-tight: -0.01em;
+  --tt-tracking-normal: 0;
+  --tt-tracking-wide: 0.04em;
+  --tt-tracking-wider: 0.09em;
+  --tt-tracking-widest: 0.18em;
+}
+
+/* ---------------------------------------------------------------- *
+ * Base document type
+ * ---------------------------------------------------------------- */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--tt-font-ui);
+  font-size: var(--tt-text-base);
+  font-weight: 400;
+  line-height: var(--tt-leading-normal);
+  letter-spacing: var(--tt-tracking-normal);
+  color: var(--tt-text-primary);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------------------------------------------------------------- *
+ * Utility classes — the type system as composable primitives
+ * ---------------------------------------------------------------- */
+
+/* Display lockups: condensed, uppercase, tightly tracked. */
+.tt-display {
+  font-family: var(--tt-font-display);
+  font-weight: 600;
+  line-height: var(--tt-leading-tight);
+  letter-spacing: var(--tt-tracking-tight);
+  text-transform: uppercase;
+  color: var(--tt-text-bright);
+}
+
+.tt-h1 {
+  @extend .tt-display;
+  font-size: var(--tt-text-3xl);
+  font-weight: 700;
+}
+.tt-h2 {
+  @extend .tt-display;
+  font-size: var(--tt-text-2xl);
+}
+.tt-h3 {
+  @extend .tt-display;
+  font-size: var(--tt-text-xl);
+  letter-spacing: var(--tt-tracking-wide);
+}
+.tt-h4 {
+  @extend .tt-display;
+  font-size: var(--tt-text-lg);
+  letter-spacing: var(--tt-tracking-wide);
+  font-weight: 500;
+}
+
+/* Section eyebrow — small, wide-tracked, muted. The workhorse label. */
+.tt-overline {
+  font-family: var(--tt-font-display);
+  font-size: var(--tt-text-2xs);
+  font-weight: 500;
+  letter-spacing: var(--tt-tracking-widest);
+  text-transform: uppercase;
+  color: var(--tt-text-muted);
+  line-height: 1;
+}
+
+.tt-label {
+  font-family: var(--tt-font-ui);
+  font-size: var(--tt-text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tt-tracking-wide);
+  text-transform: uppercase;
+  color: var(--tt-text-secondary);
+}
+
+.tt-body {
+  font-size: var(--tt-text-base);
+  line-height: var(--tt-leading-relaxed);
+  color: var(--tt-text-secondary);
+}
+
+.tt-lead {
+  font-size: var(--tt-text-md);
+  line-height: var(--tt-leading-relaxed);
+  color: var(--tt-text-secondary);
+}
+
+.tt-caption {
+  font-size: var(--tt-text-xs);
+  line-height: var(--tt-leading-normal);
+  color: var(--tt-text-muted);
+}
+
+/* Numerals: always tabular so animated values never reflow. */
+.tt-numeral {
+  font-family: var(--tt-font-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+  letter-spacing: var(--tt-tracking-tight);
+  font-weight: 600;
+}
+
+.tt-tabular {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+}
+
+/* Text that must never be selected mid-drag (labels on controls). */
+.tt-nosel {
+  user-select: none;
+  -webkit-user-select: none;
+}

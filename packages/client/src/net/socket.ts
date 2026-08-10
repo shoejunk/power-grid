@@ -1,13 +1,13 @@
-import type { ServerMessage } from '@pg/shared';
+import { CLOSE, type ClientMessage, type ServerMessage } from '@tt/core';
 
-import type { ConnectionStatus, OutboundMessage } from './types';
+import type { ConnectionStatus } from './types';
 
 /* ------------------------------------------------------------------ *
  * Session persistence
  * ------------------------------------------------------------------ */
 
-const SESSION_KEY = 'pg.sessionToken';
-const NAME_KEY = 'pg.playerName';
+const SESSION_KEY = 'tt.sessionToken';
+const NAME_KEY = 'tt.playerName';
 
 /**
  * localStorage can throw (private mode, disabled storage, quota). Every access
@@ -66,6 +66,8 @@ export interface SocketHandlers {
   onMessage: (message: ServerMessage) => void;
   onStatus: (status: ConnectionStatus, attempt: number) => void;
   onLatency: (ms: number) => void;
+  /** A newer tab took this seat over. Reconnecting would only fight it. */
+  onReplaced: () => void;
 }
 
 /**
@@ -98,7 +100,7 @@ export class GameSocket {
   private pingSentAt = 0;
 
   /** Messages produced while the socket was down, replayed on reconnect. */
-  private queue: OutboundMessage[] = [];
+  private queue: ClientMessage[] = [];
 
   constructor(handlers: SocketHandlers) {
     this.handlers = handlers;
@@ -178,11 +180,22 @@ export class GameSocket {
       /* `close` always follows; reconnection is handled there. */
     };
 
-    socket.onclose = () => {
+    socket.onclose = (event: CloseEvent) => {
       this.stopHeartbeat();
       this.ws = null;
       if (this.closedByUs) {
         this.setStatus('idle');
+        return;
+      }
+      /*
+       * `REPLACED` is the one close the client must not fight: another tab has
+       * taken this seat, and reconnecting would kick that tab off in turn,
+       * leaving the two of them trading the seat forever.
+       */
+      if (event.code === CLOSE.REPLACED) {
+        this.closedByUs = true;
+        this.setStatus('idle');
+        this.handlers.onReplaced();
         return;
       }
       this.scheduleReconnect();
@@ -194,7 +207,7 @@ export class GameSocket {
     this.closedByUs = true;
     this.clearReconnect();
     this.stopHeartbeat();
-    this.ws?.close(1000, 'client disconnect');
+    this.ws?.close(CLOSE.NORMAL, 'client disconnect');
     this.ws = null;
     this.setStatus('idle');
   }
@@ -203,7 +216,7 @@ export class GameSocket {
    * Sends a message, or queues it if the socket is down.
    * `ping` is never queued — a stale heartbeat is worthless.
    */
-  send(message: OutboundMessage): void {
+  send(message: ClientMessage): void {
     if (this.isOpen) {
       this.ws!.send(JSON.stringify(message));
       return;
@@ -239,9 +252,9 @@ export class GameSocket {
   private identify(): void {
     const token = loadSessionToken();
     if (token !== null && token.length > 0) {
-      this.ws?.send(JSON.stringify({ t: 'rejoin', sessionToken: token } satisfies OutboundMessage));
+      this.ws?.send(JSON.stringify({ t: 'rejoin', sessionToken: token } satisfies ClientMessage));
     } else {
-      this.ws?.send(JSON.stringify({ t: 'hello' } satisfies OutboundMessage));
+      this.ws?.send(JSON.stringify({ t: 'hello' } satisfies ClientMessage));
     }
   }
 
@@ -277,12 +290,12 @@ export class GameSocket {
     this.heartbeatTimer = window.setInterval(() => {
       if (!this.isOpen) return;
       this.pingSentAt = performance.now();
-      this.ws!.send(JSON.stringify({ t: 'ping' } satisfies OutboundMessage));
+      this.ws!.send(JSON.stringify({ t: 'ping' } satisfies ClientMessage));
 
       // No pong in time means a half-open socket: force a close so the normal
       // reconnect path runs instead of sitting on a dead connection.
       this.heartbeatTimeout = window.setTimeout(() => {
-        this.ws?.close(4000, 'heartbeat timeout');
+        this.ws?.close(CLOSE.NORMAL, 'heartbeat timeout');
       }, HEARTBEAT_TIMEOUT_MS);
     }, HEARTBEAT_INTERVAL_MS);
   }
