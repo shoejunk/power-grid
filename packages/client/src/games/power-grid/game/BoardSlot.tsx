@@ -1,6 +1,8 @@
 import { Component, Suspense, lazy, type ComponentType, type ReactNode } from 'react';
 
-import { LoadingSpinner } from '../ui';
+import {
+  LoadingSpinner,
+} from '@tt/ui';
 import { useMatch } from './model';
 
 /**

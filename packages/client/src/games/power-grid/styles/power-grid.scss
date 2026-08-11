@@ -1,6 +1,5 @@
 @charset "UTF-8";
 @use 'mixins' as *;
-@use 'tokens' as tokens;
 
 /* The seat list, mirrored from PLAYER_COLORS in @game/power-grid. */
 $pg-player-colors: ('red', 'blue', 'green', 'yellow', 'purple', 'black');
@@ -870,13 +869,13 @@ $pg-player-colors: ('red', 'blue', 'green', 'yellow', 'purple', 'black');
  * palette publishes its own block and reuses the same components.
  * ==================================================================== */
 /* Per-colour custom properties, generated from the PlayerColor union. */
-@each $c in tokens.$pg-player-colors {
+@each $c in $pg-player-colors {
   [data-player-color='#{$c}'] {
-    --tt-pc: var(--tt-player-#{$c});
-    --tt-pc-light: var(--tt-player-#{$c}-light);
-    --tt-pc-dark: var(--tt-player-#{$c}-dark);
-    --tt-pc-glow: var(--tt-player-#{$c}-glow);
-    --tt-pc-ink: var(--tt-player-#{$c}-ink);
+    --tt-pc: var(--pg-player-#{$c});
+    --tt-pc-light: var(--pg-player-#{$c}-light);
+    --tt-pc-dark: var(--pg-player-#{$c}-dark);
+    --tt-pc-glow: var(--pg-player-#{$c}-glow);
+    --tt-pc-ink: var(--pg-player-#{$c}-ink);
   }
 }
 

@@ -1,17 +1,24 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
-import type { BuildTarget } from '@pg/shared';
+import type { BuildTarget } from '@game/power-grid';
 import {
   END_GAME_THRESHOLD,
   HOUSE_SLOT_COSTS,
   PAYMENT_TABLE,
   SLOTS_OPEN_AT_STEP,
   STEP2_THRESHOLD,
-} from '@pg/shared';
+} from '@game/power-grid';
 
-import { net } from '../../net';
-import { springSnappy } from '../../styles/motion';
-import { Badge, Button, Modal, Money, TextInput, Tooltip } from '../../ui';
+import { net } from '@/net';
+import { springSnappy } from '@tt/ui';
+import {
+  Badge,
+  Button,
+  Modal,
+  TextInput,
+  Tooltip,
+} from '@tt/ui';
+import { Money } from '../../ui/Money';
 import { plural } from '../format';
 import { useMatch } from '../model';
 import { Callout, PhaseShell, Stat, Waiting, type RuleLine } from './shell';

@@ -15,7 +15,7 @@ import {
   type GameSettings,
   type GameState,
   type PlayerId,
-} from '@pg/shared';
+} from '@game/power-grid';
 
 const SETTINGS: GameSettings = {
   mapId: 'germany',

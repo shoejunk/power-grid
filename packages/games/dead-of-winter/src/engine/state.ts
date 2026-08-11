@@ -24,6 +24,7 @@ import {
   type SurvivorInstanceId,
 } from '../content/primitives.js';
 import type {
+  EffectContext,
   EngineEffect,
   EntranceState,
   GameState,
@@ -455,7 +456,7 @@ export const EMPTY_CTX = {
 export function pushFrame(
   state: GameState,
   effects: EngineEffect[],
-  ctx: Partial<typeof EMPTY_CTX & { controllerId: PlayerId | null }> = {},
+  ctx: Partial<EffectContext> = {},
 ): void {
   if (effects.length === 0) return;
   state.effectStack.push({

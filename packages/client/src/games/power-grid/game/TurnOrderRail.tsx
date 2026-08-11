@@ -1,8 +1,15 @@
 import { motion } from 'framer-motion';
-import type { Phase } from '@pg/shared';
+import type { Phase } from '@game/power-grid';
 
-import { springSnappy, springSoft } from '../styles/motion';
-import { Avatar, Badge, Hint, Money, Panel, Tooltip } from '../ui';
+import { springSnappy, springSoft } from '@tt/ui';
+import {
+  Avatar,
+  Badge,
+  Hint,
+  Panel,
+  Tooltip,
+} from '@tt/ui';
+import { Money } from '../ui/Money';
 import { PHASE_META, STATUS_META } from './format';
 import { orderedPlayers, useMatch } from './model';
 

@@ -37,15 +37,18 @@ if (new URLSearchParams(window.location.search).has('reduced')) {
 }
 
 import { useGameStore } from '@/net';
-import '@/styles/index.scss';
+import '@tt/ui/styles/index.scss';
+import '../../styles/power-grid.scss';
 
 import { GameBoard } from '../GameBoard';
 import { PREVIEW_PLAYER_ID, previewState } from './scenario';
 
+/* Stands in for a `state` frame from the server: the store carries the
+   snapshot opaquely, exactly as it would in a real match. */
 useGameStore.setState({
-  gameState: previewState(),
+  gameKey: 'power-grid',
+  state: previewState(),
   myPlayerId: PREVIEW_PLAYER_ID,
-  route: 'game',
   connectionStatus: 'connected',
 });
 

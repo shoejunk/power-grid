@@ -1,8 +1,12 @@
 import { motion } from 'framer-motion';
-import { END_GAME_THRESHOLD, finalStandings, getPlant } from '@pg/shared';
+import { END_GAME_THRESHOLD, finalStandings, getPlant } from '@game/power-grid';
 
-import { springSoft } from '../../styles/motion';
-import { Avatar, Badge, Money } from '../../ui';
+import { springSoft } from '@tt/ui';
+import {
+  Avatar,
+  Badge,
+} from '@tt/ui';
+import { Money } from '../../ui/Money';
 import { plural } from '../format';
 import { useMatch } from '../model';
 import { Callout, PhaseShell, Stat, type RuleLine } from './shell';

@@ -18,7 +18,7 @@
  * on every client.
  */
 
-import type { GameMap } from '@pg/shared';
+import type { GameMap } from '@game/power-grid';
 
 import { BOARD_H, boardSpace, clamp, smoothstep } from './geometry';
 

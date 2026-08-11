@@ -10,7 +10,7 @@
  * dropped the board off 60 fps; it is now a flat keyline.
  */
 
-import { PLAYER_COLORS } from '@pg/shared';
+import { PLAYER_COLORS } from '@game/power-grid';
 
 import type { Metrics } from './layout';
 import type { BoardTheme } from './theme';

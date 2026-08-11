@@ -1,4 +1,5 @@
 {
+  "//": "`paths` points at workspace SOURCE, not build output. The client emits nothing, so there is nothing to gain from compiling the packages first — and plenty to lose, because a stale `dist` that still type-checks is the hardest kind of bug to see. vite.config.ts carries the same aliases.",
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
@@ -27,7 +28,6 @@
     "types": ["vite/client"],
 
     "baseUrl": ".",
-    "//": "Source aliases, not build output. The client emits nothing, so pointing at the workspace sources keeps one copy of the truth and removes the 'did you rebuild the engine?' failure mode. Vite carries the same aliases.",
     "paths": {
       "@/*": ["./src/*"],
       "@tt/core": ["../core/src/index.ts"],

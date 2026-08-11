@@ -28,7 +28,7 @@ import {
   type Ctx,
   type RGB,
 } from './raster';
-import type { ResourceType } from '@pg/shared';
+import type { ResourceType } from '@game/power-grid';
 
 const WHITE: RGB = { r: 255, g: 255, b: 255 };
 

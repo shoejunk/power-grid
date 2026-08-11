@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
-import type { OwnedPlant } from '@pg/shared';
-import { getPlant, isEcological, isHybrid } from '@pg/shared';
+import type { OwnedPlant } from '@game/power-grid';
+import { getPlant, isEcological, isHybrid } from '@game/power-grid';
 
-import { springSnappy } from '../../styles/motion';
-import { Tooltip } from '../../ui';
+import { springSnappy } from '@tt/ui';
+import {
+  Tooltip,
+} from '@tt/ui';
 import { citiesText, fuelText, plantArtFor, plantKind, plantRuleText } from '../format';
 import { StorageBar, Token } from './Tokens';
 

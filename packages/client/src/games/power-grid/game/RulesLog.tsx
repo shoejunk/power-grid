@@ -1,9 +1,12 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { LogEntry, ResourceType } from '@pg/shared';
+import type { LogEntry, ResourceType } from '@game/power-grid';
 
-import { springSoft } from '../styles/motion';
-import { Panel, Tabs } from '../ui';
+import { springSoft } from '@tt/ui';
+import {
+  Panel,
+  Tabs,
+} from '@tt/ui';
 import { CATEGORY_LABEL, LOG_FILTERS, RESOURCE_META, matchesFilter, type LogFilter } from './format';
 import { playerName, useMatch } from './model';
 

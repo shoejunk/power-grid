@@ -14,6 +14,402 @@
  * ===================================================================== */
 
 /* ==================================================================== *
+ * WORDMARK
+ * -------------------------------------------------------------------- *
+ * The site's own mark, as opposed to a game's. Deliberately restrained:
+ * it has to sit above Power Grid's copper and Dead of Winter's rust
+ * without fighting either, so it takes its colour from the accent in
+ * scope rather than owning one.
+ * ==================================================================== */
+.tt-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(10px, 0.9vw, 16px);
+  user-select: none;
+  color: var(--tt-text-bright);
+}
+
+.tt-mark__glyph {
+  display: grid;
+  place-items: center;
+  width: clamp(38px, 3.4vw, 58px);
+  height: clamp(38px, 3.4vw, 58px);
+  flex: none;
+  color: var(--tt-accent);
+  filter: drop-shadow(0 0 18px var(--tt-accent-glow));
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.tt-mark__type {
+  display: flex;
+  align-items: baseline;
+  gap: 0.16em;
+  font-family: var(--tt-font-display);
+  font-size: clamp(1.9rem, 3.1vw, 3.1rem);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: var(--tt-tracking-tight);
+  text-transform: uppercase;
+
+  b {
+    font-weight: 700;
+    color: var(--tt-text-bright);
+  }
+  i {
+    font-style: normal;
+    font-weight: 300;
+    color: var(--tt-accent-bright);
+  }
+}
+
+.tt-mark--compact {
+  gap: 8px;
+
+  .tt-mark__glyph {
+    width: 24px;
+    height: 24px;
+    filter: none;
+  }
+  .tt-mark__type {
+    font-size: var(--tt-text-lg);
+    letter-spacing: var(--tt-tracking-wide);
+  }
+}
+
+/* ==================================================================== *
+ * PORTAL HOME
+ * -------------------------------------------------------------------- *
+ * Two columns at desktop widths: the pitch on the left, the catalogue on
+ * the right. Deliberately not a centred hero with the games below the
+ * fold — the benchmark's failing is a phone layout on a 27" monitor, and
+ * the games are the reason anybody is here (quality bar V10).
+ * ==================================================================== */
+.tt-portal__inner {
+  position: relative;
+  z-index: var(--tt-z-content);
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(360px, 0.85fr) minmax(520px, 1.15fr);
+  gap: clamp(28px, 3.4vw, 72px);
+  align-items: center;
+  width: 100%;
+  max-width: var(--tt-max-content);
+  margin: 0 auto;
+  padding: clamp(12px, 2vh, 40px) var(--tt-gutter) clamp(8px, 1.6vh, 28px);
+}
+
+.tt-portal__hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--tt-space-5);
+  min-width: 0;
+}
+
+.tt-portal__eyebrow {
+  color: var(--tt-accent-bright);
+}
+
+.tt-portal__title {
+  margin: 0;
+  /* The mark carries the type; the heading exists for the document
+     outline and for screen readers. */
+  font-size: inherit;
+  line-height: 1;
+}
+
+.tt-portal__tagline {
+  max-width: 46ch;
+  font-size: clamp(var(--tt-text-base), 1.05vw, var(--tt-text-lg));
+  line-height: var(--tt-leading-relaxed);
+  color: var(--tt-text-secondary);
+  text-wrap: pretty;
+}
+
+.tt-portal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tt-space-3);
+  padding-top: var(--tt-space-2);
+}
+
+.tt-portal__catalogue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-4);
+  min-height: 0;
+  min-width: 0;
+}
+
+.tt-portal__cataloguehead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--tt-space-4);
+  padding-bottom: var(--tt-space-2);
+  border-bottom: 1px solid var(--tt-line-hairline);
+}
+
+.tt-portal__loading {
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+}
+
+.tt-portal__footer {
+  position: relative;
+  z-index: var(--tt-z-content);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tt-space-4);
+  padding: var(--tt-space-3) var(--tt-gutter) var(--tt-space-4);
+  flex: none;
+  color: var(--tt-text-faint);
+}
+
+/* -------------------------------------------------------------------- *
+ * Game cards
+ * -------------------------------------------------------------------- */
+.tt-gamegrid {
+  display: grid;
+  gap: var(--tt-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-height: 0;
+  overflow-y: auto;
+  /* Two abreast once there is room for a third title; stacked while there
+     are only two, so each card stays big enough to read as artwork. */
+  @include up('xxl') {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.tt-gamecard-wrap {
+  display: block;
+  min-width: 0;
+}
+
+.tt-gamecard {
+  @include panel(var(--tt-radius-xl), 3);
+  @include corner-ticks(11px, var(--tt-line-strong), 10px);
+  position: relative;
+  display: grid;
+  gap: var(--tt-space-3);
+  width: 100%;
+  padding: clamp(18px, 1.5vw, 26px) clamp(20px, 1.7vw, 30px);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  transition: border-color var(--tt-dur-base) var(--tt-ease-out);
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--tt-accent) 46%, transparent);
+  }
+
+  @include focus-ring(2px);
+
+  /*
+   * The accent bloom. This is the card's entire identity, and it is driven
+   * by --tt-accent, which the descriptor sets per game — so a third title
+   * gets its own look with no stylesheet change at all.
+   */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(
+        120% 90% at 8% 0%,
+        color-mix(in srgb, var(--tt-accent) 22%, transparent) 0%,
+        transparent 62%
+      ),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 40%);
+    pointer-events: none;
+    /* Corner ticks own ::before/::after on the element itself, so the
+       bloom lives on the wash span below instead — see .tt-gamecard__wash. */
+    display: none;
+  }
+}
+
+.tt-gamecard__wash {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      130% 100% at 6% -10%,
+      color-mix(in srgb, var(--tt-accent) 26%, transparent) 0%,
+      transparent 58%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 42%);
+  opacity: 0.9;
+  transition: opacity var(--tt-dur-base) var(--tt-ease-out);
+
+  .tt-gamecard:hover & {
+    opacity: 1;
+  }
+}
+
+/** The lit edge down the left of the card — the accent's strongest note. */
+.tt-gamecard__rule {
+  position: absolute;
+  left: 0;
+  top: 14%;
+  bottom: 14%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, transparent, var(--tt-accent), transparent);
+  box-shadow: 0 0 18px var(--tt-accent-glow);
+  transition: top var(--tt-dur-base) var(--tt-ease-out),
+    bottom var(--tt-dur-base) var(--tt-ease-out);
+
+  .tt-gamecard:hover & {
+    top: 6%;
+    bottom: 6%;
+  }
+}
+
+.tt-gamecard__head {
+  display: grid;
+  gap: 4px;
+}
+
+.tt-gamecard__name {
+  font-family: var(--tt-font-display);
+  font-size: clamp(1.5rem, 1.9vw, 2.1rem);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: var(--tt-tracking-tight);
+  text-transform: uppercase;
+  color: var(--tt-text-bright);
+}
+
+.tt-gamecard__tagline {
+  font-size: var(--tt-text-sm);
+  line-height: var(--tt-leading-normal);
+  color: var(--tt-accent-bright);
+}
+
+.tt-gamecard__blurb {
+  font-size: var(--tt-text-sm);
+  line-height: var(--tt-leading-relaxed);
+  color: var(--tt-text-secondary);
+  /* Four lines is enough to sell a game and short enough that two cards
+     never disagree about their height. */
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tt-gamecard__facts {
+  display: flex;
+  align-items: center;
+  gap: var(--tt-space-5);
+  padding-top: var(--tt-space-3);
+  border-top: 1px solid var(--tt-line-hairline);
+}
+
+.tt-gamecard__fact {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--tt-text-muted);
+
+  svg {
+    width: 14px;
+    height: 14px;
+    align-self: center;
+    color: var(--tt-text-faint);
+  }
+  b {
+    font-family: var(--tt-font-display);
+    font-size: var(--tt-text-base);
+    font-weight: 600;
+    color: var(--tt-text-primary);
+    letter-spacing: var(--tt-tracking-wide);
+  }
+  em {
+    font-style: normal;
+    font-size: var(--tt-text-xs);
+    letter-spacing: var(--tt-tracking-wide);
+    text-transform: uppercase;
+  }
+}
+
+.tt-gamecard__seats {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+
+  i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--tt-accent);
+    box-shadow: 0 0 8px var(--tt-accent-glow);
+  }
+}
+
+.tt-gamecard__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--tt-font-display);
+  font-size: var(--tt-text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tt-tracking-wider);
+  text-transform: uppercase;
+  color: var(--tt-accent-bright);
+
+  svg {
+    width: 12px;
+    height: 12px;
+    transition: transform var(--tt-dur-base) var(--tt-ease-out);
+  }
+
+  .tt-gamecard:hover & svg {
+    transform: translateX(3px);
+  }
+}
+
+/* Games whose interface has not landed are dimmed, not hidden. */
+.tt-gamecard[data-coming-soon='true'] {
+  .tt-gamecard__name,
+  .tt-gamecard__blurb {
+    opacity: 0.72;
+  }
+  .tt-gamecard__cta {
+    color: var(--tt-text-muted);
+  }
+}
+
+/* ==================================================================== *
+ * COMING SOON (a game's own placeholder, rendered in the detail column)
+ * ==================================================================== */
+.dow-soon {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+}
+
+.dow-soon__note {
+  margin-top: var(--tt-space-4);
+  color: var(--tt-text-faint);
+}
+
+/* ==================================================================== *
  * CREATE GAME
  * ==================================================================== */
 /*
@@ -26,7 +422,7 @@
  * effectively unreachable. The document root is `overflow: hidden` (reset.scss),
  * so if this element does not scroll, nothing does.
  */
-.pg-setup__grid {
+.tt-setup__grid {
   position: relative;
   z-index: var(--tt-z-content);
   flex: 1;
@@ -51,7 +447,7 @@
   }
 }
 
-.pg-setup__col {
+.tt-setup__col {
   display: flex;
   flex-direction: column;
   gap: var(--tt-space-4);
@@ -70,22 +466,32 @@
  * nothing depends on the reflow being perfect at every width.
  */
 @media (max-height: 820px) and (min-width: 1180px) {
-  .pg-setup__grid {
+  .tt-setup__grid {
     grid-template-columns: minmax(0, 1fr) minmax(500px, 1.06fr);
   }
-  .pg-setup__col:last-child {
+  .tt-setup__col:last-child {
     display: grid;
     grid-template-columns: repeat(2, minmax(230px, 1fr));
     align-content: start;
     gap: var(--tt-space-4);
   }
-  .pg-setup__col:last-child > .pg-setup__submit,
-  .pg-setup__col:last-child > .tt-inline-error {
+  .tt-setup__col:last-child > .tt-setup__submit,
+  .tt-setup__col:last-child > .tt-inline-error {
     grid-column: 1 / -1;
   }
 }
 
-.pg-setup__heading {
+/** The descriptor's three facts, under a game's blurb on its detail page. */
+.tt-setup__facts {
+  display: flex;
+  align-items: center;
+  gap: var(--tt-space-5);
+  padding: var(--tt-space-4) 0;
+  border-top: 1px solid var(--tt-line-hairline);
+  border-bottom: 1px solid var(--tt-line-hairline);
+}
+
+.tt-setup__heading {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -93,7 +499,7 @@
 }
 
 
-.pg-setup__submit {
+.tt-setup__submit {
   position: sticky;
   bottom: 0;
   z-index: var(--tt-z-sticky);
@@ -113,7 +519,7 @@
 /* ==================================================================== *
  * JOIN GAME
  * ==================================================================== */
-.pg-join__main {
+.tt-join__main {
   position: relative;
   z-index: var(--tt-z-content);
   flex: 1;
@@ -123,25 +529,25 @@
   min-height: 0;
   overflow-y: auto;
 }
-.pg-join__card {
+.tt-join__card {
   width: min(100%, 560px);
   display: flex;
   flex-direction: column;
   gap: var(--tt-space-5);
 }
-.pg-join__heading {
+.tt-join__heading {
   display: flex;
   flex-direction: column;
   gap: var(--tt-space-2);
   text-align: center;
   align-items: center;
 }
-.pg-join__form {
+.tt-join__form {
   display: flex;
   flex-direction: column;
   gap: var(--tt-space-5);
 }
-.pg-join__codewrap {
+.tt-join__codewrap {
   display: flex;
   align-items: flex-start;
   gap: var(--tt-space-3);
@@ -153,7 +559,7 @@
     margin-top: 28px;
   }
 }
-.pg-join__alt {
+.tt-join__alt {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -164,7 +570,7 @@
 /* ==================================================================== *
  * LOBBY
  * ==================================================================== */
-.pg-lobby__grid {
+.tt-lobby__grid {
   position: relative;
   z-index: var(--tt-z-content);
   flex: 1;
@@ -191,9 +597,9 @@
   }
 }
 
-.pg-lobby__roster,
-.pg-lobby__share,
-.pg-lobby__settings {
+.tt-lobby__roster,
+.tt-lobby__share,
+.tt-lobby__settings {
   display: flex;
   flex-direction: column;
   gap: var(--tt-space-4);
@@ -206,17 +612,17 @@
  * then takes the column it vacates.
  */
 @media (max-height: 780px) {
-  /* Scoped with `.pg-lobby` so these win over the unconditional rules further
+  /* Scoped with `.tt-lobby` so these win over the unconditional rules further
      down the file, which carry the same specificity. */
-  .pg-lobby .pg-lobby__chat {
+  .tt-lobby .tt-lobby__chat {
     display: none;
   }
-  .pg-lobby .pg-lobby__rosterpanel {
+  .tt-lobby .tt-lobby__rosterpanel {
     flex: 1 1 auto;
   }
 }
 
-.pg-lobby__settings {
+.tt-lobby__settings {
   @include down('xl') {
     display: none;
   }
@@ -225,15 +631,15 @@
 /* All three columns finish on the same baseline: the last panel in each
    absorbs the slack, so the lobby reads as one composed frame rather than
    three stacks of cards floating at different heights. */
-.pg-lobby__next,
-.pg-lobby__settings > .tt-panel:last-child {
+.tt-lobby__next,
+.tt-lobby__settings > .tt-panel:last-child {
   flex: 1 1 auto;
 }
 
 /* The roster sizes to its seats and only shrinks under real pressure; the chat
    below absorbs whatever height is left, so the column never ends in a void —
    and a seat row is never left half-cut at the panel edge. */
-.pg-lobby__rosterpanel {
+.tt-lobby__rosterpanel {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -245,7 +651,7 @@
   }
 }
 
-.pg-lobby__list {
+.tt-lobby__list {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -254,7 +660,7 @@
   gap: 6px;
 }
 
-.pg-seat {
+.tt-seat {
   display: flex;
   align-items: center;
   gap: var(--tt-space-3);
@@ -273,43 +679,43 @@
     );
   }
 }
-.pg-seat--empty {
+.tt-seat--empty {
   border-style: dashed;
   border-color: var(--tt-line-subtle);
   background: rgba(255, 255, 255, 0.014);
   min-height: 58px;
 }
-.pg-seat__slot {
+.tt-seat__slot {
   font-size: var(--tt-text-xs);
   color: var(--tt-text-faint);
   letter-spacing: var(--tt-tracking-wide);
   flex: none;
   width: 22px;
 }
-.pg-seat__chip {
+.tt-seat__chip {
   flex: 1;
   min-width: 0;
 }
-.pg-seat__right {
+.tt-seat__right {
   display: flex;
   align-items: center;
   gap: var(--tt-space-3);
   flex: none;
 }
-.pg-seat__waiting {
+.tt-seat__waiting {
   flex: 1;
   font-size: var(--tt-text-xs);
   color: var(--tt-text-faint);
   font-style: italic;
 }
 
-.pg-lobby__chat {
+.tt-lobby__chat {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   min-height: 148px;
 }
-.pg-lobby__chatlog {
+.tt-lobby__chatlog {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -318,12 +724,12 @@
   gap: 5px;
   padding: var(--tt-space-2) 0;
 }
-.pg-lobby__chatempty {
+.tt-lobby__chatempty {
   margin: auto;
   text-align: center;
   max-width: 34ch;
 }
-.pg-chatline {
+.tt-chatline {
   display: flex;
   gap: var(--tt-space-3);
   align-items: baseline;
@@ -331,7 +737,7 @@
   line-height: var(--tt-leading-normal);
   padding: 2px 0;
 }
-.pg-chatline__name {
+.tt-chatline__name {
   flex: none;
   min-width: 88px;
   font-family: var(--tt-font-display);
@@ -341,14 +747,14 @@
   color: var(--tt-text-muted);
   text-align: right;
 }
-.pg-chatline[data-me='true'] .pg-chatline__name {
+.tt-chatline[data-me='true'] .tt-chatline__name {
   color: var(--tt-cyan);
 }
-.pg-chatline__text {
+.tt-chatline__text {
   color: var(--tt-text-secondary);
   overflow-wrap: anywhere;
 }
-.pg-lobby__chatform {
+.tt-lobby__chatform {
   display: flex;
   align-items: flex-start;
   gap: var(--tt-space-2);
@@ -363,7 +769,7 @@
   }
 }
 
-.pg-lobby__readybar {
+.tt-lobby__readybar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -372,7 +778,7 @@
   @include glass(var(--tt-radius-lg));
   flex: none;
 }
-.pg-lobby__readyhint {
+.tt-lobby__readyhint {
   display: flex;
   align-items: center;
   gap: var(--tt-space-2);
@@ -384,10 +790,10 @@
   }
 }
 
-.pg-lobby__sharenote {
+.tt-lobby__sharenote {
   margin-top: var(--tt-space-3);
 }
-.pg-lobby__hostrow {
+.tt-lobby__hostrow {
   display: flex;
   gap: var(--tt-space-3);
   margin-bottom: var(--tt-space-4);
@@ -396,10 +802,10 @@
     flex: 1;
   }
 }
-.pg-lobby__startwrap {
+.tt-lobby__startwrap {
   display: block;
 }
-.pg-lobby__blocked {
+.tt-lobby__blocked {
   margin-top: var(--tt-space-3);
   text-align: center;
   color: var(--tt-warning);
@@ -407,8 +813,8 @@
 
 
 @include down('md') {
-  .pg-setup__grid,
-  .pg-lobby__grid {
+  .tt-setup__grid,
+  .tt-lobby__grid {
     padding-left: var(--tt-space-4);
     padding-right: var(--tt-space-4);
   }

@@ -3,7 +3,7 @@
  *
  * CONTRACT. The exported names here are depended on by the board renderer
  * (`src/board/`) and the in-game UI (`src/game/`). Consumers import from
- * '@/art' only — never reach into sibling files. Signatures are frozen;
+ * '@/games/power-grid/art' only — never reach into sibling files. Signatures are frozen;
  * additions are fine, changes are not.
  *
  * HOW THE ART IS MADE
@@ -27,7 +27,7 @@
  * an SVG `<image href>`, an SVG `<pattern>`, or a CSS `background-image`.
  */
 
-import type { MapId, PlayerColor, PowerPlant, ResourceType } from '@pg/shared';
+import type { MapId, PlayerColor, PowerPlant, ResourceType } from '@game/power-grid';
 import { houseTexture, trustHouseTexture } from './houses';
 import {
   cityPlateTexture,
@@ -219,7 +219,7 @@ export function plantArt(plant: PowerPlant): PlantArt {
  * ------------------------------------------------------------------ */
 
 /**
- * Fallback mirror of --tt-player-* in styles/tokens.scss, used when there is no
+ * Fallback mirror of --pg-player-* in styles/tokens.scss, used when there is no
  * DOM to read the resolved custom properties from (SSR, unit tests, the asset
  * generator). Keep in lockstep with tokens.scss — those values are the output
  * of a CVD separation solve and must not drift.
@@ -278,17 +278,17 @@ export interface SeatPalette {
 /**
  * Seat colours resolved from the design tokens, so board and DOM cannot drift.
  *
- * The token names are `--tt-player-<colour>`; getting this prefix wrong makes
+ * The token names are `--pg-player-<colour>`; getting this prefix wrong makes
  * every lookup fall back silently, which is exactly the kind of bug that ships.
  */
 export function seatPalette(color: PlayerColor): SeatPalette {
   const fallback = Number.parseInt(SEAT_HEX[color].slice(1), 16);
   return {
-    base: cssColor(`--tt-player-${color}`, fallback),
-    light: cssColor(`--tt-player-${color}-light`, 0xffffff),
-    dark: cssColor(`--tt-player-${color}-dark`, 0x000000),
-    glow: cssColor(`--tt-player-${color}-glow`, fallback),
-    ink: cssColor(`--tt-player-${color}-ink`, 0xffffff),
+    base: cssColor(`--pg-player-${color}`, fallback),
+    light: cssColor(`--pg-player-${color}-light`, 0xffffff),
+    dark: cssColor(`--pg-player-${color}-dark`, 0x000000),
+    glow: cssColor(`--pg-player-${color}-glow`, fallback),
+    ink: cssColor(`--pg-player-${color}-ink`, 0xffffff),
   };
 }
 

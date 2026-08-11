@@ -28,10 +28,12 @@ import {
   useState,
 } from 'react';
 
-import { BOARD_BASE_SIZE, loadArtManifest, type ArtManifest } from '@/art';
+import { BOARD_BASE_SIZE, loadArtManifest, type ArtManifest } from '@/games/power-grid/art';
 import { net, useGameStore } from '@/net';
-import { Button, Modal } from '@/ui';
-import { SLOTS_OPEN_AT_STEP, getMap, type CityId } from '@pg/shared';
+import { Button, Modal } from '@tt/ui';
+import { SLOTS_OPEN_AT_STEP, getMap, type CityId } from '@game/power-grid';
+
+import { usePowerGridState } from '../state';
 
 import { BoardDefs, DEF } from './Defs';
 import { CityNode, type NodeState } from './CityNode';
@@ -69,7 +71,7 @@ type PendingPlacement =
   | { type: 'markStartCity'; cityId: CityId };
 
 export function GameBoard(): JSX.Element {
-  const gameState = useGameStore((s) => s.gameState);
+  const gameState = usePowerGridState();
   const myPlayerId = useGameStore((s) => s.myPlayerId);
   const reduced = usePrefersReducedMotion();
 

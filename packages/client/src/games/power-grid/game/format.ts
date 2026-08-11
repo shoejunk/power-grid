@@ -12,9 +12,9 @@ import type {
   PhaseStatus,
   PowerPlant,
   ResourceType,
-} from '@pg/shared';
-import { getPlant, isEcological, isHybrid } from '@pg/shared';
-import { plantArt, type PlantArt } from '@/art';
+} from '@game/power-grid';
+import { getPlant, isEcological, isHybrid } from '@game/power-grid';
+import { plantArt, type PlantArt } from '@/games/power-grid/art';
 
 /* ------------------------------------------------------------------ *
  * Resources

@@ -1,4 +1,4 @@
-import type { MapId } from '@pg/shared';
+import type { MapId } from '@game/power-grid';
 
 /**
  * Presentation metadata for the two shipped maps.

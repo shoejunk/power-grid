@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion';
-import type { OwnedPlant, ResourceBundle, ResourceType } from '@pg/shared';
-import { getPlant, isEcological, isHybrid } from '@pg/shared';
+import type { OwnedPlant, ResourceBundle, ResourceType } from '@game/power-grid';
+import { getPlant, isEcological, isHybrid } from '@game/power-grid';
 
-import { springSnappy } from '../../styles/motion';
+import { springSnappy } from '@tt/ui';
 import { RESOURCE_META, RESOURCE_ORDER } from '../format';
-import { Tooltip } from '../../ui';
+import {
+  Tooltip,
+} from '@tt/ui';
 
 /* ------------------------------------------------------------------ *
  * A single resource token

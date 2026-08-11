@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { GameMap, LegalActions, MapCity } from '@pg/shared';
-import { END_GAME_THRESHOLD, STEP2_THRESHOLD, getMap, legalActions } from '@pg/shared';
+import type { GameMap, LegalActions, MapCity } from '@game/power-grid';
+import { END_GAME_THRESHOLD, STEP2_THRESHOLD, getMap, legalActions } from '@game/power-grid';
 
 import { BoardSlot } from '../game/BoardSlot';
 import { PlayerHud } from '../game/Hud';
@@ -14,18 +14,19 @@ import { TurnOrderRail } from '../game/TurnOrderRail';
 import { PHASE_META } from '../game/format';
 import { MatchProvider, noLegalActions, type MatchValue } from '../game/model';
 import '../game/game.scss';
-import { net, useGameStore } from '../net';
-import { springSoft } from '../styles/motion';
+import { ConnectionPill, net, useGameStore } from '@/net';
 import {
   Badge,
   Button,
-  ConnectionPill,
+  ConfirmDialog,
   IconBolt,
   IconLogout,
   LoadingSpinner,
+  springSoft,
   Tooltip,
-} from '../ui';
-import { ConfirmDialog } from '../ui/ConfirmDialog';
+} from '@tt/ui';
+
+import { usePowerGridState } from '../state';
 import { AmbientBackdrop, Wordmark } from '../ui/Artwork';
 
 /* ==================================================================== *
@@ -94,7 +95,7 @@ const PHASE_KEYS = ['order', 'auction', 'resources', 'building', 'bureaucracy'] 
  *   └───────────────────────────────────────────────────────┘
  */
 export function GameScreen(): JSX.Element {
-  const gameState = useGameStore((s) => s.gameState);
+  const gameState = usePowerGridState();
   const myPlayerId = useGameStore((s) => s.myPlayerId);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 

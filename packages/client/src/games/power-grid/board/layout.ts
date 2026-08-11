@@ -36,7 +36,7 @@
  * 10% over-estimate is the difference between zero overlaps and several.
  */
 
-import type { CityId, GameMap, MapConnection } from '@pg/shared';
+import type { CityId, GameMap, MapConnection } from '@game/power-grid';
 
 import {
   BOARD_H,

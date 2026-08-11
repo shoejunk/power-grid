@@ -1,9 +1,14 @@
 import { motion } from 'framer-motion';
-import type { Player } from '@pg/shared';
-import { END_GAME_THRESHOLD, MAX_PLANTS_PER_PLAYER, STEP2_THRESHOLD } from '@pg/shared';
+import type { Player } from '@game/power-grid';
+import { END_GAME_THRESHOLD, MAX_PLANTS_PER_PLAYER, STEP2_THRESHOLD } from '@game/power-grid';
 
-import { springSnappy, springSoft } from '../styles/motion';
-import { Avatar, Badge, Money, Tooltip } from '../ui';
+import { springSnappy, springSoft } from '@tt/ui';
+import {
+  Avatar,
+  Badge,
+  Tooltip,
+} from '@tt/ui';
+import { Money } from '../ui/Money';
 import { STATUS_META, plural } from './format';
 import { orderedPlayers, useMatch } from './model';
 import { PlantCard } from './parts/PlantCard';

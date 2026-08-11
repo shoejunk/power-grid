@@ -22,7 +22,7 @@ import {
   type GameState,
   type Player,
   type PlayerId,
-} from '@pg/shared';
+} from '@game/power-grid';
 
 import { pairKey } from './layout';
 

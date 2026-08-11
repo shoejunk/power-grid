@@ -1,8 +1,13 @@
 import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
 
-import { springSoft } from '../../styles/motion';
-import { Avatar, Badge, Money, Panel } from '../../ui';
+import { springSoft } from '@tt/ui';
+import {
+  Avatar,
+  Badge,
+  Panel,
+} from '@tt/ui';
+import { Money } from '../../ui/Money';
 import { PHASE_META } from '../format';
 import { useMatch } from '../model';
 

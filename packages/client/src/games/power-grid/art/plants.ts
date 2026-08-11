@@ -29,7 +29,7 @@ import {
   type RGB,
 } from './raster';
 import { overlayGrain } from './plates';
-import type { PowerPlant } from '@pg/shared';
+import type { PowerPlant } from '@game/power-grid';
 
 export type FuelKey = 'coal' | 'oil' | 'garbage' | 'uranium' | 'hybrid' | 'eco';
 

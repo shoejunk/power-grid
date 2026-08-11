@@ -1,10 +1,16 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { REFILL_TABLE } from '@pg/shared';
-import type { ResourceBundle, ResourceType } from '@pg/shared';
+import { REFILL_TABLE } from '@game/power-grid';
+import type { ResourceBundle, ResourceType } from '@game/power-grid';
 
-import { springSnappy } from '../styles/motion';
-import { Button, Hint, Modal, Panel, Tooltip } from '../ui';
+import { springSnappy } from '@tt/ui';
+import {
+  Button,
+  Hint,
+  Modal,
+  Panel,
+  Tooltip,
+} from '@tt/ui';
 import { useMatch } from './model';
 import { RESOURCE_META, RESOURCE_ORDER } from './format';
 

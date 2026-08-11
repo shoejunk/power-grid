@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
-import type { GameState, PowerOption, ResourceBundle } from '@pg/shared';
+import type { GameState, PowerOption, ResourceBundle } from '@game/power-grid';
 import {
   PAYMENT_TABLE,
   RESOURCE_TYPES,
@@ -10,11 +10,17 @@ import {
   payoutFor,
   rowToBundle,
   storedPool,
-} from '@pg/shared';
+} from '@game/power-grid';
 
-import { net } from '../../net';
-import { springSoft } from '../../styles/motion';
-import { Badge, Button, Money, NumberStepper, Tooltip } from '../../ui';
+import { net } from '@/net';
+import { springSoft } from '@tt/ui';
+import {
+  Badge,
+  Button,
+  NumberStepper,
+  Tooltip,
+} from '@tt/ui';
+import { Money } from '../../ui/Money';
 import { plural } from '../format';
 import { useMatch } from '../model';
 import { Token } from '../parts/Tokens';

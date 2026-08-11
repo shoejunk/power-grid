@@ -10,8 +10,8 @@
  * memoised, because `getComputedStyle` is not free.
  */
 
-import type { PlayerColor } from '@pg/shared';
-import { cssColor, seatPalette, seatSigil, type SeatSigil } from '@/art';
+import type { PlayerColor } from '@game/power-grid';
+import { cssColor, seatPalette, seatSigil, type SeatSigil } from '@/games/power-grid/art';
 
 export const hex = (n: number): string => `#${(n >>> 0).toString(16).padStart(6, '0')}`;
 

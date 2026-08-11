@@ -1,4 +1,4 @@
-import { GERMANY_MAP } from '@pg/shared';
+import { GERMANY_MAP } from '@game/power-grid';
 import { describe, expect, it } from 'vitest';
 
 import { frameAt } from './geometry';

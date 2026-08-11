@@ -1,9 +1,9 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { LogEntry } from '@pg/shared';
+import type { LogEntry } from '@game/power-grid';
 
-import { springBouncy, springHeavy } from '../styles/motion';
+import { springBouncy, springHeavy } from '@tt/ui';
 import { useMatch } from './model';
 
 interface Moment {
@@ -94,7 +94,7 @@ function build(
   const nameOf = (id: unknown): string =>
     typeof id === 'string' ? (players[id]?.name ?? 'A player') : 'A player';
   const colorOf = (id: unknown): string | null =>
-    typeof id === 'string' && players[id] ? `var(--tt-player-${players[id]!.color})` : null;
+    typeof id === 'string' && players[id] ? `var(--pg-player-${players[id]!.color})` : null;
 
   switch (event) {
     case 'auctionResolved':

@@ -2,7 +2,10 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from './App';
-import './styles/index.scss';
+/* The design system first, then the portal's own layouts on top of it. A
+   game's stylesheet arrives later, with that game's UI module. */
+import '@tt/ui/styles/index.scss';
+import './portal/portal.scss';
 
 const container = document.getElementById('root');
 if (!container) {

@@ -8,7 +8,7 @@
  * container size — there is no manual fit code anywhere in the renderer.
  */
 
-import type { GameMap, MapCity, MapConnection } from '@pg/shared';
+import type { GameMap, MapCity, MapConnection } from '@game/power-grid';
 
 /** Height of the board-unit coordinate space. Width is `H * aspectRatio`. */
 export const BOARD_H = 1000;

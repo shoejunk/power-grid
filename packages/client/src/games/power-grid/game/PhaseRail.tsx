@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { ResourceBundle } from '@pg/shared';
-import { emptyResources } from '@pg/shared';
+import type { ResourceBundle } from '@game/power-grid';
+import { emptyResources } from '@game/power-grid';
 
 import { PlantMarket } from './PlantMarket';
 import { ResourceMarket } from './ResourceMarket';

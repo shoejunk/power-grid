@@ -1,8 +1,12 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import type { NominatablePlant } from '@pg/shared';
+import type { NominatablePlant } from '@game/power-grid';
 
-import { springSoft } from '../styles/motion';
-import { Badge, Hint, Panel } from '../ui';
+import { springSoft } from '@tt/ui';
+import {
+  Badge,
+  Hint,
+  Panel,
+} from '@tt/ui';
 import { useMatch } from './model';
 import { PlantCard } from './parts/PlantCard';
 

@@ -6,9 +6,14 @@ import {
   SLOTS_OPEN_AT_STEP,
   STEP2_THRESHOLD,
   refillFor,
-} from '@pg/shared';
+} from '@game/power-grid';
 
-import { Badge, Button, IconBook, Modal } from '../ui';
+import {
+  Badge,
+  Button,
+  IconBook,
+  Modal,
+} from '@tt/ui';
 import { PHASE_META, RESOURCE_META, RESOURCE_ORDER } from './format';
 import { useMatch } from './model';
 

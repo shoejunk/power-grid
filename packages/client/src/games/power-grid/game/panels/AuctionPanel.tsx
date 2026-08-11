@@ -1,11 +1,17 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { MAX_PLANTS_PER_PLAYER, getPlant } from '@pg/shared';
+import { MAX_PLANTS_PER_PLAYER, getPlant } from '@game/power-grid';
 
-import { net } from '../../net';
-import { springSoft } from '../../styles/motion';
-import { Avatar, Badge, Button, NumberStepper, Tooltip } from '../../ui';
-import { ConfirmDialog } from '../../ui/ConfirmDialog';
+import { net } from '@/net';
+import { springSoft } from '@tt/ui';
+import {
+  Avatar,
+  Badge,
+  Button,
+  NumberStepper,
+  Tooltip,
+} from '@tt/ui';
+import { ConfirmDialog } from '@tt/ui';
 import { fuelText } from '../format';
 import { useMatch } from '../model';
 import { PlantCard } from '../parts/PlantCard';

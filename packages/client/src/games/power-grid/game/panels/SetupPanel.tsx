@@ -1,9 +1,13 @@
 import { useMemo, useState } from 'react';
-import type { AreaId } from '@pg/shared';
-import { ZONE_AREA_COUNT, isZoneContiguous } from '@pg/shared';
+import type { AreaId } from '@game/power-grid';
+import { ZONE_AREA_COUNT, isZoneContiguous } from '@game/power-grid';
 
-import { net } from '../../net';
-import { Badge, Button, Tooltip } from '../../ui';
+import { net } from '@/net';
+import {
+  Badge,
+  Button,
+  Tooltip,
+} from '@tt/ui';
 import { plural } from '../format';
 import { useMatch } from '../model';
 import { Callout, PhaseShell, Stat, Waiting, type RuleLine } from './shell';

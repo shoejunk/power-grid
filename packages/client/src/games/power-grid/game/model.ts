@@ -15,7 +15,7 @@ import type {
   MapCity,
   Player,
   PlayerId,
-} from '@pg/shared';
+} from '@game/power-grid';
 
 export interface MatchValue {
   state: GameState;

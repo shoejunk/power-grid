@@ -381,6 +381,8 @@ export type ChoiceKind =
   | 'exileSwap'
   | 'lastSurvivorPlacement'
   | 'requestResponse'
+  /** §8.7: the recipient's controller must consent to a hand-off. */
+  | 'handOffConsent'
   | 'attractPlacement'
   | 'vote';
 
@@ -443,6 +445,12 @@ export interface VoteState {
   electorate: PlayerId[];
   /** Committed simultaneously; identities stay hidden until every vote is in (§15). */
   votes: Record<PlayerId, boolean>;
+  /**
+   * Who has answered. Public even while the answers are not, so §21's
+   * "require simultaneous secret vote commitments before revealing votes" can
+   * show progress without showing content.
+   */
+  committed: PlayerId[];
   /** Set when this is an exile vote, so the engine knows what to do on `yes`. */
   nomineeId: PlayerId | null;
   /** Effects to run on the two outcomes when the vote came from a card. */
@@ -563,6 +571,14 @@ export interface GameState extends GameStateEnvelope {
   rngCursor: number;
 
   phase: Phase;
+  /**
+   * Where inside §4's setup order the table is.
+   *
+   * Setup has two genuinely simultaneous decisions — every player keeps two of
+   * four survivors (§4.10) and then names a group leader (§4.11) — so it needs
+   * its own small state machine rather than a single "setting up" flag.
+   */
+  setupStage?: 'dealSurvivors' | 'keepSurvivors' | 'chooseLeader' | 'done';
   colonyStep: ColonyStep | null;
   round: number;
   /** §11.5: "survive X rounds" counts completed rounds, not the tracker. */
@@ -614,8 +630,6 @@ export interface GameState extends GameStateEnvelope {
  * to audit, instead of a dozen near-identical ones.
  */
 export type GameAction =
-  /* setup */
-  | { type: 'startGame' }
   /* die actions (§7) */
   | { type: 'attackZombie'; survivorId: SurvivorInstanceId; die: number; entrance?: number }
   | { type: 'attackSurvivor'; survivorId: SurvivorInstanceId; die: number; targetId: SurvivorInstanceId }

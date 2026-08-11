@@ -60,6 +60,7 @@ export function beginExileVote(
     prompt: `Exile ${getPlayer(state, nomineeId).name}?`,
     electorate,
     votes: {},
+    committed: [],
     nomineeId,
   };
   pushChoice(state, {

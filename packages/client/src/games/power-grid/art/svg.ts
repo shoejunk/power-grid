@@ -16,7 +16,7 @@
  * Everything is additive: nothing in here is required to render the board.
  */
 
-import type { PlayerColor } from '@pg/shared';
+import type { PlayerColor } from '@game/power-grid';
 import { seatPalette, toHex } from './index';
 
 /** Stable ids, so consumers never hard-code strings that might drift. */

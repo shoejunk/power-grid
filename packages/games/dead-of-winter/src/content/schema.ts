@@ -154,6 +154,15 @@ export interface ItemCardDefinition {
   /** Resolved when the card is played (both kinds may have one). */
   onPlay?: Effect;
   /**
+   * Lowers the die value this survivor's attacks require, while equipped.
+   *
+   * §18.5: "Switchblade modifies the required attack die and does not itself
+   * replace the attack." A modifier is therefore not an ability and not a
+   * replacement effect — it is a number the attack action reads, which is also
+   * why §7.1 lets it combine with one replacement effect.
+   */
+  attackDieModifier?: number;
+  /**
    * Abilities the card grants while equipped. Their usage limits live on the
    * card instance, never on its current holder (§18.5).
    */
@@ -243,6 +252,18 @@ export interface MainObjectiveSide {
   setup: Effect[];
   /** Evaluated only at the Check Main Objective step (§11.5, §18.2). */
   completion: Condition;
+  /**
+   * Run once per zombie killed, *before* that kill's exposure roll.
+   *
+   * §18.2 makes this ordering explicit for `We Need More Samples`: "after a
+   * zombie is killed, roll its sample check before rolling exposure. The sample
+   * check is mandatory." Expressing it as objective data rather than as a
+   * special case in the combat code means the ordering holds for every kill
+   * verb — attacks, abilities and card effects alike — and only for objectives
+   * that actually ask for it. §7.1's kill/remove split still applies: a `remove`
+   * never reaches here.
+   */
+  onZombieKilled?: Effect;
   /** What may be added face up to this objective (§8.3), if anything. */
   contribution?: {
     requirement: CardRequirement;
