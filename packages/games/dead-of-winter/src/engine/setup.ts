@@ -138,10 +138,23 @@ function buildLocations(content: ContentIndex): Record<string, LocationState> {
 }
 
 /* ------------------------------------------------------------------ *
- * createGame (§4)
+ * buildGame (§4)
  * ------------------------------------------------------------------ */
 
-export function createGame(
+/**
+ * Builds the §4 starting position and stops.
+ *
+ * Deliberately **not** named `createGame`: the engine's public `createGame`
+ * lives in `engine/index.ts`, wraps this, and then runs `advance()` to reach the
+ * first human decision. `engine/index.ts` re-exports this module wholesale, so
+ * two functions of the same name would collide in that barrel — and the two
+ * resolutions are not equivalent. Node's ESM gives the local declaration
+ * precedence (the correct, advancing one), while Vite/Vitest resolves the star
+ * re-export instead, which would hand the test suite a game frozen at
+ * `setupStage: 'dealSurvivors'` with no choices dealt. Distinct names remove the
+ * ambiguity rather than relying on either resolution order.
+ */
+export function buildGame(
   ctx: CreateGameContext,
   settings: GameSettings,
   seats: SeatSeed[],

@@ -28,7 +28,7 @@ import { checkCrossroadsTrigger, returnCrossroads } from './crossroads.js';
 import { checkMoraleZero, endGame } from './endgame.js';
 import {
   assignFirstPlayer,
-  createGame as buildGame,
+  buildGame,
   dealSurvivorChoices,
   pushLeaderChoices,
 } from './setup.js';
