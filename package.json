@@ -22,8 +22,11 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "@esbuild/win32-x64": "^0.28.1",
-    "@rollup/rollup-win32-x64-msvc": "^4.62.3",
     "sharp": "^0.35.3"
+  },
+  "//optionalDependencies": "Windows dev machines need these prebuilt binaries pinned. They must stay optional: as hard dependencies they fail EBADPLATFORM and abort the whole install on Linux and macOS.",
+  "optionalDependencies": {
+    "@esbuild/win32-x64": "^0.28.1",
+    "@rollup/rollup-win32-x64-msvc": "^4.62.3"
   }
 }

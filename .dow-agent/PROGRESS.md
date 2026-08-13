@@ -8,6 +8,24 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-13 — nightly run 1
+
+**Intent:** workstream `engine-tests` — stand up the vitest suite for the Dead of Winter engine
+covering all 15 §23 acceptance criteria and every §18 erratum.
+
+**Blocker found first, before any of that:** `npm install` fails outright on Linux. The root
+`package.json` carried `@esbuild/win32-x64` and `@rollup/rollup-win32-x64-msvc` as **hard**
+`devDependencies`. On any non-Windows machine npm aborts the whole install with `EBADPLATFORM`,
+so `node_modules` was never populated, `@tt/core` and `vitest` did not resolve, and every build
+and test command failed. The previous run's "all packages build clean" claim was true only on the
+Windows dev machine — the nightly sandbox is Linux, so **no nightly run could have built or tested
+anything**. Moved both to `optionalDependencies`, which npm skips on platform mismatch while still
+installing them on Windows. Install, all five builds and both suites are green again.
+
+(in progress — entry completed at end of run)
+
+---
+
 ## 2026-08-12 — setup run (interactive, not the routine)
 
 **Intent:** turn the single-game Power Grid repo into a multi-game platform, add Dead of Winter as
