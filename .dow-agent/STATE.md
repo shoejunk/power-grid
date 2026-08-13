@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-08-12** (setup run)
+Last updated: **2026-08-13** (nightly run 1)
 
 ---
 
@@ -53,7 +53,8 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 
 ## Build and test status
 
-All packages build clean as of the last push.
+All packages build clean as of the last push, **on Linux as well as Windows** — which was not
+previously true. Verify the baseline yourself every run; do not trust this table.
 
 | Check | Command | Status |
 | --- | --- | --- |
@@ -87,6 +88,13 @@ All packages build clean as of the last push.
 
 ## Known debts
 
+- **The nightly sandbox is Linux; the dev machine is Windows.** Anything platform-specific will
+  be caught here first and can silently make a whole run a no-op. Run the baseline before
+  believing any claim in this file.
+- **Pushing requires GitHub write access for the session.** Run 1 initially had none: `git push`
+  returned 403 through the agent proxy and the GitHub API returned `Resource not accessible by
+  integration` on the trees, refs and contents endpoints. If a future run cannot push, that is
+  the cause — report it rather than working all night into a sandbox that gets discarded.
 - `packages/ui/src/components/ErrorBoundary.tsx` logs a literal `[power-grid]` from a
   game-agnostic component.
 - `packages/client/src/portal/portal.scss` still uses `.pg-setup__*` class names; the
