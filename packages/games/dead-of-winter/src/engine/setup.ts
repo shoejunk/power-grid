@@ -82,7 +82,11 @@ export function setupProfile(settings: GameSettings): SetupProfile {
   const twoPlayerCoop = coop && settings.playerCount === 2;
 
   return {
-    useHardcoreSide: coop || settings.hardcore,
+    // §19.6 "begin from the two-player cooperative setup" → §19.2 "use all
+    // cooperative rules, plus" → §19.1's first bullet, the hardcore side. PD
+    // already inherits §19.2's hand and survivor deltas below; the objective
+    // side comes from the same chain and was the one link missing.
+    useHardcoreSide: coop || pd || settings.hardcore,
     dealsSecretObjectives: !coop,
     dealsBetrayalToEveryone: pd,
     starterHandSize: twoPlayerCoop || pd ? 7 : 5,
@@ -468,7 +472,21 @@ function dealStarterHands(state: GameState, now: number, profile: SetupProfile):
     const player = getPlayer(state, id);
     for (let i = 0; i < profile.starterHandSize; i++) {
       const iid = state.decks.starterItems.shift();
-      if (!iid) break;
+      /*
+       * §22: "a rules error must fail closed … it must not discard hidden
+       * choices or silently skip effects". A short starter deck is a content
+       * defect — §2.0 fixes the deck at 25 and §4.8 deals a fixed hand — and
+       * dealing the last player a smaller hand hides it behind a playable-
+       * looking game. Refusing to build the table surfaces it at setup instead.
+       */
+      if (!iid) {
+        throw new Error(
+          `Content error: the starter deck ran out while dealing §4.8's ` +
+            `${profile.starterHandSize}-card hand to ${state.seating.length} players. ` +
+            `The pack must hold at least ${profile.starterHandSize * state.seating.length} ` +
+            `starter items that survive this mode's card filters.`,
+        );
+      }
       player.hand.push(iid);
     }
   }

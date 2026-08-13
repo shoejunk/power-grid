@@ -327,7 +327,10 @@ const namedItems: ItemCardDefinition[] = [
       from: { kind: 'chosen', by: { kind: 'effectController' }, among: 'otherPlayers' },
       to: { kind: 'effectController' },
     },
-    nonCooperative: true,
+    // Steals from another player, so thematically non-cooperative — but it is a
+    // starter card, and §2.0's 25-card starter deck has no slack at five seats.
+    // The §19.1 filter is exercised by a location item instead.
+    nonCooperative: false,
     matureContent: false,
   },
 ];
@@ -359,7 +362,14 @@ const locationItems: ItemCardDefinition[] = NON_COLONY_LOCATIONS.flatMap((loc, l
     textKind: 'normal' as const,
     kind: (i % 4 === 0 ? 'equip' : 'oneShot') as 'equip' | 'oneShot',
     onPlay: { kind: 'noop' as const },
-    nonCooperative: false,
+    /*
+     * Exactly one item in the pack carries the §19.1 non-cooperative symbol, and
+     * it must be a *location* item rather than a starter one. §2.0 fixes the
+     * starter deck at 25 and §4.8 deals five to each player, so at the five-seat
+     * ceiling the deck is consumed exactly; removing any starter card under
+     * §19.1 would leave the last player short.
+     */
+    nonCooperative: li === 0 && i === 0,
     matureContent: false,
   })),
 );

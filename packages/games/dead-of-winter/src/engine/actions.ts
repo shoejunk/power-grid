@@ -908,9 +908,29 @@ function finishSearch(state: GameState, now: number, keptIid: string): void {
  * Votes
  * ------------------------------------------------------------------ */
 
+/**
+ * Retires the open simultaneous-vote choice (§15).
+ *
+ * A simultaneous vote is the one decision that is never answered through
+ * `resolveChoice`: every elector sends `castVote`, so nothing ever calls
+ * `takeChoice` for it and the choice would otherwise outlive its own vote. That
+ * matters more than a stray record — `advance()` returns while any choice is
+ * pending and `turnGate` rejects every action behind one, so a surviving vote
+ * choice deadlocks the match permanently at the first exile nomination.
+ */
+function closeVoteChoice(state: GameState): void {
+  state.pendingChoices = state.pendingChoices.filter(
+    (c) => !(c.kind === 'vote' && c.playerId === null),
+  );
+}
+
 function finishVote(state: GameState, now: number): void {
   const vote = state.vote!;
   const result = tallyVote(state, now);
+
+  // Retired before either branch: the tie-break below queues a *second* vote
+  // choice, and leaving the first one behind would block the tie-break itself.
+  closeVoteChoice(state);
 
   if (result === 'tie') {
     // §15: the first player breaks every tied group decision "even if the first

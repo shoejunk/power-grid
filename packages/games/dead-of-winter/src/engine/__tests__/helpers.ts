@@ -67,9 +67,13 @@ export function settingsFor(opts: GameOpts = {}): GameSettings {
     includeBetrayalObjective: true,
     matureContentFilter: false,
     mainObjectiveId: null,
+    // §19.6's three designer suggestions, defaulted to the suggestion exactly as
+    // `plugin.defaultSettings()` does. These must not drift from the plugin: a
+    // suite that silently tests different defaults than the product ships is
+    // worse than no suite.
     prisonersDilemma: {
       roundZeroEndsLikeMoraleZero: true,
-      keepNonCooperativeCards: false,
+      keepNonCooperativeCards: true,
       removeExileDependentContent: true,
     },
     ...opts.settings,

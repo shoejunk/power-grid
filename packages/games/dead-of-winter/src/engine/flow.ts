@@ -61,6 +61,20 @@ export function beginRound(state: GameState, now: number): void {
     });
   }
 
+  /*
+   * §7.7: a once-per-round ability "must retain its used state for the entire
+   * round" — and therefore only for the round. The reset lives here, at the
+   * round boundary, mirroring `beginTurn`'s `usedThisTurn` clear.
+   *
+   * Every survivor and every item is cleared, not just the ones on the board:
+   * §18.5 scopes usage to the card instance precisely so that it survives dying
+   * into a hand, being re-equipped and being handed off. That rule is about
+   * *transfers*, not about the round boundary, so an item sitting in a hand must
+   * come back refreshed like any other.
+   */
+  for (const survivor of Object.values(state.survivors)) survivor.usedThisRound = [];
+  for (const item of Object.values(state.items)) item.usedThisRound = [];
+
   rollActionDice(state, now);
 
   const order = turnOrder(state);
