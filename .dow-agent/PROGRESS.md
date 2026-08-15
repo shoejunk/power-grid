@@ -8,6 +8,26 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-15 — nightly run 2
+
+**Baseline verified before any work** (not trusted from `STATE.md`): `npm install` clean on Linux,
+all five `tsc` builds clean, Power Grid **230 passed**, Dead of Winter **140 passed**, server
+**42 passed**. Run 1's own PROGRESS entry was left unfinished — it was killed mid-run — but its
+work did land on `master` (`fb8fa62`): the A1–A4 acceptance suites plus five engine fixes those
+suites found. `STATE.md` still claims "DoW tests: none exist"; that is stale and gets corrected
+tonight.
+
+**Intent:** continue workstream `engine-tests`, the first queue item, which is only ~27% done.
+A1–A4 are covered. Tonight takes the remaining §23 acceptance criteria **A5–A15** and the **§18
+errata** regression coverage required by A14. Fanning out one sub-agent per criterion group, each
+owning exactly one new test file, each looping against its own harsh critic. Sub-agents do not run
+git and do not edit engine source — engine bugs they find are reported back and applied here, so
+two agents can never race the same file.
+
+(in progress — entry completed at end of run)
+
+---
+
 ## 2026-08-13 — nightly run 1
 
 **Intent:** workstream `engine-tests` — stand up the vitest suite for the Dead of Winter engine
