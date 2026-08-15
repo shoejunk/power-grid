@@ -18,6 +18,7 @@
 import type { CreateGameContext, SeatSeed } from '@tt/core';
 
 import { TEST_PACK } from '../../content/testPack.js';
+import type { ContentIndex, ContentPack } from '../../content/schema.js';
 import type { CardId, CardInstanceId, NonColonyLocationId } from '../../content/primitives.js';
 import type {
   GameAction,
@@ -53,6 +54,42 @@ export interface GameOpts {
   playerCount?: number;
   seed?: string;
   settings?: Partial<GameSettings>;
+  /**
+   * A content index from `extendPack`, used instead of the shared fixture.
+   * Lets a suite add the cards its own rulings need without editing
+   * `testPack.ts`, which every other suite also reads.
+   */
+  pack?: ContentIndex;
+}
+
+/**
+ * Registers a variant of the shared fixture carrying extra cards, under its own
+ * `id@version` so it cannot collide with the base fixture or with another
+ * suite's variant. `suffix` must be unique per suite — name it after the file.
+ *
+ * This exists because the §18 rulings are card-specific: a test for Loretta
+ * Clay's `4+` threshold means nothing unless a card called Loretta Clay with
+ * that threshold is really in the deck being played. Suites that need such a
+ * card build it here rather than growing the shared fixture, so two suites can
+ * never disagree about what a fixture card does.
+ */
+export function extendPack(
+  suffix: string,
+  extra: Partial<Pick<
+    ContentPack,
+    'survivors' | 'items' | 'crises' | 'crossroads' | 'mainObjectives' | 'secretObjectives'
+  >>,
+): ContentIndex {
+  return registerContentPack({
+    ...TEST_PACK,
+    version: `${TEST_PACK.version}+${suffix}`,
+    survivors: [...TEST_PACK.survivors, ...(extra.survivors ?? [])],
+    items: [...TEST_PACK.items, ...(extra.items ?? [])],
+    crises: [...TEST_PACK.crises, ...(extra.crises ?? [])],
+    crossroads: [...TEST_PACK.crossroads, ...(extra.crossroads ?? [])],
+    mainObjectives: [...TEST_PACK.mainObjectives, ...(extra.mainObjectives ?? [])],
+    secretObjectives: [...TEST_PACK.secretObjectives, ...(extra.secretObjectives ?? [])],
+  });
 }
 
 export function settingsFor(opts: GameOpts = {}): GameSettings {
@@ -96,7 +133,7 @@ export function contextFor(opts: GameOpts = {}): CreateGameContext {
  */
 export function fresh(opts: GameOpts = {}): GameState {
   const settings = settingsFor(opts);
-  return createGame(contextFor(opts), settings, seats(settings.playerCount), PACK);
+  return createGame(contextFor(opts), settings, seats(settings.playerCount), opts.pack ?? PACK);
 }
 
 export function act(
