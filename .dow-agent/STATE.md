@@ -99,6 +99,15 @@ previously true. Verify the baseline yourself every run; do not trust this table
   game-agnostic component.
 - `packages/client/src/portal/portal.scss` still uses `.pg-setup__*` class names; the
   `--pg-*` → `--tt-*` rename did not reach it.
+- ~~Whether headless screenshots are possible in the sandbox~~ — **RESOLVED, run 2.** They are.
+  Chromium ships at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (symlinked from
+  `/opt/pw-browsers/chromium`), and `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers` is already set, so
+  **never run `playwright install`**. Verified working recipe:
+  `chrome --headless --no-sandbox --disable-gpu --screenshot=out.png --window-size=1280,720 <url>`.
+  The `dbus/bus.cc` connection errors it prints are harmless noise in this container, not a failure.
+  The resulting PNG can be read back and actually looked at. Puppeteer must be pointed at that
+  binary via `executablePath` rather than downloading its own. **No future run may claim it could
+  not do visual verification without first trying this.**
 - The Wingspan blind comparison cannot be run against the real product from inside the sandbox
   unless the critic fetches reference screenshots itself. `docs/QUALITY-BAR-DOW.md` §0 encodes
   Wingspan's specific strengths and weaknesses so the comparison is checkable either way.
