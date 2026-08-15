@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-08-13** (nightly run 1)
+Last updated: **2026-08-15** (nightly run 2, in progress)
 
 ---
 
@@ -42,7 +42,7 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 | Platform / multiplayer plumbing | **PASS** | 42 server tests green; game-agnostic boundary audited |
 | Power Grid (regression guard) | **PASS** | 230 engine tests green; must never go red |
 | DoW engine — code exists | **PASS** | 9,419 lines; plugin implements the full `GamePlugin` contract |
-| DoW engine — tested | **FAIL** | **0 tests.** §23 criteria unverified, §18 errata unverified |
+| DoW engine — tested | **PARTIAL** | 140 tests. A1–A4 covered; A5–A15 and §18 errata in flight (run 2) |
 | DoW content pack | **PARTIAL** | Schema + validator + `testPack` fixture only. No shipping catalog |
 | DoW client UI | **FAIL** | `packages/client/src/games/dead-of-winter/index.tsx` is a placeholder |
 | DoW art | **FAIL** | Nothing produced |
@@ -65,7 +65,7 @@ previously true. Verify the baseline yourself every run; do not trust this table
 | Client | `npx tsc -p packages/client/tsconfig.json --noEmit` | OK |
 | Power Grid tests | `npm test -w @game/power-grid` | 230 passed |
 | Server tests | `npx vitest run --root packages/server` | 42 passed |
-| DoW tests | `npm test -w @game/dead-of-winter` | **none exist** |
+| DoW tests | `npm test -w @game/dead-of-winter` | 140 passed |
 
 ## Queue — next workstreams, in dependency order
 
