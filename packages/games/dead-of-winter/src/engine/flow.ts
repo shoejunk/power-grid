@@ -32,7 +32,7 @@ import {
 import { locationOrder } from './policy.js';
 import { drawCrossroads, returnCrossroads } from './crossroads.js';
 import { applyFrostbiteAtTurnStart } from './survivors.js';
-import { placementEffects, resetEntrancePointer } from './zombies.js';
+import { placementEffects } from './zombies.js';
 import { checkMoraleZero, endGame, mainObjectiveSatisfied } from './endgame.js';
 import { itemMatches } from './effects/conditions.js';
 
@@ -202,7 +202,7 @@ export function runColonyStep(state: GameState, now: number, step: (typeof COLON
       resolveCrisis(state, now);
       return;
     case 'addZombies':
-      addZombies(state, now);
+      addZombies(state);
       return;
     case 'checkMainObjective':
       checkMainObjective(state, now);
@@ -347,7 +347,7 @@ function resolveCrisis(state: GameState, now: number): void {
  * one place in the rules where a morale of zero does *not* end the game on the
  * spot.
  */
-function addZombies(state: GameState, now: number): void {
+function addZombies(state: GameState): void {
   const content = contentOf(state);
   const queue: EngineEffect[] = [];
 

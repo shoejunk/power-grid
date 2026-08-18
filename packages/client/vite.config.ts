@@ -24,9 +24,7 @@ export default defineConfig({
      * Source aliases, mirroring tsconfig `paths`. The client is `noEmit`, so
      * there is nothing to gain from compiling the workspace packages first —
      * and plenty to lose, because a stale `dist` that still type-checks is the
-     * hardest kind of bug to see. `@game/dead-of-winter` is deliberately absent:
-     * that package is still being built out, so it resolves through its own
-     * `exports` map and the client only ever reads its descriptor.
+     * hardest kind of bug to see.
      */
     alias: {
       '@': fromHere('./src'),
@@ -34,6 +32,7 @@ export default defineConfig({
       '@tt/ui/styles': fromHere('../ui/src/styles'),
       '@tt/ui': fromHere('../ui/src/index.ts'),
       '@game/power-grid': fromHere('../games/power-grid/src/index.ts'),
+      '@game/dead-of-winter': fromHere('../games/dead-of-winter/src/index.ts'),
     },
   },
 

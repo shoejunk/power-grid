@@ -35,6 +35,7 @@ import {
   registerContentPack,
   validateAction as engineValidate,
 } from './engine/index.js';
+import { fallbackActions, planAction } from './engine/bot.js';
 import {
   GAME_MODES,
   STATE_VERSION,
@@ -386,6 +387,29 @@ function allowsOutOfTurn(state: GameState, playerId: PlayerId, action: GameActio
 }
 
 /**
+ * Whose input the table is waiting on.
+ *
+ * Normally the engine's own answer. The exception is a §15 vote: those are
+ * simultaneous, so the engine deliberately leaves the clock where it was and
+ * lets `allowsOutOfTurn` admit every elector's commitment. That is right for
+ * people and wrong for the server's automation, which only ever offers a move
+ * to the seat this function names — an automated seat would sit on its vote
+ * and the table would wait on it forever.
+ *
+ * So while a vote is outstanding this reports the first elector who has not
+ * committed. It narrows nobody's rights: `allowsOutOfTurn` still lets any
+ * elector vote whenever they like, in any order.
+ */
+function activePlayerOf(state: GameState): PlayerId | null {
+  const vote = state.vote;
+  if (vote) {
+    const pending = vote.electorate.find((id) => vote.votes[id] === undefined);
+    if (pending) return pending;
+  }
+  return state.activePlayerId;
+}
+
+/**
  * Mirrors socket presence into the state so the board can dim an absent
  * player's survivors. Deliberately outside the reducer: presence is not a move,
  * it is never validated, and nothing a replay depends on is touched.
@@ -440,13 +464,16 @@ export const deadOfWinter: GamePlugin<GameState, GameAction, GameSettings> = {
   applyAction: (state, playerId, action, now) => engineApply(state, playerId, action, now),
 
   createGame,
-  activePlayerOf: (state) => state.activePlayerId,
+  activePlayerOf,
   isGameOver: (state) => state.phase === 'gameOver',
 
   redactStateFor: engineRedact,
   allowsOutOfTurn,
   applyPresence,
   applyHostChange: engineHostChange,
+
+  defaultActionFor: planAction,
+  safeDefaultActions: fallbackActions,
 
   migrateState,
 };

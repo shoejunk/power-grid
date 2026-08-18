@@ -33,7 +33,8 @@
       "@tt/core": ["../core/src/index.ts"],
       "@tt/ui": ["../ui/src/index.ts"],
       "@tt/ui/*": ["../ui/src/*"],
-      "@game/power-grid": ["../games/power-grid/src/index.ts"]
+      "@game/power-grid": ["../games/power-grid/src/index.ts"],
+      "@game/dead-of-winter": ["../games/dead-of-winter/src/index.ts"]
     }
   },
   "include": ["src", "vite.config.ts"]

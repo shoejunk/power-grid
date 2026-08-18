@@ -4,13 +4,13 @@
     {
       "name": "client",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace=@pg/client"],
+      "runtimeArgs": ["run", "dev", "--workspace=@tt/client"],
       "port": 5173
     },
     {
       "name": "server",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace=@pg/server"],
+      "runtimeArgs": ["run", "dev", "--workspace=@tt/server"],
       "port": 8787
     }
   ]

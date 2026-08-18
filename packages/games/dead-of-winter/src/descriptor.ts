@@ -46,7 +46,13 @@ export const descriptor: GameDescriptor = {
   maxPlayers: MAX_PLAYERS,
   playTime: '60–120 min',
   seatColors: SEAT_COLORS,
-  supportsBots: false,
+  /*
+   * Bot seats exist so one person can sit down at a game that needs three.
+   * They answer the decisions the rules block on and spend their dice on the
+   * obvious things (see `engine/bot.ts`); they do not scheme, and they never
+   * vote to exile anybody.
+   */
+  supportsBots: true,
   theme: {
     accent: '#c8452f',
     backdrop: '#0d1114',

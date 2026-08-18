@@ -171,7 +171,6 @@ export function orderCasualtyCandidates(
  * rest of the movement rules impose.
  */
 export function eligibleExiledEntryLocations(
-  state: GameState,
   content: ContentIndex,
   freeSpaceAt: (loc: LocationId) => number,
 ): NonColonyLocationId[] {

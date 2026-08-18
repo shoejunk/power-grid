@@ -449,7 +449,7 @@ export function addSurvivorToPlayer(
 
   // §13/§14.2: an exiled player's new survivor enters a non-colony location of
   // that player's choice.
-  const eligible = eligibleExiledEntryLocations(state, contentOf(state), (loc) =>
+  const eligible = eligibleExiledEntryLocations(contentOf(state), (loc) =>
     freeSurvivorSpaces(state, loc),
   );
   if (eligible.length === 0) {
@@ -533,7 +533,7 @@ function addReplacementSurvivor(state: GameState, now: number, playerId: PlayerI
     } else {
       const cardId = drawSurvivorCard(state);
       if (!cardId) return false;
-      const eligible = eligibleExiledEntryLocations(state, contentOf(state), (loc) =>
+      const eligible = eligibleExiledEntryLocations(contentOf(state), (loc) =>
         freeSurvivorSpaces(state, loc),
       );
       if (eligible.length === 0) {
@@ -553,7 +553,7 @@ function addReplacementSurvivor(state: GameState, now: number, playerId: PlayerI
     return true;
   }
 
-  const eligible = eligibleExiledEntryLocations(state, contentOf(state), (loc) =>
+  const eligible = eligibleExiledEntryLocations(contentOf(state), (loc) =>
     freeSurvivorSpaces(state, loc),
   );
   if (eligible.length === 0) {

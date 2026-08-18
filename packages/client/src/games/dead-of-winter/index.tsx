@@ -1,81 +1,79 @@
-import { descriptor, SEAT_COLOR_HEX } from '@game/dead-of-winter';
-import { Badge, Panel } from '@tt/ui';
-import { motion } from 'framer-motion';
+import { deadOfWinter, SEAT_COLORS, SEAT_COLOR_HEX, type SeatColorId } from '@game/dead-of-winter';
+import {
+  SigilCircle,
+  SigilDiamond,
+  SigilHex,
+  SigilSquare,
+  SigilTriangle,
+  type SeatColorOption,
+} from '@tt/ui';
+import type { ComponentType, ReactNode } from 'react';
 
 import type { GameUiModule } from '../types';
 
+import { DeadOfWinterMatch } from './game/Match';
+import {
+  defaultSettings,
+  DeadOfWinterSettings,
+  DeadOfWinterSettingsSummary,
+} from './settings/DeadOfWinterSettings';
+
 /**
- * Dead of Winter — mount point.
+ * Dead of Winter's client module.
  *
- * The rules package exists and the server will host a table for it; the
- * interface does not exist yet. Until it does, this module exists so that
- * `registry.ts` has something to point at and the portal can advertise the
- * game honestly rather than pretending it is not coming.
+ * The interface is playable but unfinished: it draws the whole authoritative
+ * state and can send every action the engine accepts, with each affordance's
+ * legality answered by the rules engine itself rather than guessed at. What it
+ * does not yet have is art — the board is panels, not a painted colony — and
+ * the animation and moment-to-moment feedback the quality bar asks for.
  *
- * See ./README.md for what replacing this involves.
+ * The stylesheet is imported by the match screen rather than here, so the
+ * portal does not pay for it until somebody actually sits down.
  */
 
-/** Seat swatches, so the platform lobby can already paint this game's seats. */
-const seatColors = descriptor.seatColors.map((id) => ({
+const SEAT_LABEL: Record<SeatColorId, string> = {
+  ember: 'Ember',
+  frost: 'Frost',
+  moss: 'Moss',
+  rust: 'Rust',
+  violet: 'Violet',
+};
+
+/**
+ * A distinct shape per seat colour. Colour alone is not an accessible
+ * encoding, and this game paints five seats over a deliberately desaturated
+ * winter palette, where it is even less of one.
+ */
+const SEAT_SIGIL: Record<SeatColorId, ComponentType> = {
+  ember: SigilTriangle,
+  frost: SigilCircle,
+  moss: SigilSquare,
+  rust: SigilDiamond,
+  violet: SigilHex,
+};
+
+const seatColors: readonly SeatColorOption[] = SEAT_COLORS.map((id) => ({
   id,
-  label: id.charAt(0).toUpperCase() + id.slice(1),
-  tint: {
-    base: SEAT_COLOR_HEX[id as keyof typeof SEAT_COLOR_HEX],
-    ink: '#0b0f14',
-  },
+  label: SEAT_LABEL[id],
+  tint: { base: SEAT_COLOR_HEX[id], ink: '#0b0f14' },
 }));
 
-function ComingSoon(): JSX.Element {
-  return (
-    <div className="tt-screen">
-      <div className="dow-soon">
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-        >
-          <Panel
-            tone="glass"
-            padding="roomy"
-            ticks
-            title={descriptor.name}
-            subtitle={descriptor.tagline}
-            actions={<Badge tone="warning">In development</Badge>}
-            className="dow-soon__panel"
-          >
-            <p className="tt-lead">{descriptor.blurb}</p>
-            <dl className="tt-summary">
-              <div className="tt-summary__row">
-                <dt className="tt-summary__label">Players</dt>
-                <dd className="tt-summary__value">
-                  {descriptor.minPlayers}&ndash;{descriptor.maxPlayers}
-                </dd>
-              </div>
-              <div className="tt-summary__row">
-                <dt className="tt-summary__label">Play time</dt>
-                <dd className="tt-summary__value">{descriptor.playTime}</dd>
-              </div>
-              <div className="tt-summary__row">
-                <dt className="tt-summary__label">Status</dt>
-                <dd className="tt-summary__value">Rules engine in progress</dd>
-              </div>
-            </dl>
-            <p className="tt-caption dow-soon__note">
-              The colony is being built. Come back for the first winter.
-            </p>
-          </Panel>
-        </motion.div>
-      </div>
-    </div>
-  );
+export function seatSigil(color: string): ReactNode {
+  const Sigil = SEAT_SIGIL[color as SeatColorId];
+  return Sigil ? <Sigil /> : null;
 }
 
 const deadOfWinterUi: GameUiModule = {
-  descriptor,
-  comingSoon: true,
-  defaultSettings: () => ({}),
+  descriptor: deadOfWinter.descriptor,
+  defaultSettings,
   seatColors,
-  Match: ComingSoon,
+  seatSigil,
+  /* Mirrors the plugin method the server uses to size the table, so the lobby
+     never advertises a seat that `startGame` would then refuse. */
+  seatCapacity: (settings) => deadOfWinter.seatCapacity?.(settings as never),
+  Settings: DeadOfWinterSettings,
+  SettingsSummary: DeadOfWinterSettingsSummary,
+  Match: DeadOfWinterMatch,
 };
 
 export default deadOfWinterUi;

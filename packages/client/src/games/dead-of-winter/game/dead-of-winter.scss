@@ -1,0 +1,812 @@
+@charset "UTF-8";
+
+/* =====================================================================
+ * DEAD OF WINTER — match screen
+ * ---------------------------------------------------------------------
+ * Consumes the design tokens on :root; declares none of its own beyond a
+ * handful of game-local ones scoped to `.dow-match`, so this sheet stays a
+ * leaf and @tt/ui remains the single source of colour and spacing.
+ *
+ * Desktop-proportioned and dense: the board, the rail, the seats and the log
+ * are all on screen at 1440px wide with no scrolling of the frame itself.
+ * Only the log and the hand scroll, and both are bounded.
+ * ===================================================================== */
+
+.dow-match {
+  --dow-snow: #dce8f2;
+  --dow-blood: #b5453b;
+  --dow-rail-w: 380px;
+  --dow-gap: var(--tt-space-3);
+
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: var(--dow-gap);
+  padding: var(--tt-space-3) var(--tt-space-4);
+  height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(95, 179, 217, 0.12), transparent 60%),
+    var(--tt-surface-base);
+}
+
+.dow-match--empty {
+  display: grid;
+  place-items: center;
+}
+
+/* ------------------------------------------------------------------ *
+ * Title bar
+ * ------------------------------------------------------------------ */
+
+.dow-match__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tt-space-3);
+}
+
+.dow-match__title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--tt-space-2);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tt-text-bright);
+}
+
+.dow-match__code {
+  font-family: var(--tt-font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--tt-text-muted);
+}
+
+.dow-match__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tt-space-2);
+}
+
+.dow-match__warn {
+  border-color: var(--tt-warning);
+}
+
+/* ------------------------------------------------------------------ *
+ * Vitals row
+ * ------------------------------------------------------------------ */
+
+.dow-top {
+  display: grid;
+  grid-template-columns: minmax(360px, 1.1fr) 1fr 1fr;
+  gap: var(--dow-gap);
+  align-items: stretch;
+}
+
+.dow-top__vitals {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--tt-space-2);
+}
+
+.dow-top__stats {
+  display: flex;
+  gap: var(--tt-space-4);
+  flex-wrap: wrap;
+}
+
+.dow-top__phase {
+  display: flex;
+  gap: var(--tt-space-2);
+  flex-wrap: wrap;
+}
+
+.dow-top__counters {
+  display: flex;
+  gap: var(--tt-space-1);
+  margin-top: var(--tt-space-2);
+}
+
+.dow-top__symbols {
+  color: var(--tt-text-faint);
+}
+
+.dow-stat {
+  display: flex;
+  flex-direction: column;
+  min-width: 54px;
+}
+
+.dow-stat__value {
+  font-size: 22px;
+  line-height: 1.05;
+  color: var(--tt-text-bright);
+}
+
+.dow-stat__label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tt-text-faint);
+}
+
+.dow-stat--warning .dow-stat__value {
+  color: var(--tt-warning);
+}
+
+.dow-stat--danger .dow-stat__value {
+  color: var(--tt-danger);
+  text-shadow: 0 0 18px var(--tt-danger-glow);
+}
+
+/* ------------------------------------------------------------------ *
+ * Main split
+ * ------------------------------------------------------------------ */
+
+.dow-match__main {
+  display: grid;
+  grid-template-columns: 1fr var(--dow-rail-w);
+  gap: var(--dow-gap);
+  min-height: 0;
+}
+
+.dow-match__board,
+.dow-match__rail {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.dow-match__rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dow-gap);
+}
+
+/* ------------------------------------------------------------------ *
+ * Board
+ * ------------------------------------------------------------------ */
+
+.dow-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--dow-gap);
+  align-content: start;
+}
+
+.dow-place--colony {
+  grid-column: 1 / -1;
+  border-color: var(--tt-line-strong);
+}
+
+.dow-place--target {
+  outline: 2px solid var(--tt-cyan);
+  outline-offset: 2px;
+}
+
+.dow-place__title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--tt-space-2);
+}
+
+.dow-place__count {
+  font-size: 11px;
+  color: var(--tt-text-faint);
+}
+
+.dow-place__marks {
+  display: inline-flex;
+  gap: var(--tt-space-2);
+  font-size: 11px;
+  color: var(--tt-text-secondary);
+}
+
+.dow-place__mark--zombie {
+  color: var(--dow-blood);
+}
+
+.dow-place__entrances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tt-space-2);
+  margin-bottom: var(--tt-space-2);
+}
+
+.dow-entrance {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 5px;
+  border: 1px solid var(--tt-line-subtle);
+  border-radius: var(--tt-radius-sm);
+  background: var(--tt-surface-sunken);
+}
+
+.dow-entrance__index {
+  font-size: 9px;
+  color: var(--tt-text-faint);
+}
+
+.dow-entrance__slots {
+  display: inline-flex;
+  gap: 1px;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.dow-entrance__zombie {
+  color: var(--dow-blood);
+}
+
+.dow-entrance__barricade {
+  color: var(--tt-copper);
+}
+
+.dow-entrance__free {
+  color: var(--tt-text-faint);
+}
+
+.dow-place__survivors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tt-space-1);
+  min-height: 26px;
+}
+
+.dow-place__empty {
+  font-size: 11px;
+  color: var(--tt-text-faint);
+}
+
+.dow-place__pick {
+  margin-top: var(--tt-space-2);
+  width: 100%;
+  padding: 4px;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tt-text-inverse);
+  background: var(--tt-cyan);
+  border: 0;
+  border-radius: var(--tt-radius-sm);
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------------ *
+ * Survivors
+ * ------------------------------------------------------------------ */
+
+.dow-survivor {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  font-size: 11px;
+  color: var(--tt-text-primary);
+  background: var(--tt-surface-raised);
+  border: 1px solid var(--tt-line-subtle);
+  border-radius: var(--tt-radius-pill);
+}
+
+.dow-survivor--live {
+  cursor: pointer;
+}
+
+.dow-survivor--live:hover {
+  border-color: var(--tt-line-accent);
+  background: var(--tt-surface-elevated);
+}
+
+.dow-survivor--selected {
+  border-color: var(--tt-cyan);
+  box-shadow: 0 0 0 1px var(--tt-cyan), 0 0 14px var(--tt-cyan-glow);
+}
+
+.dow-survivor--muted {
+  opacity: 0.66;
+}
+
+.dow-survivor__pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tt-pc);
+  flex: none;
+}
+
+.dow-survivor__name {
+  white-space: nowrap;
+}
+
+.dow-survivor__stats {
+  display: inline-flex;
+  gap: 4px;
+  font-size: 9.5px;
+  color: var(--tt-text-faint);
+}
+
+.dow-survivor__wounds {
+  color: var(--tt-danger);
+  letter-spacing: -1px;
+}
+
+.dow-survivor__frost {
+  color: var(--tt-cyan);
+}
+
+.dow-survivor__kit {
+  display: inline-flex;
+  gap: 1px;
+  font-size: 10px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Dice
+ * ------------------------------------------------------------------ */
+
+.dow-die {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--dow-snow);
+  background: var(--tt-surface-sunken);
+  border: 1px solid var(--tt-line);
+  border-radius: var(--tt-radius-sm);
+}
+
+.dow-die--live {
+  cursor: pointer;
+}
+
+.dow-die--live:hover {
+  border-color: var(--tt-line-accent);
+}
+
+.dow-die--selected {
+  border-color: var(--tt-cyan);
+  box-shadow: var(--tt-focus-ring-tight);
+}
+
+.dow-die--spent {
+  opacity: 0.38;
+}
+
+.dow-die__face {
+  display: block;
+  margin-top: -2px;
+}
+
+/* ------------------------------------------------------------------ *
+ * The rail
+ * ------------------------------------------------------------------ */
+
+.dow-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dow-gap);
+}
+
+.dow-dice__label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tt-text-faint);
+  margin-bottom: var(--tt-space-1);
+}
+
+.dow-dice__row,
+.dow-mine__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tt-space-1);
+  align-items: center;
+}
+
+.dow-mine {
+  margin-top: var(--tt-space-3);
+}
+
+.dow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tt-space-1);
+  margin-top: var(--tt-space-3);
+}
+
+.dow-actions--free {
+  border-top: 1px solid var(--tt-line-hairline);
+  padding-top: var(--tt-space-2);
+}
+
+/* A disabled button swallows pointer events, so its tooltip needs this
+   wrapper to be the hover target. */
+.dow-actions__blocked {
+  display: inline-flex;
+}
+
+.dow-actions__food {
+  display: flex;
+  align-items: center;
+  gap: var(--tt-space-2);
+  width: 100%;
+  margin-top: var(--tt-space-2);
+}
+
+.dow-aim {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-2);
+  margin-top: var(--tt-space-3);
+  padding: var(--tt-space-2);
+  border: 1px dashed var(--tt-line-accent);
+  border-radius: var(--tt-radius-md);
+  background: var(--tt-cyan-wash);
+}
+
+.dow-aim__text {
+  font-size: 12px;
+  color: var(--tt-text-primary);
+}
+
+.dow-aim__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tt-space-1);
+  align-items: center;
+}
+
+.dow-table__row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tt-space-2);
+  width: 100%;
+  padding: 2px 0;
+}
+
+.dow-table__name {
+  min-width: 84px;
+  font-size: 12px;
+  color: var(--tt-text-secondary);
+}
+
+/* ------------------------------------------------------------------ *
+ * Cards
+ * ------------------------------------------------------------------ */
+
+.dow-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tt-space-2);
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.dow-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 148px;
+  padding: var(--tt-space-2);
+  text-align: left;
+  font: inherit;
+  color: var(--tt-text-primary);
+  background: var(--tt-surface-raised);
+  border: 1px solid var(--tt-line-subtle);
+  border-radius: var(--tt-radius-md);
+}
+
+.dow-card--live {
+  cursor: pointer;
+}
+
+.dow-card--live:hover {
+  border-color: var(--tt-line-accent);
+}
+
+.dow-card--selected {
+  border-color: var(--tt-cyan);
+  box-shadow: 0 0 0 1px var(--tt-cyan);
+}
+
+.dow-card--facedown {
+  background: var(--tt-metal-fill-dark);
+  color: var(--tt-text-faint);
+}
+
+.dow-card__name {
+  font-size: 12px;
+  color: var(--tt-text-bright);
+}
+
+.dow-card__symbols {
+  font-size: 12px;
+}
+
+.dow-card__text {
+  font-size: 10.5px;
+  color: var(--tt-text-muted);
+}
+
+.dow-card__kind {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tt-text-faint);
+}
+
+/* ------------------------------------------------------------------ *
+ * Choice dialog
+ * ------------------------------------------------------------------ */
+
+.dow-choice__meta {
+  margin-bottom: var(--tt-space-2);
+}
+
+.dow-choice__options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-2);
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.dow-choice__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tt-space-2);
+  padding: var(--tt-space-2) var(--tt-space-3);
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: var(--tt-text-primary);
+  background: var(--tt-surface-raised);
+  border: 1px solid var(--tt-line-subtle);
+  border-radius: var(--tt-radius-md);
+  cursor: pointer;
+}
+
+.dow-choice__option:hover:not(:disabled) {
+  border-color: var(--tt-line-accent);
+  background: var(--tt-surface-elevated);
+}
+
+.dow-choice__option--selected {
+  border-color: var(--tt-cyan);
+  box-shadow: 0 0 0 1px var(--tt-cyan);
+}
+
+.dow-choice__option--illegal {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------------ *
+ * Vote
+ * ------------------------------------------------------------------ */
+
+.dow-vote {
+  border-color: var(--tt-warning);
+}
+
+.dow-vote__buttons {
+  display: flex;
+  gap: var(--tt-space-2);
+  margin-bottom: var(--tt-space-2);
+}
+
+/* ------------------------------------------------------------------ *
+ * Seats and log
+ * ------------------------------------------------------------------ */
+
+.dow-match__foot {
+  display: grid;
+  grid-template-columns: 1fr minmax(320px, 0.7fr);
+  gap: var(--dow-gap);
+  max-height: 210px;
+  min-height: 0;
+}
+
+.dow-seats__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tt-space-2);
+}
+
+.dow-seat {
+  flex: 1 1 168px;
+  padding: var(--tt-space-2);
+  border: 1px solid var(--tt-line-subtle);
+  border-left: 3px solid var(--dow-seat-tint, var(--tt-pc));
+  border-radius: var(--tt-radius-sm);
+  background: var(--tt-surface-sunken);
+}
+
+.dow-seat--acting {
+  border-color: var(--tt-success);
+  box-shadow: 0 0 18px rgba(58, 214, 147, 0.16);
+}
+
+.dow-seat--exiled {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--tt-surface-sunken),
+    var(--tt-surface-sunken) 6px,
+    rgba(181, 69, 59, 0.12) 6px,
+    rgba(181, 69, 59, 0.12) 12px
+  );
+}
+
+.dow-seat--out {
+  opacity: 0.5;
+}
+
+.dow-seat__head {
+  display: flex;
+  align-items: center;
+  gap: var(--tt-space-1);
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.dow-seat__pip {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.dow-seat__name {
+  font-size: 12px;
+  color: var(--tt-text-bright);
+}
+
+.dow-seat__body {
+  display: flex;
+  align-items: center;
+  gap: var(--tt-space-2);
+  font-size: 11px;
+  color: var(--tt-text-secondary);
+}
+
+.dow-seat__dice {
+  display: inline-flex;
+  gap: 2px;
+  transform: scale(0.72);
+  transform-origin: left center;
+}
+
+.dow-seat__secret {
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--tt-text-muted);
+}
+
+.dow-log__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 150px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.dow-log__line {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: var(--tt-space-2);
+  font-size: 11.5px;
+  color: var(--tt-text-secondary);
+}
+
+.dow-log__round {
+  color: var(--tt-text-faint);
+  font-size: 10px;
+}
+
+.dow-log__line--bad .dow-log__text {
+  color: var(--tt-danger);
+}
+
+.dow-log__line--warn .dow-log__text {
+  color: var(--tt-warning);
+}
+
+.dow-log__line--good .dow-log__text {
+  color: var(--tt-success);
+}
+
+.dow-log__line--note .dow-log__text {
+  color: var(--tt-text-primary);
+}
+
+/* ------------------------------------------------------------------ *
+ * Game over
+ * ------------------------------------------------------------------ */
+
+.dow-over {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--tt-space-6);
+  background: var(--tt-surface-scrim);
+  backdrop-filter: blur(6px);
+  z-index: 40;
+}
+
+.dow-over__panel {
+  width: min(760px, 92vw);
+}
+
+.dow-over__results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-2);
+  margin: var(--tt-space-3) 0;
+}
+
+.dow-over__row {
+  display: grid;
+  grid-template-columns: 140px 72px 1fr 110px;
+  align-items: center;
+  gap: var(--tt-space-2);
+  padding: var(--tt-space-2);
+  border: 1px solid var(--tt-line-hairline);
+  border-radius: var(--tt-radius-sm);
+  font-size: 12px;
+}
+
+.dow-over__name {
+  color: var(--tt-text-bright);
+}
+
+.dow-over__objectives {
+  color: var(--tt-text-muted);
+}
+
+.dow-over__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ------------------------------------------------------------------ *
+ * Coming-soon panel, still used by the game's detail page
+ * ------------------------------------------------------------------ */
+
+.dow-soon__panel {
+  width: min(520px, 100%);
+}
+
+.dow-soon__note {
+  margin-top: var(--tt-space-3);
+  color: var(--tt-text-faint);
+}
+
+@media (max-width: 1180px) {
+  .dow-match {
+    height: auto;
+    overflow: visible;
+  }
+
+  .dow-match__main {
+    grid-template-columns: 1fr;
+  }
+
+  .dow-top {
+    grid-template-columns: 1fr;
+  }
+
+  .dow-match__foot {
+    grid-template-columns: 1fr;
+    max-height: none;
+  }
+}
