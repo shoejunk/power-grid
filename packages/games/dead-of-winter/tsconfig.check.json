@@ -1,0 +1,20 @@
+// Typecheck-only view of this package.
+//
+// `tsconfig.json` is a composite project: `tsc -b` writes `dist/` and a shared
+// `.tsbuildinfo`, so two processes running it at once race each other. During a
+// nightly run several agents typecheck the same tree concurrently, so they use
+// this config instead — no emit, no build info, nothing on disk to contend for.
+// It must stay otherwise identical to `tsconfig.json`, or it would green-light
+// code that the real build rejects.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "incremental": false,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts"]
+}
