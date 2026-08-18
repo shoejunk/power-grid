@@ -8,6 +8,29 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-18 — nightly run 3
+
+**Baseline verified before any work.** `npm install` clean. Builds: core OK, power-grid OK, server
+OK, client OK — but **dead-of-winter and server `tsc -b` were RED**. Run 2 was killed mid-run and
+left `src/engine/__tests__/crossroads.test.ts` on `master`: a sub-agent's scratch `console.log`
+probe, not a real test, referencing a non-existent `GameState.rounds`. It passed `vitest` (which
+does not typecheck) while breaking every downstream build. Deleted it — first commit of the night.
+Post-fix baseline: all five builds clean, Power Grid **230**, server **42**, Dead of Winter **142**.
+
+**Correction to run 2's record:** despite the commit message `wip(dow): in-flight crossroads and
+redaction suites`, there is no crossroads coverage on master. The only crossroads file was the
+probe. `redaction-replay.test.ts` holds exactly **one** test. Real coverage today is A1–A4 via
+`setup.test.ts` (68) and `dice-and-actions.test.ts` (70).
+
+**Intent:** finish workstream `engine-tests` — the remaining §23 criteria **A5–A13**, the **§18
+errata** regression coverage required by A14, and **A15** replay/redaction. Fanning out sub-agents,
+each owning exactly one new test file, each looping against its own harsh critic. Sub-agents run no
+git and do not edit engine source; engine bugs they find are reported back and applied here.
+
+(in progress — entry completed at end of run)
+
+---
+
 ## 2026-08-15 — nightly run 2
 
 **Baseline verified before any work** (not trusted from `STATE.md`): `npm install` clean on Linux,
