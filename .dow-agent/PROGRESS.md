@@ -8,6 +8,29 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-18 — nightly run 4
+
+**Baseline verified before any work, and it is green.** `npm install` clean; all five `tsc` builds
+clean (core, power-grid, dead-of-winter, server, client); Power Grid **230**, Dead of Winter **141**,
+server **42**. Working tree clean at `b286a93`.
+
+**What run 3 actually got done, for the record:** run 3 was killed very early. It landed exactly
+three commits — deleting run 2's broken scratch probe (`9e27937`), adding `tsconfig.check.json`
+(`365d170`), and the ErrorBoundary tag fix (`b286a93`). **None of the A5–A15 test work it intended
+was written.** Its PROGRESS entry above stops at "in progress" and should be read as intent only.
+
+**Intent:** continue workstream `engine-tests` — still the first queue item and still incomplete.
+Coverage on master today is A1–A4 (`setup.test.ts` 68, `dice-and-actions.test.ts` 70) plus one
+redaction test. Tonight targets the remaining §23 criteria **A5–A13**, the **§18 errata** regression
+coverage required by A14, and **A15** replay/redaction. One sub-agent per criterion group, each
+owning exactly one new test file, each looping against its own harsh critic. Sub-agents run no git
+and do not edit engine source; engine bugs they find come back to me and I apply them, so no two
+agents ever touch the same file.
+
+(in progress — entry completed at end of run)
+
+---
+
 ## 2026-08-18 — nightly run 3
 
 **Baseline verified before any work.** `npm install` clean. Builds: core OK, power-grid OK, server
