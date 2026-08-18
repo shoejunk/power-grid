@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   override componentDidCatch(error: Error, info: ErrorInfo): void {
     // Kept as a console report rather than a remote logger: the shell has no
     // telemetry dependency, and the stack is what a developer needs here.
-    console.error('[power-grid] render failure', error, info.componentStack);
+    console.error('[tabletop] render failure', error, info.componentStack);
   }
 
   private readonly reset = (): void => {
