@@ -8,6 +8,35 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-20 — nightly run 6
+
+**What run 5 got done, for the record:** run 5 was killed after two commits — `f0e821e` (its intent
+entry) and `8e15e2c` (a full rewrite of `STATE.md` correcting three runs of staleness). It wrote
+**none** of the A5–A15 tests it declared. That is now four consecutive runs (2, 3, 4, 5) that
+declared `engine-tests` and landed zero acceptance tests. `STATE.md` is at least accurate now.
+
+**Diagnosis of the pattern:** every one of those runs spent its first hour re-reading the design
+doc, re-deriving the engine API, and briefing sub-agents from scratch before a single test file
+existed. The kill always landed inside that window. Tonight inverts it: the *smallest* useful unit
+is committed first and the briefing is amortised. One sub-agent per §23 criterion group, each
+owning exactly one new test file under `src/engine/__tests__/`, each looping against its own harsh
+critic, and **I commit and push the moment a file's suite is green** — not at the end of the group,
+not at the end of the night.
+
+**Intent:** workstream `engine-tests`. Targets in order: §23 **A5, A6, A7** (search privacy /
+crisis secrecy / waste / food persistence; combat, kill-vs-remove, exposure, frostbite, bite chains,
+last-survivor replacement; colony entrance cycling, barricades, overruns, casualty choice, noise
+zombies), then **A8–A13** (morale-zero termination, crossroads draw/trigger/legality, exile,
+effect-interruption and once-per-round persistence, objective-check timing, winner evaluation),
+then the **§18 errata** required by **A14**, then **A15** determinism + a whole-view redaction walk.
+
+Sub-agents run no git and do not edit engine source. Engine bugs they find are reported back and I
+apply them, so no two agents ever touch the same file.
+
+(in progress — entry completed at end of run)
+
+---
+
 ## 2026-08-20 — nightly run 5
 
 **What run 4 actually got done, for the record:** run 4's own entry below stops at "in progress" —
