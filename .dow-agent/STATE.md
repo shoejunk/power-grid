@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-08-15** (nightly run 2, in progress)
+Last updated: **2026-08-20** (nightly run 5, in progress)
 
 ---
 
@@ -29,9 +29,10 @@ When that holds, write `.dow-agent/.aaa-complete` and disable the routine.
 
 ## Current focus
 
-**Workstream: `engine-tests`** — the Dead of Winter engine has ~9,400 lines and no tests at all.
-Nothing else can be trusted until that changes, because every later claim about rules conformance
-rests on it.
+**Workstream: `engine-tests`** — still the first non-PASS item in the queue, and still the
+bottleneck. Runs 2, 3 and 4 all declared it and none of them wrote a single one of the A5–A15
+tests; run 4 went and built the client UI instead. Run 5 is doing A5–A15 with one sub-agent per
+test file and **a separate push per finished file**, so a mid-run kill cannot lose the night.
 
 ## Scorecard
 
@@ -41,20 +42,21 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 | --- | --- | --- |
 | Platform / multiplayer plumbing | **PASS** | 42 server tests green; game-agnostic boundary audited |
 | Power Grid (regression guard) | **PASS** | 230 engine tests green; must never go red |
-| DoW engine — code exists | **PASS** | 9,419 lines; plugin implements the full `GamePlugin` contract |
-| DoW engine — tested | **PARTIAL** | 140 tests. A1–A4 covered; A5–A15 and §18 errata in flight (run 2) |
-| DoW content pack | **PARTIAL** | Schema + validator + `testPack` fixture only. No shipping catalog |
-| DoW client UI | **FAIL** | `packages/client/src/games/dead-of-winter/index.tsx` is a placeholder |
-| DoW art | **FAIL** | Nothing produced |
-| Visual (V1–V15) | — | Cannot assess until a UI exists |
-| Motion (M1–M9) | — | Cannot assess until a UI exists |
-| UX (U1–U13) | — | Cannot assess until a UI exists |
+| DoW engine — code exists | **PASS** | ~5,400 lines under `engine/`; plugin implements the full `GamePlugin` contract |
+| DoW engine — tested | **PARTIAL** | 147 tests. A1–A4 covered; A5–A15 and §18 errata are run 5's work |
+| DoW content pack | **FAIL** | Schema + validator + `testPack` fixture only. **No shipping catalog** — the game is played with the engine's test fixture |
+| DoW client UI — exists | **PASS** | Run 4 landed the match screen (`packages/client/src/games/dead-of-winter/`) |
+| DoW client UI — judged | **FAIL** | **Never screenshotted, never critiqued.** No evidence for any V/M/U criterion |
+| DoW art | **FAIL** | Nothing produced. No procedural pipeline for this game yet |
+| Visual (V1–V15) | — | UI exists but has had no critic pass; assume nothing |
+| Motion (M1–M9) | — | Same |
+| UX (U1–U13) | — | Same |
 | Blind comparison vs Wingspan | — | Final gate; not attempted |
 
 ## Build and test status
 
-All packages build clean as of the last push, **on Linux as well as Windows** — which was not
-previously true. Verify the baseline yourself every run; do not trust this table.
+Verify the baseline yourself every run; do not trust this table. Figures below were measured at the
+start of run 5, on Linux, at `f0e821e`.
 
 | Check | Command | Status |
 | --- | --- | --- |
@@ -65,21 +67,20 @@ previously true. Verify the baseline yourself every run; do not trust this table
 | Client | `npx tsc -p packages/client/tsconfig.json --noEmit` | OK |
 | Power Grid tests | `npm test -w @game/power-grid` | 230 passed |
 | Server tests | `npx vitest run --root packages/server` | 42 passed |
-| DoW tests | `npm test -w @game/dead-of-winter` | 140 passed |
+| DoW tests | `npm test -w @game/dead-of-winter` | 147 passed |
 
 ## Queue — next workstreams, in dependency order
 
-1. **`engine-tests`** — a vitest suite covering all 15 §23 acceptance criteria and every §18
-   erratum, plus a determinism test (same seed + action log ⇒ identical final state) and the
-   redaction test (serialise player A's view; assert player B's secret ids do not appear).
+1. **`engine-tests`** — §23 A5–A15 plus every §18 erratum, one named regression test each, plus a
+   determinism test (same seed + action log ⇒ identical final state) and a redaction test that
+   walks the whole serialised view rather than checking named fields. **In progress, run 5.**
 2. **`content-pack`** — the shipping catalog at the §2.0 counts: 30 survivors, 25 starter items,
    6×20 location items, 20 crisis, 80 crossroads, 10 dual-sided main objectives, 24 non-betrayal +
    10 betrayal + 10 exiled secret objectives. **Original names and text** — the retail card text is
    not reproduced. The ~18 cards named in §18 keep their real names so those regression tests mean
-   something.
-3. **`client-ui`** — the board: colony plus six locations, survivor standees, dice tray, hand,
-   crisis and objective areas, crossroads reveal, vote panel, exposure and bite resolution, zombie
-   placement narration, morale/round/food/waste readouts, rules log.
+   something. Until this exists the shipped game is played with `testPack`.
+3. **`client-ui`** — exists as of run 4 but unjudged. The next visual run does not start from
+   nothing: it starts from `packages/client/src/games/dead-of-winter/` and a first critic pass.
 4. **`art`** — survivor portraits, item cards, zombies, board, tokens. Follow the procedural art
    pipeline already in `packages/client/src/games/power-grid/art/`.
 5. **`polish`** — motion, sound, accessibility, reduced-motion, resolution sweep.
@@ -88,17 +89,24 @@ previously true. Verify the baseline yourself every run; do not trust this table
 
 ## Known debts
 
+- **Runs keep dying mid-night with unpushed work.** Runs 1, 2, 3 and 4 were all killed before
+  writing their PROGRESS result; three of them lost their declared workstream entirely. Push each
+  unit of work on its own the moment its tests are green. Do not batch.
+- **The shipped game uses the engine's test fixture as its content.** `testPack` is a fixture, not
+  a catalog. Anything judged about gameplay depth today is judging the fixture.
 - **The nightly sandbox is Linux; the dev machine is Windows.** Anything platform-specific will
   be caught here first and can silently make a whole run a no-op. Run the baseline before
   believing any claim in this file.
 - **Pushing requires GitHub write access for the session.** Run 1 initially had none: `git push`
-  returned 403 through the agent proxy and the GitHub API returned `Resource not accessible by
-  integration` on the trees, refs and contents endpoints. If a future run cannot push, that is
-  the cause — report it rather than working all night into a sandbox that gets discarded.
-- `packages/ui/src/components/ErrorBoundary.tsx` logs a literal `[power-grid]` from a
-  game-agnostic component.
+  returned 403 through the agent proxy. Confirmed working in run 5. If a future run cannot push,
+  that is the cause — report it rather than working all night into a sandbox that gets discarded.
+- **Concurrent sub-agents share one typecheck.** `tsconfig.check.json` includes `src/**/*.ts`, so
+  an agent typechecking its own file also compiles every other agent's in-progress file. Brief
+  agents that only errors in their own path are theirs, and run the clean full typecheck yourself
+  before committing.
 - `packages/client/src/portal/portal.scss` still uses `.pg-setup__*` class names; the
   `--pg-*` → `--tt-*` rename did not reach it.
+- ~~`packages/ui/src/components/ErrorBoundary.tsx` logs a literal `[power-grid]`~~ — fixed, run 3.
 - ~~Whether headless screenshots are possible in the sandbox~~ — **RESOLVED, run 2.** They are.
   Chromium ships at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (symlinked from
   `/opt/pw-browsers/chromium`), and `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers` is already set, so
