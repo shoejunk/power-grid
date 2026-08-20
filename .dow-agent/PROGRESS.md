@@ -8,6 +8,33 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-20 — nightly run 5
+
+**What run 4 actually got done, for the record:** run 4's own entry below stops at "in progress" —
+it was killed before writing its result — but it landed a large commit, `ee833d0`
+*"feat(dow): make Dead of Winter playable"*. That commit did **not** do the A5–A15 engine-test work
+it declared as its intent. It jumped ahead to queue item 3 (`client-ui`) and built the whole Dead of
+Winter match screen: `Match.tsx`, `Board.tsx`, `ChoiceDialog.tsx`, `Seats.tsx`, `LogPanel.tsx`,
+`GameOverPanel.tsx`, a `content.ts` lookup, plus bot seats and an `activePlayerOf` fix in the game
+package. So the client UI now exists and the portal will create a Dead of Winter game — but it has
+had **no critic pass, no screenshot, and no visual verification of any kind**, and `STATE.md` (last
+touched at run 2) still describes it as a placeholder. That row is wrong and gets corrected tonight.
+
+**Intent:** the queue is still in dependency order and `engine-tests` is still its first non-PASS
+item. Runs 2, 3 and 4 each declared A5–A15 and each died before writing a single one of those tests,
+which is a pattern, not bad luck: the work was batched behind one big push at the end of the night.
+Tonight changes the method rather than the target. Each sub-agent owns exactly one test file, and
+**each finished file is committed and pushed on its own the moment its suite is green** — so a kill
+at any point keeps everything landed up to that point. Targets, in order: §23 **A5–A7** (search
+privacy / crisis secrecy / waste / food, combat and exposure and bite chains, colony entrance and
+overrun ordering), then **A8–A13**, then the **§18 errata** required by A14. Sub-agents run no git
+and do not edit engine source; engine bugs they find come back to me and I apply them, so no two
+agents ever touch the same file.
+
+(in progress — entry completed at end of run)
+
+---
+
 ## 2026-08-18 — nightly run 4
 
 **Baseline verified before any work, and it is green.** `npm install` clean; all five `tsc` builds
