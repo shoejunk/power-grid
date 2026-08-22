@@ -25,6 +25,11 @@ all. Each sub-agent is given a §-number, a file list and its one output file, a
 reading. My only jobs are: push this entry, spawn, apply engine fixes agents report, run the full
 suite, commit each green file separately.
 
+**Baseline verified before any work, and it is green** at `58648e8`, measured not trusted:
+`npm install` clean; all five `tsc` builds OK (core, power-grid, dead-of-winter, server, client);
+Power Grid **230 passed**, server **42 passed**, Dead of Winter **147 passed** across the five
+pre-existing files. `STATE.md`'s build table was accurate.
+
 **Intent:** workstream `engine-tests`, in parallel, one sub-agent per §23 criterion group, each
 owning exactly one new file under `src/engine/__tests__/`, each looping against its own harsh
 critic:
