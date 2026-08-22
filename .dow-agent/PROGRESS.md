@@ -8,6 +8,42 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-22 — nightly run 7
+
+**What run 6 got done, for the record:** one commit, `976490a`, its own intent entry. **Zero A5–A15
+tests written.** That is now five consecutive runs (2, 3, 4, 5, 6) that declared `engine-tests` and
+landed no acceptance tests. Verified on master tonight: `src/engine/__tests__/` still holds only
+`setup.test.ts`, `dice-and-actions.test.ts`, `redaction-replay.test.ts`, `bot.test.ts`,
+`smoke.test.ts` and `helpers.ts`. `STATE.md`'s claim of A1–A4 coverage is accurate; everything else
+in the queue is untouched.
+
+**Diagnosis, refined.** Run 6 correctly identified that the kill lands inside the first hour, but
+its fix (commit the smallest unit first) did not address *why* that hour is spent: **I** was doing
+all the reading — the design doc, the engine API, the helper fixtures — before any sub-agent could
+be briefed. That reading is the hour. Tonight I do not read the design doc or the engine source at
+all. Each sub-agent is given a §-number, a file list and its one output file, and does its own
+reading. My only jobs are: push this entry, spawn, apply engine fixes agents report, run the full
+suite, commit each green file separately.
+
+**Intent:** workstream `engine-tests`, in parallel, one sub-agent per §23 criterion group, each
+owning exactly one new file under `src/engine/__tests__/`, each looping against its own harsh
+critic:
+
+- A5 — search privacy, crisis secrecy, waste, food persistence
+- A6 — combat, kill-vs-remove, exposure, frostbite, bite chains, last-survivor replacement
+- A7 — colony entrance cycling, barricades, overruns, casualty choice, noise zombies
+- A8–A10 — morale-zero termination, crossroads draw/trigger/legality, exile
+- A11–A13 — effect interruption, once-per-round persistence, objective-check timing, winners
+- A14 — every named §18 erratum, one targeted regression test each
+- A15 — determinism (same seed + action log ⇒ identical state) and a whole-view redaction walk
+
+Sub-agents run no git and never edit engine source. Engine bugs they find are reported back and I
+apply them, so no two agents ever touch the same file.
+
+(in progress — entry completed at end of run)
+
+---
+
 ## 2026-08-20 — nightly run 6
 
 **What run 5 got done, for the record:** run 5 was killed after two commits — `f0e821e` (its intent
