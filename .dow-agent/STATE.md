@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-08-23** (nightly run 8, in progress)
+Last updated: **2026-08-23** (nightly run 8, complete)
 
 ---
 
@@ -30,8 +30,8 @@ When that holds, write `.dow-agent/.aaa-complete` and disable the routine.
 ## Current focus
 
 **Workstream: `engine-tests`** — still the first non-PASS item in the queue and the bottleneck.
-Run 8 is bounded to A5, A6, and A7, with one implementation file and one independent harsh critic
-per criterion. Each green criterion lands in its own push.
+Run 8 completed A5, A6, and A7. The next run starts with A8–A10: morale checkpoints,
+crossroads timing/legality, and exile.
 
 ## Scorecard
 
@@ -42,7 +42,7 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 | Platform / multiplayer plumbing | **PASS** | 42 server tests green; game-agnostic boundary audited |
 | Power Grid (regression guard) | **PASS** | 230 engine tests green; must never go red |
 | DoW engine — code exists | **PASS** | ~5,400 lines under `engine/`; plugin implements the full `GamePlugin` contract |
-| DoW engine — tested | **PARTIAL** | 165 tests on master. A1–A5 and A7 covered; A6, A8–A15, and §18 errata remain |
+| DoW engine — tested | **PARTIAL** | 183 tests on master. A1–A7 covered; A8–A15 and §18 errata remain |
 | DoW content pack | **FAIL** | Schema + validator + `testPack` fixture only. **No shipping catalog** — the game is played with the engine's test fixture |
 | DoW client UI — exists | **PASS** | Run 4 landed the match screen (`packages/client/src/games/dead-of-winter/`) |
 | DoW client UI — judged | **FAIL** | **Never screenshotted, never critiqued.** No evidence for any V/M/U criterion |
@@ -55,7 +55,7 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 ## Build and test status
 
 Verify the baseline yourself every run; do not trust this table. Figures below were measured at the
-start of run 8, on Windows, at `e12fbe1`.
+end of run 8 on Windows, against the exact tree committed as `38effc0`.
 
 | Check | Command | Status |
 | --- | --- | --- |
@@ -66,14 +66,14 @@ start of run 8, on Windows, at `e12fbe1`.
 | Client | `npx tsc -p packages/client/tsconfig.json --noEmit` | OK |
 | Power Grid tests | `npm test -w @game/power-grid` | 230 passed |
 | Server tests | `npx vitest run --root packages/server` | 42 passed |
-| DoW tests | `npm test -w @game/dead-of-winter` | 165 passed on master after A7 |
+| DoW tests | `npm test -w @game/dead-of-winter` | 183 passed |
 
 ## Queue — next workstreams, in dependency order
 
-1. **`engine-tests`** — §23 A5–A15 plus every §18 erratum, one named regression test each, plus a
+1. **`engine-tests`** — §23 A8–A15 plus every §18 erratum, one named regression test each, plus a
    determinism test (same seed + action log ⇒ identical final state) and a redaction test that
-   walks the whole serialised view rather than checking named fields. **In progress, run 8;
-   tonight's bounded tranche is A5–A7. A5 and A7 are PASS; A6 remains in its critic loop.**
+   walks the whole serialised view rather than checking named fields. **A1–A7 are covered; start
+   next with A8–A10.**
 2. **`content-pack`** — the shipping catalog at the §2.0 counts: 30 survivors, 25 starter items,
    6×20 location items, 20 crisis, 80 crossroads, 10 dual-sided main objectives, 24 non-betrayal +
    10 betrayal + 10 exiled secret objectives. **Original names and text** — the retail card text is
@@ -94,9 +94,8 @@ start of run 8, on Windows, at `e12fbe1`.
   unit of work on its own the moment its tests are green. Do not batch.
 - **The shipped game uses the engine's test fixture as its content.** `testPack` is a fixture, not
   a catalog. Anything judged about gameplay depth today is judging the fixture.
-- **The nightly sandbox is Linux; the dev machine is Windows.** Anything platform-specific will
-  be caught here first and can silently make a whole run a no-op. Run the baseline before
-  believing any claim in this file.
+- **The execution environment varies between Linux and Windows.** Anything platform-specific can
+  silently make a whole run a no-op. Run the baseline before believing any claim in this file.
 - **Pushing requires GitHub write access for the session.** Run 1 initially had none: `git push`
   returned 403 through the agent proxy. Confirmed working in run 5. If a future run cannot push,
   that is the cause — report it rather than working all night into a sandbox that gets discarded.

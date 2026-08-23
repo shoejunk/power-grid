@@ -25,7 +25,47 @@ outside that file. Each area must then survive a separate harsh critic review ag
 doc before it can be called complete. Integration fixes, full-suite verification, commits, and
 pushes remain with the primary agent.
 
-(in progress — entry completed at end of run)
+**Landed, in separate green pushes:**
+
+- `b51514d` — A5: 9 acceptance tests for search privacy/noise and deterministic bottoming,
+  crisis secrecy/scoring/non-exiled threshold/cleanup, ordered waste, starvation persistence,
+  and public objective contributions. Fixed crisis cleanup skipping every other contribution
+  while mutating the live contribution array.
+- `20528f2` — A7: 9 acceptance tests for exact 1→6→1 colony cycling, real sequence resets,
+  barricade destruction, tied casualty choice, last-survivor replacement ordering, helpless and
+  empty overruns, non-colony placement, and deterministic population/noise order.
+- `38effc0` — A6: 18 acceptance tests for zombie/survivor combat, kill versus remove, all exposure
+  faces, movement-before-exposure, frostbite, bite-chain ordering/stops/ties, deterministic private
+  theft, and standard/exiled last-survivor replacement. Fixed first-player authority for tied bite
+  targets, deferred replacement after a blank bite response, private exiled replacement choices,
+  and former-owner authorization for stolen-card identity.
+
+**Harsh critic verdicts:**
+
+- **A5:** initial **FAIL** — only one bottomed search card, missing search boundaries, no spectator
+  crisis proof, no non-exiled threshold proof, and ambiguous food arithmetic. Revised suite closed
+  every gap; re-review **PASS**, 9/9 targeted.
+- **A6:** initial **FAIL** — missing movement exposure, redacted/replay theft proof, multi-token
+  frostbite, and exiled replacement. Second review **FAIL** because the former owner still could not
+  identify the stolen card. After both revisions and engine fixes, final review **PASS**, 18/18
+  targeted.
+- **A7:** initial **FAIL** — no 6→1 wrap, last-survivor replacement ordering, helpless/empty
+  overrun branches, or real sequence-reset proof. Revised suite closed every gap; re-review
+  **PASS**, 9/9 targeted.
+
+**Final verification:** all five TypeScript checks passed; Power Grid **230/230**, Dead of Winter
+**183/183**, server **42/42**, and `git diff --check` passed. The exact validated implementation is
+on `master` at `38effc0`; the handoff-only commit follows it.
+
+**State change:** engine-test coverage advanced from A1–A4 to **A1–A7**. The discipline remains
+**PARTIAL** because A8–A15 and all named §18 errata still need their acceptance/regression suites.
+Content, visuals, motion, UX, art, blind comparison, and multiplayer proof did not change and must
+not be inferred to pass. No visual critic or screenshot run was performed because the dependency-
+ordered workstream was engine tests.
+
+**Next run:** stay on `engine-tests`; take A8–A10 first (morale-zero checkpoints, crossroads
+draw/trigger/option legality, and exile relocation/restrictions/two-non-betrayer loss), again with
+one owned test file and a separate harsh critic loop per criterion group.
 
 ---
 
