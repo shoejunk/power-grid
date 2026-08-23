@@ -26,3 +26,6 @@ Thumbs.db
 # logs
 *.log
 npm-debug.log*
+
+# local visual verification captures
+.dow-agent/artifacts/
