@@ -42,7 +42,7 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 | Platform / multiplayer plumbing | **PASS** | 42 server tests green; game-agnostic boundary audited |
 | Power Grid (regression guard) | **PASS** | 230 engine tests green; must never go red |
 | DoW engine — code exists | **PASS** | ~5,400 lines under `engine/`; plugin implements the full `GamePlugin` contract |
-| DoW engine — tested | **PARTIAL** | 156 tests on master. A1–A5 covered; A6–A15 and §18 errata remain |
+| DoW engine — tested | **PARTIAL** | 165 tests on master. A1–A5 and A7 covered; A6, A8–A15, and §18 errata remain |
 | DoW content pack | **FAIL** | Schema + validator + `testPack` fixture only. **No shipping catalog** — the game is played with the engine's test fixture |
 | DoW client UI — exists | **PASS** | Run 4 landed the match screen (`packages/client/src/games/dead-of-winter/`) |
 | DoW client UI — judged | **FAIL** | **Never screenshotted, never critiqued.** No evidence for any V/M/U criterion |
@@ -66,14 +66,14 @@ start of run 8, on Windows, at `e12fbe1`.
 | Client | `npx tsc -p packages/client/tsconfig.json --noEmit` | OK |
 | Power Grid tests | `npm test -w @game/power-grid` | 230 passed |
 | Server tests | `npx vitest run --root packages/server` | 42 passed |
-| DoW tests | `npm test -w @game/dead-of-winter` | 156 passed on master after A5 |
+| DoW tests | `npm test -w @game/dead-of-winter` | 165 passed on master after A7 |
 
 ## Queue — next workstreams, in dependency order
 
 1. **`engine-tests`** — §23 A5–A15 plus every §18 erratum, one named regression test each, plus a
    determinism test (same seed + action log ⇒ identical final state) and a redaction test that
    walks the whole serialised view rather than checking named fields. **In progress, run 8;
-   tonight's bounded tranche is A5–A7. A5 is PASS; A6 and A7 remain in critic loops.**
+   tonight's bounded tranche is A5–A7. A5 and A7 are PASS; A6 remains in its critic loop.**
 2. **`content-pack`** — the shipping catalog at the §2.0 counts: 30 survivors, 25 starter items,
    6×20 location items, 20 crisis, 80 crossroads, 10 dual-sided main objectives, 24 non-betrayal +
    10 betrayal + 10 exiled secret objectives. **Original names and text** — the retail card text is
