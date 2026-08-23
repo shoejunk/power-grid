@@ -334,7 +334,11 @@ function resolveCrisis(state: GameState, now: number): void {
   }
 
   // §11.3 step 9: every contributed card leaves the game, prevented or not.
-  for (const contribution of state.crisis.contributions) removeFromGame(state, contribution.iid);
+  // `removeFromGame` detaches the item from every zone, including splicing it
+  // out of `crisis.contributions`. Snapshot first so mutating the live array
+  // cannot skip every other contribution.
+  const contributionIids = state.crisis.contributions.map((contribution) => contribution.iid);
+  for (const iid of contributionIids) removeFromGame(state, iid);
   state.crisis.contributions = [];
   state.crisis.cardId = null;
   state.decks.removedFromGame.survivors.length; // (crisis cards are not reused)
