@@ -8,6 +8,20 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-23 — nightly run 9
+
+**Intent:** continue the first non-PASS queue item, `engine-tests`, starting with A8–A10 in
+dependency order: immediate morale-zero termination and the three Add Zombies checkpoints;
+Crossroads right-hand draw, active-player timing, movement/exposure ordering, and option legality;
+then exile relocation, exposure/swap rules, objective adjustment, restrictions, allowed interactions,
+and the two-non-betrayer-exiles loss condition. Each bounded area will have one owned test file and
+an independent harsh critic. Integration fixes, verification, commits, and pushes remain with the
+primary agent.
+
+**(in progress — entry opened before implementation)**
+
+---
+
 ## 2026-08-23 — nightly run 8
 
 **Intent:** continue the first non-PASS queue item, `engine-tests`, with three bounded acceptance
