@@ -46,7 +46,7 @@ primary agent.
 
 **Verification:** all five TypeScript builds pass; Power Grid **230**, Dead of Winter **213**, and server
 **42** tests pass. `git diff --check` passed before each push. The tree is clean and synchronized with
-`origin/master` at `aef80dc`.
+`origin/master` at `3e36fbf`.
 
 **State changes:** DoW engine tested advanced from A1–A7 to **A1–A10 covered**; platform and regression
 guards remain PASS. No content-pack, client-UI judgment, art, visual, motion, multiplayer-proof, or

@@ -56,7 +56,7 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 ## Build and test status
 
 Verify the baseline yourself every run; do not trust this table. Figures below were measured at the
-end of run 9 on Windows, against the exact tree committed as `aef80dc`.
+end of run 9 on Windows, against the exact tree committed as `3e36fbf`.
 
 | Check | Command | Status |
 | --- | --- | --- |
