@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-08-20** (nightly run 5, in progress)
+Last updated: **2026-08-23** (nightly run 8, in progress)
 
 ---
 
@@ -29,10 +29,9 @@ When that holds, write `.dow-agent/.aaa-complete` and disable the routine.
 
 ## Current focus
 
-**Workstream: `engine-tests`** — still the first non-PASS item in the queue, and still the
-bottleneck. Runs 2, 3 and 4 all declared it and none of them wrote a single one of the A5–A15
-tests; run 4 went and built the client UI instead. Run 5 is doing A5–A15 with one sub-agent per
-test file and **a separate push per finished file**, so a mid-run kill cannot lose the night.
+**Workstream: `engine-tests`** — still the first non-PASS item in the queue and the bottleneck.
+Run 8 is bounded to A5, A6, and A7, with one implementation file and one independent harsh critic
+per criterion. Each green criterion lands in its own push.
 
 ## Scorecard
 
@@ -56,7 +55,7 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 ## Build and test status
 
 Verify the baseline yourself every run; do not trust this table. Figures below were measured at the
-start of run 5, on Linux, at `f0e821e`.
+start of run 8, on Windows, at `e12fbe1`.
 
 | Check | Command | Status |
 | --- | --- | --- |
@@ -73,7 +72,8 @@ start of run 5, on Linux, at `f0e821e`.
 
 1. **`engine-tests`** — §23 A5–A15 plus every §18 erratum, one named regression test each, plus a
    determinism test (same seed + action log ⇒ identical final state) and a redaction test that
-   walks the whole serialised view rather than checking named fields. **In progress, run 5.**
+   walks the whole serialised view rather than checking named fields. **In progress, run 8;
+   tonight's bounded tranche is A5–A7.**
 2. **`content-pack`** — the shipping catalog at the §2.0 counts: 30 survivors, 25 starter items,
    6×20 location items, 20 crisis, 80 crossroads, 10 dual-sided main objectives, 24 non-betrayal +
    10 betrayal + 10 exiled secret objectives. **Original names and text** — the retail card text is
