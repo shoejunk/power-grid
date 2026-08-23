@@ -556,13 +556,19 @@ function executeAuthored(state: GameState, now: number, frame: EffectFrame, effe
       // §7.2: "The random card selection must be authoritative and reveal the
       // stolen card only to its new owner and the former owner."
       const iid = withRng(state, (rng) => rng.pick(victim.hand));
+      const cardId = state.items[iid]?.cardId;
+      if (!cardId) throw new Error(`Stolen item '${iid}' has no registered card identity`);
       detachItem(state, iid);
       getPlayer(state, to).hand.push(iid);
       pushLog(state, now, {
         category: 'card',
         playerId: to,
         message: `${getPlayer(state, to).name} takes a card from ${victim.name}.`,
-        data: { event: 'stealCard', from, to, iid },
+        // The card has left the former owner's hand, so the redacted item
+        // registry can no longer identify it for them. Carry the identity in
+        // this audience-restricted event so exactly both authorized players
+        // can see what was stolen.
+        data: { event: 'stealCard', from, to, iid, cardId },
         audience: [from, to],
       });
       return;

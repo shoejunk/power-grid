@@ -47,6 +47,7 @@ import {
   legalMoveDestinations,
   moveSurvivor,
   placeSurvivor,
+  resolveBiteTarget,
   survivorName,
 } from './survivors.js';
 import { addBarricade, attractZombies, removeZombies } from './zombies.js';
@@ -1022,6 +1023,18 @@ function resolveChoice(
         return;
       }
       finishSearch(state, now, pick.slice('keep:'.length));
+      return;
+    }
+
+    case 'biteTarget': {
+      const data = choice.data ?? {};
+      resolveBiteTarget(
+        state,
+        pick,
+        data['location'] as LocationId,
+        (data['excluded'] as string[]) ?? [],
+        (data['deferred'] as PlayerId[]) ?? [],
+      );
       return;
     }
 

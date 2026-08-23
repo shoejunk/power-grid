@@ -369,6 +369,7 @@ export interface EffectFrame {
 export type ChoiceKind =
   | 'effectOption'
   | 'searchDecision'
+  | 'biteTarget'
   | 'biteResponse'
   | 'overrunCasualty'
   | 'chooseNewLeader'

@@ -298,6 +298,35 @@ export function stepBiteChain(
     return;
   }
 
+  // §9.2 identifies the lowest-influence survivor, while §15 gives the first
+  // player authority over a tied game decision. Preserve that decision as an
+  // explicit pending choice so a disconnect can resume it exactly.
+  if (candidates.length > 1) {
+    pushChoice(state, {
+      kind: 'biteTarget',
+      playerId: state.firstPlayerId,
+      prompt: `Several survivors tie for lowest influence at ${location}. Choose who faces the bite.`,
+      options: candidates.map((candidate) => ({
+        id: candidate.id,
+        label: nameOf(state, candidate),
+        legal: true,
+      })),
+      data: { location, excluded, deferred },
+    });
+    return;
+  }
+
+  pushBiteResponseChoice(state, victim, location, excluded, deferred);
+}
+
+function pushBiteResponseChoice(
+  state: GameState,
+  victim: SurvivorInstance,
+  location: LocationId,
+  excluded: SurvivorInstanceId[],
+  deferred: PlayerId[],
+): void {
+
   pushChoice(state, {
     kind: 'biteResponse',
     playerId: victim.controllerId,
@@ -308,6 +337,24 @@ export function stepBiteChain(
     ],
     data: { survivorId: victim.id, location, excluded, deferred },
   });
+}
+
+/** Resumes a bite chain after the first player resolves a lowest-influence tie. */
+export function resolveBiteTarget(
+  state: GameState,
+  survivorId: SurvivorInstanceId,
+  location: LocationId,
+  excluded: SurvivorInstanceId[],
+  deferred: PlayerId[],
+): void {
+  const victim = trySurvivor(state, survivorId);
+  if (!victim) {
+    unshiftIntoCurrentFrame(state, [
+      { kind: 'i.biteChain', location, excluded: [...excluded, survivorId], deferred },
+    ]);
+    return;
+  }
+  pushBiteResponseChoice(state, victim, location, excluded, deferred);
 }
 
 /**
@@ -360,6 +407,12 @@ export function resolveBiteResponse(
   if (face === 'blank') {
     // §9.2: a blank lets the survivor live *and* stops the chain — the survivor
     // takes no wound from this roll, whatever the face would normally mean.
+    if (deferred.length > 0) {
+      unshiftIntoCurrentFrame(
+        state,
+        deferred.map((playerId) => ({ kind: 'i.checkLastSurvivor', playerId }) as const),
+      );
+    }
     return;
   }
 
@@ -466,6 +519,7 @@ export function addSurvivorToPlayer(
     prompt: 'Choose where your new survivor enters.',
     options: eligible.map((loc) => ({ id: loc, label: loc, legal: true })),
     data: { cardId, asLeader: player.leaderSurvivorId === null },
+    private: true,
   });
   return true;
 }
@@ -570,6 +624,7 @@ function addReplacementSurvivor(state: GameState, now: number, playerId: PlayerI
     prompt: 'Choose where your replacement survivor enters.',
     options: eligible.map((loc) => ({ id: loc, label: loc, legal: true })),
     data: { cardId, asLeader: true },
+    private: true,
   });
   return true;
 }
