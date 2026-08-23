@@ -101,6 +101,11 @@ export function survivorName(state: GameState, survivorId: SurvivorInstanceId): 
 export const survivorCard = (cardId: CardId): SurvivorCardDefinition | undefined =>
   ACTIVE_PACK.survivors.get(cardId);
 
+/** Public portrait asset for every survivor card in the active pack. */
+export function survivorArtPath(cardId: CardId): string {
+  return `/games/dead-of-winter/survivors/${cardId}.png`;
+}
+
 /** An ability the UI can offer, whether it is printed on the survivor or on their kit. */
 export interface OfferedAbility {
   abilityId: string;

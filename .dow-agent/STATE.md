@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-08-23** (nightly run 9, complete)
+Last updated: **2026-08-23** (survivor roster and inspection pass)
 
 ---
 
@@ -30,7 +30,8 @@ When that holds, write `.dow-agent/.aaa-complete` and disable the routine.
 ## Current focus
 
 **Workstream: `engine-tests`** — still the first non-PASS item in the queue and the bottleneck.
-Run 9 completed A8, A9, and A10. The next run starts with A11–A15 plus every named §18 erratum:
+Run 9 completed A8, A9, and A10. The survivor-content pass below was a direct user request, not a
+claim that the dependency-ordered engine queue is complete. The next run starts with A11–A15 plus every named §18 erratum:
 effect interruption/once-per-round persistence, objective timing/winners, determinism, and whole-view
 redaction.
 
@@ -44,10 +45,10 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 | Power Grid (regression guard) | **PASS** | 230 engine tests green; must never go red |
 | DoW engine — code exists | **PASS** | ~5,400 lines under `engine/`; plugin implements the full `GamePlugin` contract |
 | DoW engine — tested | **PARTIAL** | 213 tests on master. A1–A10 covered; A11–A15 and §18 errata remain |
-| DoW content pack | **FAIL** | Schema + validator + `testPack` fixture only. **No shipping catalog** — the game is played with the engine's test fixture |
+| DoW content pack | **PARTIAL** | All 30 base-game survivor names, occupations, stats and portraits now exist; the game still uses `testPack` and lacks the complete retail abilities/items/crossroads catalog |
 | DoW client UI — exists | **PASS** | Run 4 landed the match screen (`packages/client/src/games/dead-of-winter/`) |
-| DoW client UI — judged | **FAIL** | **Never screenshotted, never critiqued.** No evidence for any V/M/U criterion |
-| DoW art | **FAIL** | Nothing produced. No procedural pipeline for this game yet |
+| DoW client UI — judged | **PARTIAL** | Live 1280×720 screenshot verified named chips, setup previews and survivor detail modal; no Wingspan blind critic pass yet |
+| DoW art | **PARTIAL** | 30 cohesive generated survivor portraits shipped; item/card/board/zombie art and a full visual critic pass remain |
 | Visual (V1–V15) | — | UI exists but has had no critic pass; assume nothing |
 | Motion (M1–M9) | — | Same |
 | UX (U1–U13) | — | Same |
@@ -95,6 +96,11 @@ end of run 9 on Windows, against the exact tree committed as `3e36fbf`.
   unit of work on its own the moment its tests are green. Do not batch.
 - **The shipped game uses the engine's test fixture as its content.** `testPack` is a fixture, not
   a catalog. Anything judged about gameplay depth today is judging the fixture.
+- The six executable errata survivor fixtures retain their regression-oriented engine values; their
+  original occupations are now shown. Two newly named influence values remain deliberate tie
+  sentinels for the setup regression; the other newly named cards use the base-game roster stats.
+- Survivor portraits are complete for the 30-card base roster, but original survivor ability text and
+  the remaining retail card families are not yet a shipping catalog.
 - **The execution environment varies between Linux and Windows.** Anything platform-specific can
   silently make a whole run a no-op. Run the baseline before believing any claim in this file.
 - **Pushing requires GitHub write access for the session.** Run 1 initially had none: `git push`

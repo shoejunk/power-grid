@@ -25,6 +25,8 @@ export interface BoardProps {
   state: GameState;
   selectedSurvivorId: string | null;
   onSelectSurvivor: (id: string | null) => void;
+  /** Opens the public card detail view; every survivor remains inspectable. */
+  onInspectSurvivor: (id: string) => void;
   /** Locations offered as a destination while a move (or an attract source) is being aimed. */
   targets: readonly LocationId[] | null;
   targetLabel: string;
@@ -37,6 +39,7 @@ export function Board({
   state,
   selectedSurvivorId,
   onSelectSurvivor,
+  onInspectSurvivor,
   targets,
   targetLabel,
   onPickLocation,
@@ -51,6 +54,7 @@ export function Board({
           location={id}
           selectedSurvivorId={selectedSurvivorId}
           onSelectSurvivor={onSelectSurvivor}
+          onInspectSurvivor={onInspectSurvivor}
           isTarget={targets?.includes(id) ?? false}
           targetLabel={targetLabel}
           onPickLocation={onPickLocation}
@@ -66,6 +70,7 @@ interface LocationCardProps {
   location: LocationId;
   selectedSurvivorId: string | null;
   onSelectSurvivor: (id: string | null) => void;
+  onInspectSurvivor: (id: string) => void;
   isTarget: boolean;
   targetLabel: string;
   onPickLocation: (id: LocationId) => void;
@@ -77,6 +82,7 @@ function LocationCard({
   location,
   selectedSurvivorId,
   onSelectSurvivor,
+  onInspectSurvivor,
   isTarget,
   targetLabel,
   onPickLocation,
@@ -166,12 +172,12 @@ function LocationCard({
                 survivor={survivor}
                 selected={survivor.id === selectedSurvivorId}
                 muted={!actable}
-                onClick={
-                  actable
-                    ? () =>
-                        onSelectSurvivor(survivor.id === selectedSurvivorId ? null : survivor.id)
-                    : undefined
-                }
+                onClick={() => {
+                  if (actable) {
+                    onSelectSurvivor(survivor.id === selectedSurvivorId ? null : survivor.id);
+                  }
+                  onInspectSurvivor(survivor.id);
+                }}
               />
             );
           })

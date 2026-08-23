@@ -291,6 +291,16 @@
   border-radius: var(--tt-radius-pill);
 }
 
+.dow-survivor__portrait {
+  width: 24px;
+  height: 28px;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 5px;
+  border: 1px solid var(--tt-line-subtle);
+  background: var(--tt-surface-sunken);
+}
+
 .dow-survivor--live {
   cursor: pointer;
 }
@@ -341,6 +351,154 @@
   display: inline-flex;
   gap: 1px;
   font-size: 10px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Survivor inspection card
+ * ------------------------------------------------------------------ */
+
+.dow-survivor-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-3);
+}
+
+.dow-survivor-detail__hero {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  gap: var(--tt-space-4);
+  align-items: stretch;
+}
+
+.dow-survivor-detail__art {
+  width: 190px;
+  height: 250px;
+  object-fit: cover;
+  object-position: center top;
+  border: 1px solid var(--tt-line-strong);
+  border-radius: var(--tt-radius-md);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+}
+
+.dow-survivor-detail__identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-3);
+  min-width: 0;
+}
+
+.dow-survivor-detail__eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tt-space-1);
+}
+
+.dow-survivor-detail__flavor {
+  margin: 0;
+  color: var(--tt-text-secondary);
+  line-height: 1.5;
+}
+
+.dow-survivor-detail__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--tt-space-2);
+  margin: auto 0 0;
+}
+
+.dow-survivor-detail__facts div {
+  padding: var(--tt-space-2);
+  border: 1px solid var(--tt-line-hairline);
+  border-radius: var(--tt-radius-sm);
+  background: var(--tt-surface-sunken);
+}
+
+.dow-survivor-detail__facts dt,
+.dow-survivor-detail__facts dd {
+  margin: 0;
+}
+
+.dow-survivor-detail__facts dt {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tt-text-faint);
+}
+
+.dow-survivor-detail__facts dd {
+  margin-top: 3px;
+  color: var(--tt-text-bright);
+}
+
+.dow-survivor-detail__stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--tt-space-2);
+  padding: var(--tt-space-2);
+  border-top: 1px solid var(--tt-line-subtle);
+  border-bottom: 1px solid var(--tt-line-subtle);
+}
+
+.dow-survivor-detail__stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+}
+
+.dow-survivor-detail__stats strong {
+  font-family: var(--tt-font-mono, ui-monospace, monospace);
+  font-size: 20px;
+  color: var(--tt-text-bright);
+}
+
+.dow-survivor-detail__stats span {
+  font-size: 9px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--tt-text-faint);
+}
+
+.dow-survivor-detail__section {
+  padding: var(--tt-space-3);
+  border: 1px solid var(--tt-line-hairline);
+  border-radius: var(--tt-radius-md);
+  background: var(--tt-surface-sunken);
+}
+
+.dow-survivor-detail__section h3 {
+  margin: 0 0 var(--tt-space-1);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tt-text-bright);
+}
+
+.dow-survivor-detail__section p {
+  margin: 0;
+  color: var(--tt-text-secondary);
+  line-height: 1.45;
+}
+
+.dow-survivor-detail__section .tt-caption {
+  margin-top: var(--tt-space-1);
+}
+
+.dow-survivor-detail__equipment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tt-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dow-survivor-detail__equipment li {
+  padding: 4px 8px;
+  border: 1px solid var(--tt-line-subtle);
+  border-radius: var(--tt-radius-pill);
+  color: var(--tt-text-primary);
+  background: var(--tt-surface-raised);
 }
 
 /* ------------------------------------------------------------------ *
@@ -573,6 +731,28 @@
   border: 1px solid var(--tt-line-subtle);
   border-radius: var(--tt-radius-md);
   cursor: pointer;
+}
+
+.dow-choice__survivor-art {
+  width: 48px;
+  height: 60px;
+  flex: none;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: var(--tt-radius-sm);
+  border: 1px solid var(--tt-line-subtle);
+}
+
+.dow-choice__survivor-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.dow-choice__survivor-meta {
+  font-size: 10px;
+  color: var(--tt-text-muted);
 }
 
 .dow-choice__option:hover:not(:disabled) {
@@ -808,5 +988,29 @@
   .dow-match__foot {
     grid-template-columns: 1fr;
     max-height: none;
+  }
+
+  .dow-survivor-detail__hero {
+    grid-template-columns: 150px 1fr;
+  }
+
+  .dow-survivor-detail__art {
+    width: 150px;
+    height: 210px;
+  }
+}
+
+@media (max-width: 560px) {
+  .dow-survivor-detail__hero {
+    grid-template-columns: 1fr;
+  }
+
+  .dow-survivor-detail__art {
+    width: 100%;
+    height: 220px;
+  }
+
+  .dow-survivor-detail__stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

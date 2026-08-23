@@ -19,6 +19,8 @@ import { useEffect, useState } from 'react';
 
 import { net } from '@/net';
 
+import { survivorArtPath, survivorCard } from '../content';
+
 export interface ChoiceDialogProps {
   state: GameState;
   choice: PendingChoice;
@@ -97,6 +99,7 @@ export function ChoiceDialog({ state, choice, open, onClose }: ChoiceDialogProps
       <div className="dow-choice__options">
         {choice.options.map((option) => {
           const selected = picked.includes(option.id);
+          const setupSurvivor = choice.kind === 'setupKeepSurvivors' ? survivorCard(option.id) : undefined;
           return (
             <button
               key={option.id}
@@ -112,7 +115,25 @@ export function ChoiceDialog({ state, choice, open, onClose }: ChoiceDialogProps
               aria-pressed={selected}
               onClick={() => (max === 1 && exact ? commit([option.id]) : toggle(option.id))}
             >
-              <span className="dow-choice__label">{option.label}</span>
+              {setupSurvivor ? (
+                <>
+                  <img
+                    className="dow-choice__survivor-art"
+                    src={survivorArtPath(setupSurvivor.id)}
+                    alt=""
+                    aria-hidden="true"
+                  />
+                  <span className="dow-choice__survivor-copy">
+                    <span className="dow-choice__label">{setupSurvivor.name}</span>
+                    <span className="dow-choice__survivor-meta">
+                      {setupSurvivor.occupation} · ⚔{setupSurvivor.attackThreshold}+ · 🔍
+                      {setupSurvivor.searchThreshold}+ · ✦{setupSurvivor.influence}
+                    </span>
+                  </span>
+                </>
+              ) : (
+                <span className="dow-choice__label">{option.label}</span>
+              )}
               {option.legal ? null : (
                 <Badge tone="warning">{option.reason ?? 'Not available'}</Badge>
               )}

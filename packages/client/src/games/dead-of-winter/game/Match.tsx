@@ -25,6 +25,7 @@ import { ChoiceDialog } from './ChoiceDialog';
 import { GameOverPanel } from './GameOverPanel';
 import { LogPanel } from './LogPanel';
 import { Seats } from './Seats';
+import { SurvivorDetailDialog } from './SurvivorDetailDialog';
 import { TopBar } from './TopBar';
 import { TurnPanel, legalMoveTargets, type Aim } from './TurnPanel';
 import { VotePanel } from './VotePanel';
@@ -36,6 +37,7 @@ export function DeadOfWinterMatch(): JSX.Element {
   const me = useGameStore((s) => s.myPlayerId);
 
   const [survivorId, setSurvivorId] = useState<string | null>(null);
+  const [inspectSurvivorId, setInspectSurvivorId] = useState<string | null>(null);
   const [die, setDie] = useState<number | null>(null);
   const [aim, setAim] = useState<Aim | null>(null);
   const [picked, setPicked] = useState<readonly string[]>([]);
@@ -54,7 +56,10 @@ export function DeadOfWinterMatch(): JSX.Element {
       setSurvivorId(null);
       setAim(null);
     }
-  }, [state, survivorId]);
+    if (state && inspectSurvivorId && !state.survivors[inspectSurvivorId]) {
+      setInspectSurvivorId(null);
+    }
+  }, [state, survivorId, inspectSurvivorId]);
 
   const actable = useMemo(() => {
     if (!state) return new Set<string>();
@@ -144,6 +149,7 @@ export function DeadOfWinterMatch(): JSX.Element {
             state={state}
             selectedSurvivorId={survivorId}
             onSelectSurvivor={setSurvivorId}
+            onInspectSurvivor={setInspectSurvivorId}
             targets={targets}
             targetLabel={targetLabel}
             onPickLocation={pickLocation}
@@ -161,6 +167,7 @@ export function DeadOfWinterMatch(): JSX.Element {
             aim={aim}
             picked={picked}
             onSelectSurvivor={setSurvivorId}
+            onInspectSurvivor={setInspectSurvivorId}
             onSelectDie={setDie}
             onAim={setAim}
             onPick={setPicked}
@@ -183,6 +190,13 @@ export function DeadOfWinterMatch(): JSX.Element {
       ) : null}
 
       {state.phase === 'gameOver' ? <GameOverPanel state={state} me={me} /> : null}
+
+      <SurvivorDetailDialog
+        state={state}
+        survivorId={inspectSurvivorId}
+        open={inspectSurvivorId !== null}
+        onClose={() => setInspectSurvivorId(null)}
+      />
 
       <ConfirmDialog
         open={leaving}

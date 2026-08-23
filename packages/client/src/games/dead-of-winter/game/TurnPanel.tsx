@@ -69,6 +69,7 @@ export interface TurnPanelProps {
   aim: Aim | null;
   picked: readonly string[];
   onSelectSurvivor: (id: string | null) => void;
+  onInspectSurvivor: (id: string) => void;
   onSelectDie: (die: number | null) => void;
   onAim: (aim: Aim | null) => void;
   onPick: (iids: readonly string[]) => void;
@@ -198,6 +199,7 @@ export function TurnPanel({
   aim,
   picked,
   onSelectSurvivor,
+  onInspectSurvivor,
   onSelectDie,
   onAim,
   onPick,
@@ -575,7 +577,10 @@ export function TurnPanel({
                 state={state}
                 survivor={s}
                 selected={s.id === survivorId}
-                onClick={() => onSelectSurvivor(s.id === survivorId ? null : s.id)}
+                onClick={() => {
+                  onSelectSurvivor(s.id === survivorId ? null : s.id);
+                  onInspectSurvivor(s.id);
+                }}
               />
             ))}
             {mine.length === 0 ? <span className="tt-caption">None left.</span> : null}

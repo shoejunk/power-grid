@@ -8,6 +8,46 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-23 — survivor roster and inspection pass
+
+**Intent:** fulfill the direct survivor-content request without weakening the engine regression
+guard: replace every anonymous `Survivor N` card with the original base-game roster, generate a
+cohesive portrait set, and make every on-board survivor inspectable from the board and turn rail.
+
+**Landed:**
+
+- Replaced all 24 anonymous filler cards with the named base-game survivors and their occupations,
+  influence, attack and search values. Corrected the six existing named occupations while retaining
+  their executable errata fixture mechanics; two influence values remain deliberate tie sentinels
+  for the fixture's deterministic first-player regression.
+- Added 30 generated survivor portraits under `packages/client/public/games/dead-of-winter/survivors/`.
+  The art is a consistent cold, painterly post-apocalyptic card-art set; Buddy Davis has a dedicated
+  portrait to complete the atlas roster.
+- Added `survivorArtPath`, portrait thumbnails in every survivor chip, setup-choice art/stat previews,
+  and `SurvivorDetailDialog` with portrait, controller, location, condition, influence, attack,
+  search, wounds, frostbite, ability text, and equipment.
+- Clicking an actable survivor still selects it for an action and now also opens its public detail;
+  clicking any non-actable survivor opens the same detail without granting control.
+
+**Critic verdicts:** no independent harsh sub-agent critic was available in this run. Direct live
+verification was performed instead: a real four-seat Dead of Winter lobby was started, survivors were
+kept, the board and rail rendered named cards and stats, the Ashley Ross detail modal opened from the
+board, and the 1280×720 screenshot showed art and all stat blocks. Browser console warnings/errors: none.
+
+**Verification:** core, Power Grid, Dead of Winter, server and client TypeScript builds passed;
+Power Grid **230**, Dead of Winter **213**, and server **42** tests passed; client production build
+passed; all 30 portrait files exist and load in the running client; `git diff --check` passed.
+
+**State changes:** survivor-content completeness advances from placeholder **FAIL** to **PARTIAL**
+(roster and portraits are now present, but the pack is still the engine test fixture and many original
+survivor abilities/items/art disciplines remain). Client UI and art advance to **PARTIAL** based on
+the live modal check only; no Wingspan blind comparison or full quality-bar critic pass is claimed.
+
+**Next run should do first:** return to the dependency-ordered `engine-tests` queue with A11–A15 and
+the remaining named §18 erratum/regression coverage, then revisit the shipping content-pack gap.
+
+---
+
 ## 2026-08-23 — nightly run 9
 
 **Intent:** continue the first non-PASS queue item, `engine-tests`, starting with A8–A10 in

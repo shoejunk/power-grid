@@ -15,7 +15,7 @@ import {
 import { Badge, Tooltip } from '@tt/ui';
 import type { ReactNode } from 'react';
 
-import { itemDef, itemName, survivorDef, SYMBOL_GLYPH, SYMBOL_LABEL } from '../content';
+import { itemDef, itemName, survivorArtPath, survivorDef, SYMBOL_GLYPH, SYMBOL_LABEL } from '../content';
 
 /* ------------------------------------------------------------------ *
  * Dice
@@ -111,6 +111,12 @@ export function SurvivorChip({
 
   const body = (
     <>
+      <img
+        className="dow-survivor__portrait"
+        src={survivorArtPath(survivor.cardId)}
+        alt=""
+        aria-hidden="true"
+      />
       <span className="dow-survivor__pip" style={tint ? { background: tint } : undefined} />
       <span className="dow-survivor__name">
         {survivor.isLeader ? <span aria-label="Group leader">★ </span> : null}
