@@ -72,7 +72,7 @@ const namedSurvivors: SurvivorCardDefinition[] = [
   {
     id: 'sv-loretta-clay',
     name: 'Loretta Clay',
-    occupation: 'Mechanic',
+    occupation: 'Cook',
     influence: 3,
     attackThreshold: 4,
     searchThreshold: 4,
@@ -92,7 +92,7 @@ const namedSurvivors: SurvivorCardDefinition[] = [
   {
     id: 'sv-edward-white',
     name: 'Edward White',
-    occupation: 'Soldier',
+    occupation: 'Chemist',
     influence: 4,
     attackThreshold: 3,
     searchThreshold: 5,
@@ -130,7 +130,7 @@ const namedSurvivors: SurvivorCardDefinition[] = [
   {
     id: 'sv-john-price',
     name: 'John Price',
-    occupation: 'Drifter',
+    occupation: 'Student',
     influence: 2,
     attackThreshold: 5,
     searchThreshold: 3,
@@ -140,7 +140,7 @@ const namedSurvivors: SurvivorCardDefinition[] = [
   {
     id: 'sv-forest-plum',
     name: 'Forest Plum',
-    occupation: 'Groundskeeper',
+    occupation: 'Mall Santa',
     influence: 1,
     attackThreshold: 5,
     searchThreshold: 4,
@@ -167,7 +167,7 @@ const namedSurvivors: SurvivorCardDefinition[] = [
   {
     id: 'sv-buddy-davis',
     name: 'Buddy Davis',
-    occupation: 'Nurse',
+    occupation: 'Fitness Trainer',
     influence: 3,
     attackThreshold: 4,
     searchThreshold: 4,
@@ -189,7 +189,7 @@ const namedSurvivors: SurvivorCardDefinition[] = [
   {
     id: 'sv-bev-russell',
     name: 'Bev Russell',
-    occupation: 'Outsider',
+    occupation: 'Mother',
     influence: 0,
     attackThreshold: 6,
     searchThreshold: 6,
@@ -201,17 +201,51 @@ const namedSurvivors: SurvivorCardDefinition[] = [
   },
 ];
 
-const fillerSurvivors: SurvivorCardDefinition[] = Array.from({ length: 24 }, (_, i) => ({
-  id: `sv-f${i + 1}`,
-  name: `Survivor ${i + 1}`,
-  occupation: 'Colonist',
-  // Influence spreads 1..6 so lowest-influence selection has real ties to break.
-  influence: (i % 6) + 1,
-  attackThreshold: (i % 3) + 3,
-  searchThreshold: (i % 3) + 3,
+/**
+ * The base-game roster.  These are deliberately data-only cards in the
+ * fixture pack: the six cards above carry the executable errata abilities used
+ * by the engine regression suite, while the rest still have their real names,
+ * occupations, influence and d6 thresholds rather than anonymous placeholders.
+ */
+const fillerSurvivors: SurvivorCardDefinition[] = ([
+  ['alexis-grey', 'Alexis Grey', 'Librarian', 46, 5, 4],
+  ['andrew-evans', 'Andrew Evans', 'Farmer', 12, 3, 3],
+  ['annaleigh-chan', 'Annaleigh Chan', 'Lawyer', 38, 2, 2],
+  // Keep a high-influence tie in the fixture so §24's deterministic first
+  // player choice is covered across the setup seed sweep.
+  ['arthur-thurston', 'Arthur Thurston', 'Principal', 68, 4, 2],
+  ['ashley-ross', 'Ashley Ross', 'Construction Worker', 52, 2, 5],
+  // Two low-influence cards intentionally share 12 so the setup tie-breaker
+  // remains exercised by the fixture's deterministic seed sweep.
+  ['brandon-kane', 'Brandon Kane', 'Janitor', 12, 2, 4],
+  ['brian-lee', 'Brian Lee', 'Mayor', 68, 3, 4],
+  ['carla-thompson', 'Carla Thompson', 'Police Dispatcher', 22, 4, 2],
+  ['daniel-smith', 'Daniel Smith', 'Sheriff', 66, 2, 5],
+  ['david-garcia', 'David Garcia', 'Accountant', 50, 4, 3],
+  ['gabriel-diaz', 'Gabriel Diaz', 'Fireman', 60, 2, 3],
+  ['gray-beard', 'Gray Beard', 'Pirate', 16, 1, 4],
+  ['harman-brooks', 'Harman Brooks', 'Park Ranger', 32, 3, 3],
+  ['james-meyers', 'James Meyers', 'Psychiatrist', 54, 6, 3],
+  ['janet-taylor', 'Janet Taylor', 'Nurse', 42, 3, 4],
+  ['jenny-clark', 'Jenny Clark', 'Waitress', 24, 4, 3],
+  ['maria-lopez', 'Maria Lopez', 'Teacher', 48, 4, 2],
+  ['mike-cho', 'Mike Cho', 'Ninja', 30, 2, 4],
+  ['olivia-brown', 'Olivia Brown', 'Doctor', 56, 4, 3],
+  ['rod-miller', 'Rod Miller', 'Truck Driver', 40, 3, 3],
+  ['sophie-robinson', 'Sophie Robinson', 'Pilot', 58, 4, 1],
+  ['sparky', 'Sparky', 'Stunt Dog', 10, 2, 2],
+  ['talia-jones', 'Talia Jones', 'Fortune Teller', 28, 3, 1],
+  ['thomas-heart', 'Thomas Heart', 'Soldier', 64, 1, 3],
+].map(([slug, name, occupation, influence, attackThreshold, searchThreshold]) => ({
+  id: `sv-${slug}`,
+  name,
+  occupation,
+  influence,
+  attackThreshold,
+  searchThreshold,
   nonCooperative: false,
   matureContent: false,
-}));
+}))) as SurvivorCardDefinition[];
 
 const survivors: SurvivorCardDefinition[] = [...namedSurvivors, ...fillerSurvivors];
 
