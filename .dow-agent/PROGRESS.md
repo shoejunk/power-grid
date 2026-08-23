@@ -18,7 +18,42 @@ and the two-non-betrayer-exiles loss condition. Each bounded area will have one 
 an independent harsh critic. Integration fixes, verification, commits, and pushes remain with the
 primary agent.
 
-**(in progress — entry opened before implementation)**
+**Landed, in separate green pushes:**
+
+- `e366603`, `0afa48d` — A8: 4 tests for immediate morale-zero termination, objective-check
+  suppression, all three Add Zombies checkpoints, within-batch continuation after morale reaches zero,
+  later-batch suppression, post-checkpoint stability, and exact event ordering.
+- `5b0faf6` — A9: 8 tests for the known right-hand Crossroads draw and privacy, turn-start monitoring,
+  active-player-only triggering after movement/exposure, illegal option visibility, This Taste Funny,
+  Outbreak's electorate, Old Divisions hidden crisis withdrawal, and complete option text in redacted views.
+- `936f126`, `200303d`, `aef80dc` — A10: 18 tests for objective attach/reveal/redaction, normal and
+  repeated no-space exile swaps, helpless-survivor persistence, exposure/move allowances, every exile
+  restriction and allowed request/handoff direction, new survivor placement without a mid-round die,
+  two-loyal-exiles loss and betrayer exemption. Added the missing `playFoodForDie` action end to end:
+  parser, validation, die cap/ownership checks, removal, and audit logging.
+
+**Critic verdicts:**
+
+- **A8:** first harsh pass **FAIL** for missing event-order, checkpoint-stability, and direct objective
+  suppression evidence. After those assertions landed, the second pass **PASS**: focused 4/4 with all
+  A8 clauses directly evidenced.
+- **A9:** first harsh pass **FAIL** for unknown top-card draw, incomplete public option text, and missing
+  Old Divisions contribution withdrawal. After targeted tests, the second pass **PASS**: focused 8/8.
+- **A10:** first harsh pass **FAIL** for non-reveal/redaction, repeated swap, helpless persistence, food
+  modifier rejection, reverse handoff, and betrayer-counterexample gaps. After targeted tests and the
+  food-card action implementation, the final pass **PASS**: focused 18/18; all requested direct evidence
+  gaps closed.
+
+**Verification:** all five TypeScript builds pass; Power Grid **230**, Dead of Winter **213**, and server
+**42** tests pass. `git diff --check` passed before each push. The tree is clean and synchronized with
+`origin/master` at `aef80dc`.
+
+**State changes:** DoW engine tested advanced from A1–A7 to **A1–A10 covered**; platform and regression
+guards remain PASS. No content-pack, client-UI judgment, art, visual, motion, multiplayer-proof, or
+shipping-completion claims changed.
+
+**Next run should do first:** remain on `engine-tests`, add A11–A15 and every §18 named erratum/ruling,
+then rerun the full suite before moving to the shipping content pack.
 
 ---
 
