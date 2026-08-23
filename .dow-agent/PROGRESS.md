@@ -8,6 +8,27 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-23 — nightly run 8
+
+**Intent:** continue the first non-PASS queue item, `engine-tests`, with three bounded acceptance
+areas and a push after each green unit:
+
+- **A5:** search privacy/noise, crisis secrecy/scoring, ordered waste, food/starvation persistence,
+  and public main-objective contributions.
+- **A6:** zombie/survivor combat, kill-versus-remove, exposure/frostbite, bite chains, and
+  last-survivor replacement.
+- **A7:** colony entrance cycling, barricade destruction, overruns/casualty ordering,
+  non-colony placement, and noise-generated zombies.
+
+Each implementation agent owns one new test file, runs no git, and may only report engine defects
+outside that file. Each area must then survive a separate harsh critic review against the design
+doc before it can be called complete. Integration fixes, full-suite verification, commits, and
+pushes remain with the primary agent.
+
+(in progress — entry completed at end of run)
+
+---
+
 ## 2026-08-22 — nightly run 7
 
 **What run 6 got done, for the record:** one commit, `976490a`, its own intent entry. **Zero A5–A15
