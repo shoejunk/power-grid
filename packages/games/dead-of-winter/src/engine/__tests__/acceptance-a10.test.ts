@@ -622,7 +622,8 @@ describe('§14.2 immediate two-loyal-exiles loss', () => {
 
   it('does not apply the two-loyal-exiles loss when one exiled player is a betrayer', () => {
     const state = game();
-    const [firstExile, secondExile] = state.seating.slice(0, 2);
+    const firstExile = state.seating[0]!;
+    const secondExile = state.seating[1]!;
     state.players[firstExile]!.exiled = true;
     state.players[secondExile]!.exiled = true;
     state.players[firstExile]!.secretObjectiveIds = ['so-n2'];
