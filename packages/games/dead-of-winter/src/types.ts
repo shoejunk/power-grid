@@ -658,6 +658,7 @@ export type GameAction =
     }
   /* no-die actions (§8) */
   | { type: 'playItem'; iid: CardInstanceId; targetSurvivorId?: SurvivorInstanceId }
+  | { type: 'playFoodForDie'; iid: CardInstanceId; die: number }
   | { type: 'contributeCrisis'; iids: CardInstanceId[] }
   | { type: 'contributeObjective'; iids: CardInstanceId[] }
   | { type: 'moveSurvivor'; survivorId: SurvivorInstanceId; to: LocationId }

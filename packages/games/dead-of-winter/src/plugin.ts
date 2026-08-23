@@ -299,6 +299,10 @@ function parseAction(raw: unknown): GameAction | null {
           : {}),
       };
 
+    case 'playFoodForDie':
+      if (!isString(raw.iid) || !isDie(raw.die)) return null;
+      return { type: 'playFoodForDie', iid: raw.iid, die: raw.die };
+
     case 'contributeCrisis':
     case 'contributeObjective': {
       if (!Array.isArray(raw.iids) || !raw.iids.every(isString)) return null;

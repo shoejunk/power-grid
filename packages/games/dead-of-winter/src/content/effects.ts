@@ -267,6 +267,7 @@ export type ActionKind =
   | 'attract'
   | 'ability'
   | 'playItem'
+  | 'playFoodForDie'
   | 'move'
   | 'contributeCrisis'
   | 'contributeObjective'

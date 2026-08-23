@@ -359,6 +359,20 @@ export function validateAction(
       return ok;
     }
 
+    case 'playFoodForDie': {
+      if (!player.exiled) return fail('Only an exiled player may use a food card this way. §14.2');
+      const zone = zoneOf(state, action.iid);
+      if (zone.kind !== 'hand' || zone.playerId !== playerId) {
+        return fail('That card is not in your hand.');
+      }
+      const def = contentOf(state).items.get(getItem(state, action.iid).cardId);
+      if (!def) return fail('Unknown card.');
+      if (!def.symbols.includes('food')) return fail('Only a food card can raise a die. §14.2');
+      if (!hasDie(player, action.die)) return fail('You have no such unused die.');
+      if (action.die >= 6) return fail('A food card cannot raise a die above six. §14.2');
+      return ok;
+    }
+
     case 'contributeCrisis': {
       const barred = exileRestriction(state, playerId, 'contributeCrisis');
       if (barred) return fail(barred);
@@ -672,6 +686,21 @@ export function applyValidatedAction(
 
     case 'playItem': {
       playItem(state, now, playerId, action.iid, action.targetSurvivorId);
+      return;
+    }
+
+    case 'playFoodForDie': {
+      const def = contentOf(state).items.get(getItem(state, action.iid).cardId)!;
+      removeFromGame(state, action.iid);
+      const i = player.unusedDice.indexOf(action.die);
+      player.unusedDice[i] = action.die + 1;
+      pushLog(state, now, {
+        category: 'card',
+        playerId,
+        message: `${player.name} uses ${def.name} to raise an action die to ${action.die + 1}.`,
+        data: { event: 'foodCardForDie', playerId, iid: action.iid, cardId: def.id, die: action.die + 1 },
+      });
+      state.turn?.events.push({ event: 'actionPerformed', action: 'playFoodForDie' });
       return;
     }
 
