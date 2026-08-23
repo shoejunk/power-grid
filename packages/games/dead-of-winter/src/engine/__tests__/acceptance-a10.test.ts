@@ -433,6 +433,13 @@ describe('§14.2 prohibitions and card/morale consequences', () => {
     nextRolls(state, [6]);
     const moraleBefore = state.colony.morale;
 
+    expect(
+      validateAction(state, exiledId, { type: 'attackZombie', survivorId: victim.id, die: 6 }),
+    ).toMatchObject({ ok: true });
+    expect(
+      validateAction(state, exiledId, { type: 'search', survivorId: victim.id, die: 6 }),
+    ).toMatchObject({ ok: true });
+
     state = act(state, exiledId, { type: 'attackZombie', survivorId: victim.id, die: 6 });
 
     expect(state.survivors[victim.id]).toBeUndefined();
@@ -474,6 +481,31 @@ describe('§14.2 allowed exiled interactions', () => {
     expect(logEvents(state, 'requestGranted').at(-1)!.data).toMatchObject({
       requesterId: exiledId,
       targetId: donorId,
+      iid: requested,
+    });
+  });
+
+  it('§14.2 lets a non-exiled player request from an exiled player', () => {
+    let state = game();
+    const requesterId = active(state);
+    const exiledId = state.seating.find((id) => id !== requesterId)!;
+    state.players[exiledId]!.exiled = true;
+    const requested = grantItem(state, exiledId, 'it-canned-food');
+    const foodBefore = state.colony.food;
+
+    expect(
+      validateAction(state, requesterId, { type: 'requestCards', fromPlayerId: exiledId }),
+    ).toMatchObject({ ok: true });
+    state = act(state, requesterId, { type: 'requestCards', fromPlayerId: exiledId });
+    expect(pending(state)).toMatchObject({ kind: 'requestResponse', playerId: exiledId });
+    state = choose(state, exiledId, pending(state)!.id, [requested]);
+
+    expect(state.request).toBeNull();
+    expect(state.colony.food).toBe(foodBefore + 2);
+    expect(zoneOf(state, requested)).toEqual({ kind: 'waste' });
+    expect(logEvents(state, 'requestGranted').at(-1)!.data).toMatchObject({
+      requesterId,
+      targetId: exiledId,
       iid: requested,
     });
   });
