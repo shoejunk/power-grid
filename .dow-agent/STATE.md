@@ -57,7 +57,7 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 ## Build and test status
 
 Verify the baseline yourself every run; do not trust this table. Figures below were measured at the
-end of run 9 on Windows, against the exact tree committed as `3e36fbf`.
+end of this pass on Windows, against the exact tree committed as `690cead`.
 
 | Check | Command | Status |
 | --- | --- | --- |
@@ -66,6 +66,7 @@ end of run 9 on Windows, against the exact tree committed as `3e36fbf`.
 | Dead of Winter | `npx tsc -b packages/games/dead-of-winter/tsconfig.json` | OK |
 | Server | `npx tsc -b packages/server/tsconfig.json` | OK |
 | Client | `npx tsc -p packages/client/tsconfig.json --noEmit` | OK |
+| Client production build | `npm run build -w @tt/client` | OK |
 | Power Grid tests | `npm test -w @game/power-grid` | 230 passed |
 | Server tests | `npx vitest run --root packages/server` | 42 passed |
 | DoW tests | `npm test -w @game/dead-of-winter` | 213 passed |
