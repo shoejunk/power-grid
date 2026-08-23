@@ -91,11 +91,24 @@ function expectMoraleLoss(state: GameState, from: number): EventData[] {
   return eventsSince(state, from);
 }
 
+function expectGameOverStable(state: GameState, from: number): void {
+  const snapshot = JSON.stringify(state);
+  advance(state, NOW + 1);
+  expect(JSON.stringify(state)).toBe(snapshot);
+  expect(gameOverEvents(state, from)).toHaveLength(1);
+  expect(() => act(state, state.seating[0]!, { type: 'endTurn' })).toThrow(/game is over/i);
+}
+
+function queueObjectiveCheck(state: GameState): void {
+  pushFrame(state, [{ kind: 'i.colonyStep', step: 'checkMainObjective' }]);
+}
+
 describe('§23 A8 — immediate morale-zero termination', () => {
   it('ends outside Add Zombies before a queued objective check and remains stable', () => {
     const state = game();
     state.colony.morale = 1;
     state.colony.food = 3;
+    expect(mainObjectiveSatisfied(state)).toBe(true);
     const from = state.log.length;
 
     runEffects(state, [
@@ -136,6 +149,7 @@ describe('§23 A8 — Add Zombies morale checkpoints', () => {
     state.colony.entrances[0]!.zombies = state.colony.entrances[0]!.capacity;
     const from = state.log.length;
 
+    queueObjectiveCheck(state);
     runColonyStep(state, NOW, 'addZombies');
     advance(state, NOW);
 
@@ -164,10 +178,18 @@ describe('§23 A8 — Add Zombies morale checkpoints', () => {
           data.entrance === 2,
       ),
     );
+    const morale = events.findIndex((data) => data.event === 'morale');
+    const helplessDeath = events.findIndex((data) => data.event === 'helplessDied');
+    const secondPlacement = events.findIndex(
+      (data) => data.event === 'zombiePlacement' && data.location === 'colony' && data.entrance === 2,
+    );
+    expect(morale).toBeGreaterThan(helplessDeath);
+    expect(morale).toBeLessThan(secondPlacement);
     // The first checkpoint ends the game before non-colony population, noise,
     // or the main-objective step can begin.
     expect(placementsSince(state, from).some((data) => data.location !== 'colony')).toBe(false);
     expect(events.some((data) => data.event === 'noiseRoll')).toBe(false);
+    expectGameOverStable(state, from);
   });
 
   it('checks after the non-colony population batch, after completing all its overruns', () => {
@@ -189,6 +211,7 @@ describe('§23 A8 — Add Zombies morale checkpoints', () => {
     state.locations['police-station']!.noise = 1;
     const from = state.log.length;
 
+    queueObjectiveCheck(state);
     runColonyStep(state, NOW, 'addZombies');
     advance(state, NOW);
 
@@ -208,10 +231,23 @@ describe('§23 A8 — Add Zombies morale checkpoints', () => {
       firstPoliceSurvivor.id,
       secondPoliceSurvivor.id,
     ]);
+    const morale = events.findIndex((data) => data.event === 'morale');
+    const firstDeath = events.findIndex(
+      (data) => data.event === 'survivorDied' && data.survivorId === firstPoliceSurvivor.id,
+    );
+    const secondOverrun = events.findIndex(
+      (data, index) =>
+        data.event === 'zombiePlacement' &&
+        data.outcome === 'overrun' &&
+        events.slice(0, index).some((prior) => prior.event === 'zombiePlacement' && prior.outcome === 'overrun'),
+    );
+    expect(morale).toBeGreaterThan(firstDeath);
+    expect(morale).toBeLessThan(secondOverrun);
     // The second police overrun and its death finish before checkpoint two;
     // checkpoint two then terminates before the queued noise token is rolled.
     expect(events.filter((data) => data.event === 'noiseRoll')).toEqual([]);
     expect(state.locations['police-station']!.noise).toBe(1);
+    expectGameOverStable(state, from);
   });
 
   it('checks after the noise batch, after rolling remaining noise following an overrun', () => {
@@ -235,6 +271,7 @@ describe('§23 A8 — Add Zombies morale checkpoints', () => {
     state.rngCursor = 0;
     const from = state.log.length;
 
+    queueObjectiveCheck(state);
     runColonyStep(state, NOW, 'addZombies');
     advance(state, NOW);
 
@@ -258,7 +295,17 @@ describe('§23 A8 — Add Zombies morale checkpoints', () => {
     expect(events.findIndex((data) => data.event === 'gameOver')).toBeGreaterThan(
       events.map((data) => data.event).lastIndexOf('noiseRoll'),
     );
+    const morale = events.findIndex((data) => data.event === 'morale');
+    const firstNoiseOverrun = events.findIndex(
+      (data) => data.event === 'zombiePlacement' && data.outcome === 'overrun',
+    );
+    const secondNoiseRoll = events.findIndex(
+      (data, index) => data.event === 'noiseRoll' && events.slice(0, index).some((prior) => prior.event === 'noiseRoll'),
+    );
+    expect(morale).toBeGreaterThan(firstNoiseOverrun);
+    expect(morale).toBeLessThan(secondNoiseRoll);
     expect(state.locations['police-station']!.noise).toBe(0);
     expect(events.filter((data) => data.event === 'mainObjectiveComplete')).toEqual([]);
+    expectGameOverStable(state, from);
   });
 });
