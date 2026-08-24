@@ -8,6 +8,18 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-24 — nightly run 10
+
+**Intent:** continue the dependency-ordered `engine-tests` workstream with A11–A15 and every named
+§18 erratum/ruling. The bounded units are effect interruption and once-per-round persistence,
+objective timing and winners, determinism/replay, and whole-view hidden-information redaction.
+Implementation agents will own separate test files only; integration fixes, verification, commits,
+and pushes remain with the primary agent.
+
+**Status:** run started; baseline and critic verdicts pending.
+
+---
+
 ## 2026-08-23 — survivor roster and inspection pass
 
 **Intent:** fulfill the direct survivor-content request without weakening the engine regression
