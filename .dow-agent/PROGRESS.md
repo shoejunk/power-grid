@@ -8,6 +8,50 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-24 — nightly run 10 result
+
+**Intent:** continue the dependency-ordered `engine-tests` workstream with A11–A15 and every named
+§18 erratum/ruling, keeping integration fixes and Git operations in the primary run.
+
+**Landed and pushed:**
+
+- `e7eeecd` (`feat(dow): cover A11-A15 and named rulings`) adds focused A11, A12/A13, A15, and
+  named-errata suites; adds the Edward White coupled-attack gate, John Price copied-ability and
+  post-move lethal reconciliation, Megaphone Attract behavior, whole-view seed redaction, and
+  content-orphan cleanup; and corrects A6/A10 fixtures that conflicted with those rules.
+- The initial run marker was pushed as `255d4f0` (`wip(dow): start nightly engine test run`).
+
+**Critic verdicts:**
+
+- **A11: PASS.** Independent re-review accepted the real public card-play interruption sequence,
+  both EVENT/OUTSIDER plays, full-destination Megaphone behavior, Edward coupling, duplicate Bat,
+  Bat exposure, and once-per-round persistence. Minor caveat: the atomic test observes a pending
+  choice, so the §5 decision gate is hit before isolating the §8.1 effect-stack gate.
+- **A12/A13: PASS.** Independent re-review accepted the exact real 3→no sample and 4→sample
+  boundary, three-player scaling, Hunger's public morale-zero endgame result, and betrayal/exiled
+  winner coverage. Focused suite: 18/18.
+- **A14: FAIL/PARTIAL under the strict bar.** Focused suite: 21/21, but Hunger/Hoarder, several
+  John/mid-turn/orphan/Bev/item-persistence cases still use direct fixture helpers instead of
+  public reducer paths, and the plugin still runs the non-shipping `TEST_PACK`.
+- **A15: FAIL/PARTIAL under the strict bar.** Focused suite: 5/5 and serialized redaction passes;
+  the main replay records setup choices, but post-setup dice/RNG/crossroads fixture mutation is
+  outside the action stream, and server session-token/socket seat reattachment is unproven.
+
+**Verification:** DoW `npm test` **265/265**, Power Grid **230/230**, server **42/42**; core,
+Power Grid, and client TypeScript checks pass; read-only DoW `tsconfig.check.json` and server
+`--noEmit` checks pass; `git diff --check` passed. Exact DoW/server composite builds remain blocked
+by EPERM overwriting pre-existing DoW `dist` artifacts, even with escalation, so they are not
+claimed green.
+
+**State changes:** DoW engine-test coverage advances from A1–A10 to 265 passing tests with A11 and
+A12/A13 critic-passed. Engine-tests remains the first non-PASS queue item; content, visual, motion,
+UX, and multiplayer proof remain unchanged. No completion marker or shipping judge was created.
+
+**Next run should do first:** close A14's public-evidence/content-pack boundary, then make A15 replay
+and real server token reconnection demonstrable before moving to the shipping catalog.
+
+---
+
 ## 2026-08-24 — nightly run 10
 
 **Intent:** continue the dependency-ordered `engine-tests` workstream with A11–A15 and every named

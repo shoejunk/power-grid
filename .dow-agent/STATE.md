@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-08-23** (survivor roster and inspection pass)
+Last updated: **2026-08-24** (A11–A15 engine-test pass and strict critic handoff)
 
 ---
 
@@ -30,10 +30,10 @@ When that holds, write `.dow-agent/.aaa-complete` and disable the routine.
 ## Current focus
 
 **Workstream: `engine-tests`** — still the first non-PASS item in the queue and the bottleneck.
-Run 9 completed A8, A9, and A10. The survivor-content pass below was a direct user request, not a
-claim that the dependency-ordered engine queue is complete. The next run starts with A11–A15 plus every named §18 erratum:
-effect interruption/once-per-round persistence, objective timing/winners, determinism, and whole-view
-redaction.
+Run 10 added A11–A15 and named §18 regression suites. A11 and A12/A13 now have independent PASS
+verdicts; A14 and A15 remain PARTIAL/FAIL under the strict bar because public-action/content-pack
+evidence, full event-stream replay, and real server token reconnection are still unproven. The next
+run stays on `engine-tests` and starts with those remaining gaps.
 
 ## Scorecard
 
@@ -44,7 +44,7 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 | Platform / multiplayer plumbing | **PASS** | 42 server tests green; game-agnostic boundary audited |
 | Power Grid (regression guard) | **PASS** | 230 engine tests green; must never go red |
 | DoW engine — code exists | **PASS** | ~5,400 lines under `engine/`; plugin implements the full `GamePlugin` contract |
-| DoW engine — tested | **PARTIAL** | 213 tests on master. A1–A10 covered; A11–A15 and §18 errata remain |
+| DoW engine — tested | **PARTIAL** | 265 tests pass. A1–A10 plus A11 and A12/A13 are covered; A14/A15 still have strict evidence gaps |
 | DoW content pack | **PARTIAL** | All 30 base-game survivor names, occupations, stats and portraits now exist; the game still uses `testPack` and lacks the complete retail abilities/items/crossroads catalog |
 | DoW client UI — exists | **PASS** | Run 4 landed the match screen (`packages/client/src/games/dead-of-winter/`) |
 | DoW client UI — judged | **PARTIAL** | Live 1280×720 screenshot verified named chips, setup previews and survivor detail modal; no Wingspan blind critic pass yet |
@@ -63,20 +63,19 @@ end of this pass on Windows, against the exact tree committed as `690cead`.
 | --- | --- | --- |
 | Core | `npx tsc -b packages/core/tsconfig.json` | OK |
 | Power Grid | `npx tsc -b packages/games/power-grid/tsconfig.json` | OK |
-| Dead of Winter | `npx tsc -b packages/games/dead-of-winter/tsconfig.json` | OK |
-| Server | `npx tsc -b packages/server/tsconfig.json` | OK |
+| Dead of Winter | `npx tsc -b packages/games/dead-of-winter/tsconfig.json` | Blocked by EPERM overwriting pre-existing `dist` artifacts; `tsconfig.check.json` passes |
+| Server | `npx tsc -b packages/server/tsconfig.json` | Blocked by the same pre-existing DoW `dist` artifacts; `--noEmit` passes |
 | Client | `npx tsc -p packages/client/tsconfig.json --noEmit` | OK |
 | Client production build | `npm run build -w @tt/client` | OK |
 | Power Grid tests | `npm test -w @game/power-grid` | 230 passed |
 | Server tests | `npx vitest run --root packages/server` | 42 passed |
-| DoW tests | `npm test -w @game/dead-of-winter` | 213 passed |
+| DoW tests | `npm test -w @game/dead-of-winter` | 265 passed |
 
 ## Queue — next workstreams, in dependency order
 
-1. **`engine-tests`** — §23 A11–A15 plus every §18 erratum, one named regression test each, plus a
-   determinism test (same seed + action log ⇒ identical final state) and a redaction test that
-   walks the whole serialised view rather than checking named fields. **A1–A10 are covered; start
-   next with A11–A15.**
+1. **`engine-tests`** — close the strict A14 evidence gaps (public reducer paths and shipping-content
+   boundary), replace A15's post-setup fixture injection with a fully replayed event stream, and add
+   server session-token reconnection proof. **A11 and A12/A13 are critic-passed; A14/A15 remain.**
 2. **`content-pack`** — the shipping catalog at the §2.0 counts: 30 survivors, 25 starter items,
    6×20 location items, 20 crisis, 80 crossroads, 10 dual-sided main objectives, 24 non-betrayal +
    10 betrayal + 10 exiled secret objectives. **Original names and text** — the retail card text is
@@ -104,6 +103,15 @@ end of this pass on Windows, against the exact tree committed as `690cead`.
   the remaining retail card families are not yet a shipping catalog.
 - **The execution environment varies between Linux and Windows.** Anything platform-specific can
   silently make a whole run a no-op. Run the baseline before believing any claim in this file.
+- **Run 10 strict-review debts:** A14's focused 21-test file passes, but Hunger/Hoarder, John
+  once-per-round/mid-turn/orphan cases, Bev overrun, item persistence, and most public-action proof
+  still rely on direct fixture helpers; the plugin also still activates `TEST_PACK`. A15's focused
+  5-test file passes and whole-view redaction is strong, but replay still injects dice/RNG/crossroads
+  state after setup and no server socket/session-token reconnect has been exercised.
+- **Build artifact permission debt:** exact DoW and server composite builds cannot overwrite existing
+  `packages/games/dead-of-winter/dist` files in this environment, including under escalation. The
+  read-only DoW `tsconfig.check.json` and server `--noEmit` checks pass; do not call the composite
+  build green until the artifact ACL is fixed.
 - **Pushing requires GitHub write access for the session.** Run 1 initially had none: `git push`
   returned 403 through the agent proxy. Confirmed working in run 5. If a future run cannot push,
   that is the cause — report it rather than working all night into a sandbox that gets discarded.
