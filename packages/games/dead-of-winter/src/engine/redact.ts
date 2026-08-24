@@ -46,6 +46,8 @@ export function redactStateFor(state: GameState, viewerId: PlayerId | null): Gam
    * future shuffle, die and random theft.
    */
   view.seed = '';
+  // The setup payload retains the same replay seed; redact that duplicate too.
+  view.settings.seed = '';
   view.rngCursor = 0;
 
   /** Instances the viewer is entitled to identify. */

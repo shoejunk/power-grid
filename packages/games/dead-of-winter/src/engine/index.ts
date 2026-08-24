@@ -32,6 +32,7 @@ import {
   dealSurvivorChoices,
   pushLeaderChoices,
 } from './setup.js';
+import { reconcileSpecialSurvivors } from './survivors.js';
 
 /* ------------------------------------------------------------------ *
  * Lifecycle
@@ -102,6 +103,11 @@ export function advance(state: GameState, now: number): void {
       state.activePlayerId = head.playerId ?? state.activePlayerId;
       return;
     }
+
+    // Dynamic survivor abilities are recomputed only after the preceding
+    // action/effect is fully settled, so John Price cannot borrow an ability
+    // before arriving and a lethal three-wound move cannot be postponed.
+    if (reconcileSpecialSurvivors(state, now)) continue;
 
     switch (state.phase) {
       case 'setup':

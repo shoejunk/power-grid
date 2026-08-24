@@ -10,7 +10,14 @@
  */
 
 import { COLONY, type LocationId, type SurvivorInstanceId } from '../content/primitives.js';
-import type { DeathCause, ExposureFace, GameState, PlayerId, SurvivorInstance } from '../types.js';
+import type {
+  AbilityId,
+  DeathCause,
+  ExposureFace,
+  GameState,
+  PlayerId,
+  SurvivorInstance,
+} from '../types.js';
 import {
   adjustMorale,
   allSurvivors,
@@ -40,6 +47,52 @@ export const totalWounds = (s: SurvivorInstance): number => s.wounds + s.frostbi
 
 const nameOf = (state: GameState, s: SurvivorInstance): string =>
   contentOf(state).survivors.get(s.cardId)?.name ?? s.cardId;
+
+function johnPriceAbilities(state: GameState, john: SurvivorInstance): AbilityId[] {
+  if (john.cardId !== 'sv-john-price' || john.location === COLONY) return [];
+  const ids = new Set<AbilityId>();
+  for (const other of survivorsAt(state, john.location)) {
+    if (other.id === john.id) continue;
+    const ability = contentOf(state).survivors.get(other.cardId)?.ability;
+    if (ability) ids.add(ability.id);
+  }
+  return [...ids];
+}
+
+/**
+ * Reconciles the two survivor-specific dynamic rules after automatic effects
+ * have settled.  Keeping this at the reducer boundary means a persisted game
+ * and a newly created game apply the same copy/death rule, while direct card
+ * effects still remain atomic.
+ */
+export function reconcileSpecialSurvivors(state: GameState, now: number): boolean {
+  let queuedDeath = false;
+  for (const survivor of Object.values(state.survivors)) {
+    if (contentOf(state).survivors.has(survivor.cardId)) continue;
+    const owner = getPlayer(state, survivor.controllerId);
+    if (owner.leaderSurvivorId === survivor.id) owner.leaderSurvivorId = null;
+    delete state.survivors[survivor.id];
+    pushLog(state, now, {
+      category: 'error',
+      playerId: survivor.controllerId,
+      message: `Removed orphan survivor standee ${survivor.id}; its card is not in the content pack.`,
+      data: { event: 'contentError', survivorId: survivor.id, cardId: survivor.cardId },
+    });
+  }
+  for (const survivor of Object.values(state.survivors)) {
+    if (survivor.cardId !== 'sv-john-price') continue;
+    survivor.copiedAbilityIds = johnPriceAbilities(state, survivor);
+    const moved = state.turn?.events.some((event) => {
+      const row = event as { event?: string; survivorId?: string };
+      return row.event === 'moveCompleted' && row.survivorId === survivor.id;
+    });
+    if (moved && totalWounds(survivor) >= LETHAL_WOUNDS) {
+      unshiftIntoCurrentFrame(state, [{ kind: 'i.kill', survivorId: survivor.id, cause: 'wounds' }]);
+      queuedDeath = true;
+    }
+  }
+  return queuedDeath;
+}
 
 /* ------------------------------------------------------------------ *
  * Exposure (§9.1)
@@ -463,6 +516,7 @@ export function placeSurvivor(
     usedThisTurn: [],
     usedThisRound: [],
     usedThisGame: [],
+    ...(cardId === 'sv-john-price' ? { copiedAbilityIds: [] } : {}),
   };
   state.survivors[survivor.id] = survivor;
   if (asLeader) getPlayer(state, playerId).leaderSurvivorId = survivor.id;

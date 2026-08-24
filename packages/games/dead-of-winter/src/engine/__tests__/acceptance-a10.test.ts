@@ -12,7 +12,7 @@ import { Rng } from '@tt/core';
 import { describe, expect, it } from 'vitest';
 
 import { COLONY, NON_COLONY_LOCATIONS } from '../../content/primitives.js';
-import type { SecretObjectiveDefinition } from '../../content/schema.js';
+import type { SecretObjectiveDefinition, SurvivorCardDefinition } from '../../content/schema.js';
 import type { EngineEffect, GameAction, GameState, PlayerId } from '../../types.js';
 import {
   advance,
@@ -54,7 +54,21 @@ const noRevealExile: SecretObjectiveDefinition = {
   matureContent: false,
 };
 
-const A10_PACK = extendPack('acceptance-a10', { secretObjectives: [noRevealExile] });
+const exiledReplacement: SurvivorCardDefinition = {
+  id: 'sv-a10-exiled-replacement',
+  name: 'A10 Replacement',
+  occupation: 'Volunteer',
+  influence: 1,
+  attackThreshold: 5,
+  searchThreshold: 5,
+  nonCooperative: false,
+  matureContent: false,
+};
+
+const A10_PACK = extendPack('acceptance-a10', {
+  secretObjectives: [noRevealExile],
+  survivors: [exiledReplacement],
+});
 
 const game = (): GameState => {
   const state = start({
@@ -586,7 +600,7 @@ describe('§14.2 allowed exiled interactions', () => {
     state.players[exiledId]!.exiled = true;
     const diceBefore = [...state.players[exiledId]!.unusedDice];
     const known = new Set(survivorsOfPlayer(state, exiledId).map((survivor) => survivor.id));
-    state.decks.survivors = ['sv-f24', ...state.decks.survivors];
+    state.decks.survivors = [exiledReplacement.id, ...state.decks.survivors];
 
     runEffects(
       state,

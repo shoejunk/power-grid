@@ -200,6 +200,10 @@ export interface SurvivorInstance {
   usedThisTurn: AbilityId[];
   usedThisRound: AbilityId[];
   usedThisGame: AbilityId[];
+  /** §18.3: John Price's abilities are copied only after a completed move. */
+  copiedAbilityIds?: AbilityId[];
+  /** §18.3: Edward White's second-die ability must follow his normal attack. */
+  edwardAttackPending?: boolean;
 }
 
 /**

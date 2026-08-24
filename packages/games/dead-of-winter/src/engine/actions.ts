@@ -9,7 +9,12 @@
  * reserved for malformed content and broken invariants (§22).
  */
 
-import { COLONY, type LocationId, type NonColonyLocationId } from '../content/primitives.js';
+import {
+  COLONY,
+  NON_COLONY_LOCATIONS,
+  type LocationId,
+  type NonColonyLocationId,
+} from '../content/primitives.js';
 import type { AbilityDefinition } from '../content/effects.js';
 import type { GameAction, GameState, PendingChoice, PlayerId } from '../types.js';
 import {
@@ -151,6 +156,17 @@ export function findAbility(
   }
 
   const def = content.survivors.get(survivor.cardId);
+  if (survivor.cardId === 'sv-john-price' && survivor.copiedAbilityIds?.includes(abilityId)) {
+    const copied = survivorsAt(state, survivor.location)
+      .filter((other) => other.id !== survivor.id)
+      .map((other) => content.survivors.get(other.cardId)?.ability)
+      .find((ability) => ability?.id === abilityId);
+    if (copied) {
+      // John owns the copied usage window.  The original survivor's used flags
+      // therefore cannot disable John's copy (§18.3).
+      return { ability: copied, holder: { kind: 'survivor', id: survivorId } };
+    }
+  }
   if (def?.ability?.id !== abilityId || !def.ability) return null;
   return { ability: def.ability, holder: { kind: 'survivor', id: survivorId } };
 }
@@ -332,6 +348,9 @@ export function validateAction(
       }
       const available = abilityAvailable(state, lookup);
       if (!available.ok) return available;
+      if (action.abilityId === 'edward-clear' && !survivor.edwardAttackPending) {
+        return fail('Edward White must complete a normal attack before this ability. §18.3');
+      }
       if (lookup.ability.dieThreshold !== null) {
         if (action.die === undefined) return fail('That ability needs an action die.');
         if (!hasDie(player, action.die)) return fail('You have no such unused die.');
@@ -529,6 +548,8 @@ export function applyValidatedAction(
       const target = entrances[0]!;
       target.zombies -= 1;
       killZombieBookkeeping(state, now, survivor.location, true, survivor.id);
+      const edwardCombo = survivor.cardId === 'sv-edward-white';
+      if (edwardCombo) survivor.edwardAttackPending = true;
       state.turn?.events.push({
         event: 'actionPerformed',
         action: 'attackZombie',
@@ -543,7 +564,7 @@ export function applyValidatedAction(
         state,
         [
           ...(hook ? [hook] : []),
-          { kind: 'i.exposure' as const, survivorId: survivor.id },
+          ...(!edwardCombo ? [{ kind: 'i.exposure' as const, survivorId: survivor.id }] : []),
         ],
         { controllerId: playerId, sourceSurvivorId: survivor.id },
       );
@@ -665,6 +686,7 @@ export function applyValidatedAction(
       if (action.die !== undefined) spendDie(player, action.die);
       markAbilityUsed(state, lookup);
       const survivor = getSurvivor(state, action.survivorId);
+      if (action.abilityId === 'edward-clear') survivor.edwardAttackPending = false;
       pushLog(state, now, {
         category: 'action',
         playerId,
@@ -847,6 +869,34 @@ function playItem(
    * effect cannot see it as still held.
    */
   discardPlayedCard(state, iid, playerId);
+
+  /*
+   * Megaphone is a one-shot Attract card, not a no-op item.  Its printed
+   * effect names the survivor's location but not a source location; the
+   * digital action therefore uses the canonical board order and takes the
+   * first other location that currently has zombies.  `attractZombies` still
+   * owns the important rule: only empty destination entrance spaces may be
+   * used, so a full destination moves fewer than two (including zero) and
+   * never causes an overrun.  A future card-choice surface can replace this
+   * deterministic source policy without changing the movement primitive.
+   */
+  if (def.id === 'it-megaphone') {
+    const target = targetSurvivorId
+      ? trySurvivor(state, targetSurvivorId)
+      : survivorsOf(state, playerId)[0];
+    if (target) {
+      const sourceLocations: LocationId[] = [COLONY, ...NON_COLONY_LOCATIONS];
+      const source = sourceLocations.find(
+        (location) =>
+          location !== target.location && entrancesOf(state, location).some((entrance) => entrance.zombies > 0),
+      );
+      if (source) {
+        attractZombies(state, now, { from: source, to: target.location, count: 2 });
+      }
+    }
+    return;
+  }
+
   if (def.onPlay) {
     pushFrame(state, [def.onPlay], {
       controllerId: playerId,

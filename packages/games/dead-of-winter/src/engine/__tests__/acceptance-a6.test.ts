@@ -145,7 +145,7 @@ describe("A6 §7 attacks", () => {
       s,
       NOW,
       playerId,
-      "sv-edward-white",
+      "sv-loretta-clay",
       COLONY,
       false,
     );
@@ -206,7 +206,7 @@ describe("A6 §7 attacks", () => {
       s,
       NOW,
       playerId,
-      "sv-edward-white",
+      "sv-loretta-clay",
       COLONY,
       false,
     );
@@ -620,7 +620,7 @@ function bitePosition(): BitePosition {
     state,
     NOW,
     attackerController,
-    "sv-edward-white",
+    "sv-loretta-clay",
     "school",
     false,
   );
@@ -743,7 +743,7 @@ describe("A6 §9.2 bite chains", () => {
       s,
       NOW,
       attackerController,
-      "sv-edward-white",
+      "sv-loretta-clay",
       "school",
       false,
     );
