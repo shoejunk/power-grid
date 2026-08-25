@@ -442,3 +442,12 @@ absent.
 
 **Next run should do first:** `engine-tests`. Nothing downstream can be trusted until the engine is
 verified against §23 and §18.
+## 2026-08-25 — nightly run 11
+
+**Intent:** continue the first queue item, `engine-tests`, on `master`. Close the strict A14
+public-action/content-pack evidence gap and the A15 replay/reconnection gap in bounded units, with
+each change reviewed by a harsh independent critic and pushed as soon as its focused and full suites
+are green. Preserve the existing Windows build-artifact ACL debt and report it rather than claiming
+the blocked composite builds are green.
+
+(in progress)
