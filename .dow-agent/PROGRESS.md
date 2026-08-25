@@ -8,6 +8,59 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-25 — nightly run 11 result
+
+**Intent:** continue the first queue item, `engine-tests`, on `master`: close the strict A14
+public-action/content-pack gap and the A15 replay/reconnection gap in bounded, independently
+critic-reviewed units, pushing each green unit immediately.
+
+**Landed and pushed:**
+
+- `331f8f6` (`wip(dow): record nightly engine test scope`) recorded the run before work began.
+- `47b5e60` (`wip(dow): add public A14 boundary evidence`) added
+  `acceptance-a14-public.test.ts`. It drives settings, setup choices, Attract, betrayal omission,
+  redaction, and active-pack pinning through the public plugin surface. It is useful plumbing evidence
+  but intentionally does not pretend the active `TEST_PACK` is a retail catalog.
+- `d8225d6` (`wip(dow): prove full engine replay stream`) replaced A15's post-setup RNG/dice/
+  crossroads injection with a setup-to-terminal action stream replay, including log deltas, RNG,
+  decks, dice, pending effects, random events, and winners.
+- `9e9ac9e` (`wip(dow): prove session-token reconnection`) added a real three-seat DoW WebSocket
+  test covering session-token rejoin, private hand/objective/crossroads redaction, SQLite restart,
+  and exact seat restoration.
+
+**Critic verdicts:**
+
+- **A14: FAIL overall.** The focused suite is green at 2/2 and Attract uses parse/validate/apply;
+  however, the active plugin still registers the explicit non-shipping `TEST_PACK`, betrayal omission
+  is only partial public-boundary evidence, and the named §18 rulings do not each have a public-path
+  regression in this slice. The critic specifically rejected treating fixture pinning as retail proof.
+- **A15 engine replay: PASS, narrow.** Focused suite 4/4; the critic found no post-setup RNG, dice,
+  or crossroads mutation in the replay path. This proves deterministic plugin/engine action replay.
+- **A15 redaction: PASS, narrow.** Whole-view deep-walk coverage remains green for player and spectator
+  views. The critic noted that the stress fixture directly constructs hidden state, so it is not natural
+  gameplay proof.
+- **A15 full product: FAIL.** The server still persists opaque snapshots and sessions, not an ordered
+  append-only action/event audit stream with actor, before/after state, public explanation, and random
+  outcomes that can rebuild a match after restart.
+- **Multiplayer: PASS for the reconnection slice, FAIL overall.** The new test proves real N1 join flow,
+  same-seat private restoration, non-leakage to another seat/replacement/spectator, and SQLite restart.
+  The strict critic still requires hostile-action proof, exact survivor/equipment/dice/exile/turn proof,
+  pending-effect restart proof, and a full browser game with exile, bite chain, overrun, and winners.
+
+**Verification:** final Windows sweep passed all five TypeScript checks, DoW **266/266**, Power Grid
+**230/230**, and server **43/43**; `git diff --check` passed and `master` is clean/synchronized at
+`9e9ac9e`. The global npm/npx shims were unusable and the user npm config forced `os=linux`, so the
+installed Node npm CLI was used directly and the Windows optional binaries were restored with a
+one-run `--os=win32 --package-lock=false` install; no tracked dependency files changed.
+
+**Disciplines changed:** DoW engine-test coverage moved from 265 to 266 tests; server regression
+coverage moved from 42 to 43 tests; the previously blocked DoW/server composite builds passed in the
+final sweep. UI, art, motion, accessibility, full multiplayer gameplay, and Wingspan visual comparison
+were not assessed because `engine-tests` remains the first non-PASS queue item.
+
+**Next run should do first:** persist and replay a server-side validated action/event audit stream,
+then return to the A14 named-ruling/public-boundary and shipping-content gap. Do not mark A14/A15 PASS.
+
 ## 2026-08-24 — nightly run 10 result
 
 **Intent:** continue the dependency-ordered `engine-tests` workstream with A11–A15 and every named
@@ -442,12 +495,3 @@ absent.
 
 **Next run should do first:** `engine-tests`. Nothing downstream can be trusted until the engine is
 verified against §23 and §18.
-## 2026-08-25 — nightly run 11
-
-**Intent:** continue the first queue item, `engine-tests`, on `master`. Close the strict A14
-public-action/content-pack evidence gap and the A15 replay/reconnection gap in bounded units, with
-each change reviewed by a harsh independent critic and pushed as soon as its focused and full suites
-are green. Preserve the existing Windows build-artifact ACL debt and report it rather than claiming
-the blocked composite builds are green.
-
-(in progress)
