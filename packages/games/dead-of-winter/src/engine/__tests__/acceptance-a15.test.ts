@@ -7,12 +7,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { Rng } from '@tt/core';
 
 import { deadOfWinter } from '../../plugin.js';
 import type { GameAction, GameState, PlayerId } from '../../types.js';
-import { NON_COLONY_LOCATIONS } from '../../content/primitives.js';
-import { contentOf } from '../index.js';
 import {
   contextFor,
   NOW,
@@ -26,6 +23,21 @@ interface RecordedAction {
   playerId: PlayerId;
   action: GameAction;
   now: number;
+  events: GameState['log'];
+  after: ReplayProofPoint;
+}
+
+interface ReplayProofPoint {
+  phase: GameState['phase'];
+  colonyStep: GameState['colonyStep'];
+  activePlayerId: GameState['activePlayerId'];
+  turn: GameState['turn'];
+  rngCursor: number;
+  decks: GameState['decks'];
+  dice: Record<PlayerId, { unusedDice: number[]; usedDice: number[] }>;
+  pendingChoices: GameState['pendingChoices'];
+  effectStack: GameState['effectStack'];
+  outcome: GameState['outcome'];
 }
 
 interface TokenHit {
@@ -97,8 +109,16 @@ function applyRecorded(
   now: number,
   script: RecordedAction[],
 ): GameState {
-  script.push({ playerId, action: clone(action), now });
-  return deadOfWinter.applyAction(state, playerId, action, now);
+  const logStart = state.log.length;
+  const next = deadOfWinter.applyAction(state, playerId, action, now);
+  script.push({
+    playerId,
+    action: clone(action),
+    now,
+    events: clone(next.log.slice(logStart)),
+    after: replayProofPoint(next),
+  });
+  return next;
 }
 
 function answerPending(
@@ -128,58 +148,8 @@ function answerPending(
   );
 }
 
-function setupComplete(seed: string): GameState {
-  let state = createPluginGame(seed);
-  const setupScript: RecordedAction[] = [];
-  while (state.phase === 'setup') state = answerPending(state, setupScript);
-  return state;
-}
-
-/** Find a cursor that makes the theft hit and the next arrival exposure blank. */
-function cursorForReplayFixture(
-  state: GameState,
-  targetThreshold: number,
-  victimHandSize: number,
-): number {
-  for (let cursor = state.rngCursor; cursor < state.rngCursor + 100_000; cursor++) {
-    const rng = new Rng(state.seed, cursor);
-    if (rng.die(6) > targetThreshold) continue;
-    rng.pick(Array.from({ length: victimHandSize }));
-    if (rng.die(6) <= 3) return cursor;
-  }
-  throw new Error('Could not find a deterministic replay fixture cursor');
-}
-
-function prepareReplayFixture(state: GameState): GameState {
-  const playerId = state.turn!.playerId;
-  const targetPlayerId = state.seating.find((id) => id !== playerId)!;
-  const target = survivorsOfPlayer(state, targetPlayerId)[0]!;
-  const targetThreshold = contentOf(state).survivors.get(target.cardId)!.attackThreshold;
-
-  // The first action is a real random theft. The following move is a real
-  // arrival exposure; the cursor search keeps both paths alive and settled.
-  state.players[playerId]!.unusedDice = [6, 5, 4];
-  state.turn!.crossroadsCardId = null;
-  state.turn!.crossroadsTriggered = true;
-  state.rngCursor = cursorForReplayFixture(
-    state,
-    targetThreshold,
-    state.players[targetPlayerId]!.hand.length,
-  );
-
-  // This is the persisted initial state for the action log, deliberately
-  // round-tripped before any recorded action is applied.
-  return JSON.parse(JSON.stringify(state)) as GameState;
-}
-
-function preparedReplayState(seed: string): GameState {
-  return prepareReplayFixture(setupComplete(seed));
-}
-
 function runReplayScenario(seed: string): {
   initial: GameState;
-  setupEnd: GameState;
-  prepared: GameState;
   final: GameState;
   script: RecordedAction[];
   setupActionCount: number;
@@ -187,104 +157,134 @@ function runReplayScenario(seed: string): {
   const initial = JSON.parse(JSON.stringify(createPluginGame(seed))) as GameState;
   let state = clone(initial);
   const script: RecordedAction[] = [];
-  while (state.phase === 'setup') state = answerPending(state, script);
-  const setupActionCount = script.length;
-  const setupEnd = clone(state);
-  state = prepareReplayFixture(state);
-  const prepared = clone(state);
-  let turns = 0;
+  let setupActionCount = 0;
   let guard = 0;
-  let theftDone = false;
+  let theftAttempts = 0;
 
-  while (state.phase !== 'gameOver' && turns < 14 && guard++ < 1_000) {
+  while (state.phase !== 'gameOver' && guard++ < 5_000) {
     if (pending(state)) {
       state = answerPending(state, script);
-      continue;
-    }
-    if (!state.turn) break;
-
-    const playerId = state.turn.playerId;
-    const mine = survivorsOfPlayer(state, playerId);
-    if (!theftDone) {
-      const targetPlayerId = state.seating.find((id) => id !== playerId)!;
-      const attacker = mine.find((survivor) => survivor.location === 'colony');
-      const target = survivorsOfPlayer(state, targetPlayerId).find(
-        (survivor) => survivor.location === 'colony',
-      );
-      const action: GameAction | undefined = attacker && target
-        ? { type: 'attackSurvivor', survivorId: attacker.id, die: 6, targetId: target.id }
-        : undefined;
-      if (!action || !deadOfWinter.validateAction(state, playerId, action).ok) {
-        throw new Error('replay fixture could not perform its random theft');
-      }
-      state = applyRecorded(state, playerId, action, NOW, script);
-      theftDone = true;
-      continue;
-    }
-    const destination = NON_COLONY_LOCATIONS[turns % NON_COLONY_LOCATIONS.length]!;
-    const mover = mine.find((survivor) =>
-      deadOfWinter.validateAction(state, playerId, {
-        type: 'moveSurvivor',
-        survivorId: survivor.id,
-        to: destination,
-      }).ok,
-    );
-    if (mover) {
-      state = applyRecorded(
-        state,
-        playerId,
-        { type: 'moveSurvivor', survivorId: mover.id, to: destination },
-        NOW,
-        script,
-      );
+      if (state.phase === 'setup') setupActionCount = script.length;
+      else if (setupActionCount === 0) setupActionCount = script.length;
       continue;
     }
 
-    const die = [...(state.players[playerId]?.unusedDice ?? [])].sort((a, b) => b - a)[0];
-    const searcher = die === undefined
-      ? undefined
-      : mine.find((survivor) =>
-          deadOfWinter.validateAction(state, playerId, {
-            type: 'search',
-            survivorId: survivor.id,
-            die,
-          }).ok,
-        );
-    if (searcher && die !== undefined) {
-      state = applyRecorded(state, playerId, { type: 'search', survivorId: searcher.id, die }, NOW, script);
-      continue;
-    }
+    const playerId = deadOfWinter.activePlayerOf(state);
+    if (!playerId) break;
 
-    state = applyRecorded(state, playerId, { type: 'endTurn' }, NOW, script);
-    turns += 1;
+    const theftAction = hasEvent(state, 'stealCard') ? undefined : randomTheftAttempt(state, playerId);
+    const action = theftAction ?? nextLegalPluginAction(state, playerId);
+    if (!action) {
+      throw new Error(`replay scenario stalled at ${state.phase}/${state.colonyStep ?? '-'} for ${playerId}`);
+    }
+    if (action.type === 'attackSurvivor') theftAttempts += 1;
+    state = applyRecorded(state, playerId, action, NOW + script.length + 1, script);
   }
 
-  if (guard >= 1_000) throw new Error('replay scenario did not settle');
+  if (guard >= 5_000) throw new Error('replay scenario did not settle');
+  if (state.phase !== 'gameOver') throw new Error(`replay scenario ended before game over: ${state.phase}`);
+  if (theftAttempts === 0) throw new Error('replay scenario never attempted an authoritative random theft');
   return {
     initial,
-    setupEnd,
-    prepared,
     final: state,
     script,
     setupActionCount,
   };
 }
 
-function replay(
-  initial: GameState,
-  script: readonly RecordedAction[],
-  prepareAfterSetup = false,
-): GameState {
-  let state = clone(initial);
-  let prepared = false;
-  for (const entry of script) {
-    state = deadOfWinter.applyAction(state, entry.playerId, entry.action, entry.now);
-    if (prepareAfterSetup && !prepared && state.phase !== 'setup') {
-      state = prepareReplayFixture(state);
-      prepared = true;
+function replayProofPoint(state: GameState): ReplayProofPoint {
+  return {
+    phase: state.phase,
+    colonyStep: state.colonyStep,
+    activePlayerId: state.activePlayerId,
+    turn: clone(state.turn),
+    rngCursor: state.rngCursor,
+    decks: clone(state.decks),
+    dice: Object.fromEntries(
+      state.seating.map((playerId) => {
+        const player = state.players[playerId]!;
+        return [playerId, {
+          unusedDice: [...player.unusedDice],
+          usedDice: [...player.usedDice],
+        }];
+      }),
+    ),
+    pendingChoices: clone(state.pendingChoices),
+    effectStack: clone(state.effectStack),
+    outcome: clone(state.outcome),
+  };
+}
+
+function hasEvent(state: GameState, event: string): boolean {
+  return state.log.some((entry) => entry.data?.event === event);
+}
+
+function randomTheftAttempt(state: GameState, playerId: PlayerId): GameAction | undefined {
+  const dice = [...(state.players[playerId]?.unusedDice ?? [])].sort((a, b) => b - a);
+  if (dice.length === 0) return undefined;
+  const attackers = survivorsOfPlayer(state, playerId);
+  const targets = Object.values(state.survivors).filter(
+    (survivor) => survivor.controllerId !== playerId && state.players[survivor.controllerId]?.hand.length,
+  );
+
+  for (const attacker of attackers) {
+    for (const target of targets) {
+      for (const die of dice) {
+        const action: GameAction = {
+          type: 'attackSurvivor',
+          survivorId: attacker.id,
+          die,
+          targetId: target.id,
+        };
+        if (deadOfWinter.validateAction(state, playerId, action).ok) return action;
+      }
     }
   }
+  return undefined;
+}
+
+function nextLegalPluginAction(state: GameState, playerId: PlayerId): GameAction | undefined {
+  const candidates = [
+    deadOfWinter.defaultActionFor?.(state, playerId) ?? null,
+    ...(deadOfWinter.safeDefaultActions?.(state, playerId) ?? []),
+  ];
+  for (const action of candidates) {
+    if (action && deadOfWinter.validateAction(state, playerId, action).ok) return action;
+  }
+  return undefined;
+}
+
+function replay(initial: GameState, script: readonly RecordedAction[]): GameState {
+  let state = clone(initial);
+  expect(state.phase).toBe('setup');
+  for (const entry of script) {
+    const logStart = state.log.length;
+    state = deadOfWinter.applyAction(state, entry.playerId, entry.action, entry.now);
+    expect(state.log.slice(logStart)).toEqual(entry.events);
+    expect(JSON.stringify(replayProofPoint(state))).toBe(JSON.stringify(entry.after));
+  }
   return state;
+}
+
+function randomEvents(state: GameState) {
+  return state.log
+    .filter((entry) => [
+      'diceRolled',
+      'searchDraw',
+      'noiseRoll',
+      'exposure',
+      'survivorAttack',
+      'stealCard',
+    ].includes(String(entry.data?.event)))
+    .map((entry) => ({ event: entry.data?.event, data: entry.data }));
+}
+
+function expectReplayIncludesRequiredRandomEvents(state: GameState): void {
+  for (const event of ['diceRolled', 'searchDraw', 'noiseRoll', 'exposure', 'survivorAttack', 'stealCard']) {
+    expect(state.log.some((entry) => entry.data?.event === event), `missing replay event ${event}`).toBe(true);
+  }
+  expect(state.log.filter((entry) => entry.data?.event === 'searchDraw').length).toBeGreaterThanOrEqual(2);
+  expect(state.outcome, 'terminal replay must evaluate winners').not.toBeNull();
 }
 
 function itemIdentities(state: GameState, iid: string): string[] {
@@ -406,71 +406,34 @@ function makeRedactionFixture(): RedactionFixture {
 }
 
 describe('§23 A15 — replay determinism', () => {
-  it('replays the same seed and full action log to the identical state and random outcome', () => {
+  it('replays the complete setup-to-terminal action/event stream to the identical state', () => {
     const first = runReplayScenario('A15-REPLAY');
-    const second = replay(
-      JSON.parse(JSON.stringify(first.initial)) as GameState,
-      first.script,
-      true,
-    );
+    const second = replay(JSON.parse(JSON.stringify(first.initial)) as GameState, first.script);
 
     expect(first.script.length).toBeGreaterThan(8);
     expect(first.initial.phase).toBe('setup');
     expect(first.setupActionCount).toBeGreaterThan(0);
-    expect(first.script.slice(0, first.setupActionCount).every((entry) => entry.action.type === 'resolveChoice')).toBe(true);
-    expect(first.setupEnd.rngCursor).toBeGreaterThanOrEqual(first.initial.rngCursor);
-    expect(first.prepared.rngCursor).toBeGreaterThanOrEqual(first.setupEnd.rngCursor);
+    expect(
+      first.script.slice(0, first.setupActionCount).every((entry) => entry.action.type === 'resolveChoice'),
+    ).toBe(true);
+    expect(first.script.every((entry) => entry.events.length > 0)).toBe(true);
     expect(second).toEqual(first.final);
     expect(JSON.stringify(second)).toBe(JSON.stringify(first.final));
     expect(second.seed).toBe(first.final.seed);
     expect(second.rngCursor).toBe(first.final.rngCursor);
     expect(second.decks).toEqual(first.final.decks);
+    expect(replayProofPoint(second).dice).toEqual(replayProofPoint(first.final).dice);
     expect(second.log).toEqual(first.final.log);
     expect(second.effectStack).toEqual(first.final.effectStack);
+    expect(second.pendingChoices).toEqual(first.final.pendingChoices);
+    expect(JSON.stringify(replayProofPoint(second))).toBe(JSON.stringify(replayProofPoint(first.final)));
+    expect(second.phase).toBe('gameOver');
+    expect(second.outcome).toEqual(first.final.outcome);
     expect(second.outcome?.winners ?? []).toEqual(first.final.outcome?.winners ?? []);
+    expect(second.outcome?.results ?? []).toEqual(first.final.outcome?.results ?? []);
 
-    const randomEvents = (state: GameState) =>
-      state.log
-        .filter((entry) => [
-          'diceRolled',
-          'searchDraw',
-          'noiseRoll',
-          'exposure',
-          'stealCard',
-        ].includes(String(entry.data?.event)))
-        .map((entry) => ({ event: entry.data?.event, data: entry.data }));
     expect(randomEvents(second)).toEqual(randomEvents(first.final));
-    expect(first.final.log.some((entry) => entry.data?.event === 'diceRolled')).toBe(true);
-    expect(first.final.log.filter((entry) => entry.data?.event === 'searchDraw').length).toBeGreaterThanOrEqual(2);
-    expect(first.final.log.some((entry) => entry.data?.event === 'noiseRoll')).toBe(true);
-    expect(first.final.log.some((entry) => entry.data?.event === 'exposure')).toBe(true);
-    expect(first.final.log.some((entry) => entry.data?.event === 'stealCard')).toBe(true);
-  });
-
-  it('replays a terminal winner evaluation after the same seeded random setup', () => {
-    const terminalInitial = preparedReplayState('A15-WINNER');
-    if (terminalInitial.phase !== 'playerTurns' || !terminalInitial.turn) {
-      throw new Error('winner fixture did not leave a live turn');
-    }
-    terminalInitial.colony.morale = 0;
-    const action: RecordedAction = {
-      playerId: terminalInitial.turn.playerId,
-      action: { type: 'endTurn' },
-      now: NOW,
-    };
-    const firstTerminal = deadOfWinter.applyAction(
-      terminalInitial,
-      action.playerId,
-      action.action,
-      action.now,
-    );
-    const replayedTerminal = replay(terminalInitial, [action]);
-
-    expect(firstTerminal).toEqual(replayedTerminal);
-    expect(firstTerminal.phase).toBe('gameOver');
-    expect(firstTerminal.outcome).not.toBeNull();
-    expect(firstTerminal.outcome!.winners).toEqual(replayedTerminal.outcome!.winners);
-    expect(firstTerminal.outcome!.results).toEqual(replayedTerminal.outcome!.results);
+    expectReplayIncludesRequiredRandomEvents(first.final);
   });
 });
 
