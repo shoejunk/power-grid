@@ -495,3 +495,15 @@ absent.
 
 **Next run should do first:** `engine-tests`. Nothing downstream can be trusted until the engine is
 verified against §23 and §18.
+---
+
+## 2026-08-26 — nightly run 12
+
+**Intent:** continue the first queue item, `engine-tests`, with a bounded audit/replay persistence
+slice at the server boundary. First inspect the current persistence and plugin contracts, then add
+the smallest durable append-only event record and replay proof that preserves hidden information
+and random-state determinism across restart. If that slice is green, take the next bounded A14
+content-boundary item only if the remaining budget allows. Sub-agents will own disjoint test or
+engine-support files and run no git; I will integrate, verify, commit, and push each green unit.
+
+(in progress)
