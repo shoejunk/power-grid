@@ -107,8 +107,10 @@ describe('synthetic topology', () => {
   });
 
   it('§8 the metropolis restriction is per player, not per city pair', () => {
-    const { state, actor } = builder((s) => {
+    const { state, actor } = builder((s, a) => {
       placeHouse(s, s.playerOrder[0]!, city('z1', 1));
+      placeHouse(s, a, city('z2', 1));
+      s.players[a]!.money = 100;
       s.step = 2;
       s.step2Triggered = true;
     });

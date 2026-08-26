@@ -446,6 +446,14 @@ export function validateMarkStartCity(
       return fail('Another player already marked that city');
     }
   }
+  const markedCities = state.playerOrder
+    .map((id) => getPlayer(state, id).markedStartCity)
+    .filter((id): id is CityId => id !== undefined)
+    .map((id) => map.cities.find((c) => c.id === id))
+    .filter((c): c is NonNullable<typeof c> => c !== undefined);
+  if (markedCities.some((marked) => marked.area === city.area)) {
+    return fail('Starting cities must be in different regions');
+  }
   return ok;
 }
 

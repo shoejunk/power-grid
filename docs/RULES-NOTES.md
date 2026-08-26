@@ -23,6 +23,9 @@ Audited against the local `power-grid-rules.pdf` plus independent secondary sour
 - **Setup removals**, **zone sizes**, **Step 2 thresholds**, **end-game thresholds**, **slot costs**, starting
   money, house counts, Trust house count, USA coal price.
 
+The current game variant selects exactly one area per human player, including two-player and six-player games.
+The two-player end threshold is capped by the 14 cities in its two-area zone so the game remains reachable.
+
 ### Corrected during the audit
 
 `REFILL_TABLE.usa` coal column, all 15 values (Steps 1–3 × player counts 2–6), was wrong — it had been written

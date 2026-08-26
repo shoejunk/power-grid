@@ -7,6 +7,7 @@ import {
   TRUST_PLAYER_ID,
   buildTargets,
   deepClone,
+  endGameThreshold,
   finalStandings,
   legalActions,
   neighboursInZone,
@@ -71,9 +72,9 @@ describe('§13 Trust setup', () => {
     }
   });
 
-  it('uses the 3-area zone', () => {
+  it('uses the two-player zone', () => {
     const s = trustGame();
-    expect(s.zone).toHaveLength(3);
+    expect(s.zone).toHaveLength(2);
   });
 
   it('alternates the placing human A, B, B, A, A, B', () => {
@@ -288,6 +289,14 @@ describe('§13 Phase 4 — Trust houses', () => {
       (c) => s.citySlots[c]!.every((x) => x === null),
     )!;
     placeHouse(s, other, free, 0);
+    const humanStart = zoneCities(map, s.zone).find(
+      (c) =>
+        c !== free &&
+        map.cities.find((city) => city.id === c)!.area !== map.cities.find((city) => city.id === free)!.area &&
+        s.citySlots[c]!.every((x) => x === null),
+    )!;
+    placeHouse(s, human, humanStart, 0);
+    s.players[human]!.money = 500;
 
     const t = act(enterPhase(s, 'building', human), human, { type: 'buildCity', cityId: free });
     expect(t.citySlots[free]).toEqual([other, human, null]);
@@ -355,6 +364,7 @@ describe('§13 Phase 5 and the end condition', () => {
     const trust = s.players[TRUST_PLAYER_ID]!;
     const map = stateMap(s);
     const cities = zoneCities(map, s.zone);
+    const threshold = endGameThreshold(s);
 
     // The Trust holds a huge network and a huge plant; the humans hold little.
     for (const c of cities) {
@@ -364,7 +374,7 @@ describe('§13 Phase 5 and the end condition', () => {
     }
     trust.plants = [{ plantId: 50, stored: { coal: 0, oil: 0, garbage: 0, uranium: 0 } }];
 
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < threshold; i++) {
       s.citySlots[cities[i]!]![2] = a;
       s.players[a]!.cities.push(cities[i]!);
     }
@@ -380,12 +390,13 @@ describe('§13 Phase 5 and the end condition', () => {
     expect([a, b]).toContain(t.winnerId);
   });
 
-  it('§11/§13 the two-player game ends at 18 connected human cities', () => {
+  it('§11/§13 the two-player game ends at its reachable connected-city threshold', () => {
     const s = deepClone(trustGame('TRUST-END'));
     s.step = 3;
     const human = s.playerOrder[2]!;
     const cities = zoneCities(stateMap(s), s.zone);
-    for (let i = 0; i < 17; i++) {
+    const threshold = endGameThreshold(s);
+    for (let i = 0; i < threshold - 1; i++) {
       s.citySlots[cities[i]!]![2] = human;
       s.players[human]!.cities.push(cities[i]!);
     }
@@ -393,8 +404,8 @@ describe('§13 Phase 5 and the end condition', () => {
     expect(seventeen.endGameTriggered).toBe(false);
 
     const s18 = deepClone(s);
-    s18.citySlots[cities[17]!]![2] = human;
-    s18.players[human]!.cities.push(cities[17]!);
+    s18.citySlots[cities[threshold - 1]!]![2] = human;
+    s18.players[human]!.cities.push(cities[threshold - 1]!);
     const eighteen = act(enterPhase(s18, 'building', human), human, { type: 'passBuilding' });
     expect(eighteen.endGameTriggered).toBe(true);
   });

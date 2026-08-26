@@ -39,6 +39,28 @@ export function cityIsEmpty(state: GameState, cityId: CityId): boolean {
   return slots.every((s) => s === null || s === undefined);
 }
 
+/** The region containing a player's first city, or null before they start. */
+function startingRegion(state: GameState, playerId: PlayerId): string | null {
+  const player = getPlayer(state, playerId);
+  const firstCity = player.cities[0];
+  if (!firstCity) return null;
+  return findCity(stateMap(state), firstCity)?.area ?? null;
+}
+
+/** Regions already claimed by another human's first city. */
+function claimedStartingRegions(state: GameState, playerId: PlayerId): Set<string> {
+  const regions = new Set<string>();
+  const map = stateMap(state);
+  for (const id of state.playerOrder) {
+    if (id === playerId) continue;
+    const player = getPlayer(state, id);
+    if (player.isTrust || player.cities.length === 0) continue;
+    const area = findCity(map, player.cities[0]!)?.area;
+    if (area) regions.add(area);
+  }
+  return regions;
+}
+
 /**
  * True while an experienced-start marker is still available to be claimed.
  *
@@ -82,6 +104,19 @@ export function buildBlockReason(
   if (!state.zone.includes(city.area)) return 'That city is outside the playing zone';
   if (player.cities.includes(cityId)) return 'You already have a house in that city';
   if (player.housesRemaining <= 0) return 'You have no houses left';
+
+  // Before Step 2, a player's network may not leave the region of their first
+  // city. A player who has not started yet must choose a region no other human
+  // has used for their first city.
+  const region = startingRegion(state, playerId);
+  if (region === null && claimedStartingRegions(state, playerId).has(city.area)) {
+    return "Your first city must be in a different region from every other player's first city";
+  }
+  if (state.step === 1) {
+    if (region !== null && city.area !== region) {
+      return 'During Step 1, you may only build in your starting region';
+    }
+  }
 
   /*
    * §8: metropolis — at most one house from the same player across the pair.

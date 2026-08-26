@@ -30,13 +30,14 @@ The digital implementation should preserve the rulebook's timing, legal-action r
 
 | Players | Areas in playing zone |
 | ---: | ---: |
-| 2 | 3 |
+| 2 | 2 |
 | 3 | 3 |
 | 4 | 4 |
 | 5 | 5 |
-| 6 | 5 |
+| 6 | 6 |
 
 - A player may use only cities and connections inside the selected zone for the entire game.
+- The selected zone contains the same number of areas as there are human players.
 - Map data must include city adjacency, connection costs, city/metropolis relationships, and the three house-slot costs.
 - A connection may have cost 0.
 - The game must support choosing a contiguous zone, either randomly or through an appropriate player-facing selection flow.
@@ -115,7 +116,7 @@ Each market space has a price. A resource purchase pays the price printed on the
 
 ### Optional experienced-player starting cities
 
-After initial player order and zone selection, let players choose future starting cities in player order and mark each temporarily with a neutral uranium token. The markers form a shared pool: when a player begins building, they may exchange any unoccupied marked city's token for their house and return the token to the supply. A marker must not use the colour of the player who selected it before a house occupies that city. Except when a player is establishing their first city, unoccupied marked starting cities cannot be connected during Step 1.
+After initial player order and zone selection, let players choose future starting cities in player order and mark each temporarily with a neutral uranium token. The marked cities must be in different areas. The markers form a shared pool: when a player begins building, they may exchange any unoccupied marked city's token for their house and return the token to the supply. A marker must not use the colour of the player who selected it before a house occupies that city. Except when a player is establishing their first city, unoccupied marked starting cities cannot be connected during Step 1.
 
 ## 3. Round and phase state machine
 
@@ -210,7 +211,7 @@ Resolve players in reverse player order. Each player may connect any number of c
 
 ### Starting network
 
-- A player with no network may choose any empty city in the selected zone and place a house in its lowest available slot for 10 Elektro.
+- A player with no network may choose any empty city in the selected zone and place a house in its lowest available slot for 10 Elektro, but their first city must be in an area not used for another human player's first city.
 - The player pays the building cost to the bank.
 - A player may defer starting their network until a later round.
 - In the optional experienced-player mode, a player with no network may choose any unoccupied marked starting city as described in Setup.
@@ -224,6 +225,7 @@ Resolve players in reverse player order. Each player may connect any number of c
 - A player must pay the connection cost again for the route chosen to each new city, even if an earlier connection traversed or bypassed the same edge or city.
 - A player may not connect the same city twice.
 - A player may connect only cities and edges inside the selected zone.
+- Until Step 2, a player may connect only cities in the area of their first city.
 - A player cannot place a second house in a metropolis city if that would put two houses from the same player in the two cities of the metropolis.
 - A player places their house in the lowest empty city slot: 10, then 15, then 20 Elektro.
 - A player's network count updates immediately after each new city is connected.
@@ -353,10 +355,12 @@ The game ends immediately after Phase 4 when at least one human player reaches t
 
 | Players | End-game threshold |
 | ---: | ---: |
-| 2 | 18 |
+| 2 | 14* |
 | 3-4 | 17 |
 | 5 | 15 |
 | 6 | 14 |
+
+\* The base two-player threshold is 18, but the two-area zone contains only 14 cities, so the effective threshold is capped at 14.
 
 - A player may connect additional cities during the remainder of the ending Phase 4 if those cities are needed to win.
 - The following Phase 5 is a winner-evaluation phase, not a normal cash-production phase.
@@ -385,7 +389,7 @@ The Trust is an automated third faction. All base-game rules remain in force exc
 
 ### Trust setup
 
-- Use the 3-area playing zone.
+- Use the 2-area playing zone.
 - Give the Trust 16 houses plus one extra house used only for the player-order track.
 - The Trust does not receive money and does not use the connected-city scoring track.
 - Randomly choose which human is first. Place that human at order position 1, the Trust permanently at position 2, and the other human at position 3.
@@ -441,7 +445,7 @@ Keep the Trust at player-order position 2 every round. Recompute order only betw
 
 ### Trust end condition
 
-- The two-player game ends after Phase 4 when either human has connected at least 18 cities.
+- The two-player game ends after Phase 4 when either human has connected at least 14 cities in this two-area variant.
 - The following Phase 5 uses the normal two-player winner evaluation: the human who can supply the most cities wins, with remaining money breaking ties.
 
 ## 14. Digital implementation requirements

@@ -5,11 +5,11 @@ import type { MapId, ResourceBundle, ResourceType, Step } from '../types.js';
  * ------------------------------------------------------------------ */
 
 export const ZONE_AREA_COUNT: Record<number, number> = {
-  2: 3,
+  2: 2,
   3: 3,
   4: 4,
   5: 5,
-  6: 5,
+  6: 6,
 };
 
 /* ------------------------------------------------------------------ *

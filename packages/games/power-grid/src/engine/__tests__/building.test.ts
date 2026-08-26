@@ -65,6 +65,39 @@ describe('§8 starting a network', () => {
     });
     expect(buildCost(state, actor, 'hannover')).toBeNull();
   });
+
+  it('requires different first-city regions and keeps a network in its region during Step 1', () => {
+    const { state, actor } = builder();
+    let t = act(state, actor, build('essen'));
+
+    expect(validateAction(t, actor, build('duisburg')).ok).toBe(true);
+    expect(validateAction(t, actor, build('aachen'))).toEqual({
+      ok: false,
+      reason: 'During Step 1, you may only build in your starting region',
+    });
+
+    const next = deepClone(t);
+    const nextPlayer = next.playerOrder[0]!;
+    next.activePlayerId = nextPlayer;
+    next.players[nextPlayer]!.phaseStatus = 'acting';
+    expect(validateAction(next, nextPlayer, build('duisburg'))).toEqual({
+      ok: false,
+      reason: "Your first city must be in a different region from every other player's first city",
+    });
+    expect(validateAction(next, nextPlayer, build('aachen')).ok).toBe(true);
+
+    next.step = 2;
+    next.step2Triggered = true;
+    expect(validateAction(next, nextPlayer, build('duisburg'))).toEqual({
+      ok: false,
+      reason: "Your first city must be in a different region from every other player's first city",
+    });
+
+    t = deepClone(t);
+    t.step = 2;
+    t.step2Triggered = true;
+    expect(validateAction(t, actor, build('aachen')).ok).toBe(true);
+  });
 });
 
 describe('§8 connection costs', () => {
@@ -77,7 +110,11 @@ describe('§8 connection costs', () => {
   });
 
   it('finds the cheapest multi-hop route and may pass through unbuilt cities', () => {
-    const { state, actor } = builder((s, a) => placeHouse(s, a, 'essen'));
+    const { state, actor } = builder((s, a) => {
+      s.step = 2;
+      s.step2Triggered = true;
+      placeHouse(s, a, 'essen');
+    });
     // The rulebook's own example: Aachen for 10 + 9 + 2 via Düsseldorf.
     expect(buildCost(state, actor, 'aachen')).toEqual({
       routeCost: 11,
@@ -102,7 +139,10 @@ describe('§8 connection costs', () => {
   });
 
   it('cities connected earlier in the same turn become new route origins', () => {
-    const { state, actor } = builder();
+    const { state, actor } = builder((s) => {
+      s.step = 2;
+      s.step2Triggered = true;
+    });
     let t = act(state, actor, build('essen')); // 10
     expect(buildCost(t, actor, 'aachen')!.total).toBe(21);
     t = act(t, actor, build('duesseldorf')); // 2 + 10 = 12
@@ -118,7 +158,11 @@ describe('§8 connection costs', () => {
   });
 
   it('§8 pays the route again in full even when an edge was already traversed', () => {
-    const { state, actor } = builder((s, a) => placeHouse(s, a, 'essen'));
+    const { state, actor } = builder((s, a) => {
+      s.step = 2;
+      s.step2Triggered = true;
+      placeHouse(s, a, 'essen');
+    });
     let t = act(state, actor, build('aachen')); // 11 + 10, traverses Essen–Düsseldorf
     expect(t.players[actor]!.money).toBe(29);
     t = act(t, actor, build('duesseldorf')); // pays the same edge again: 2 + 10
@@ -127,6 +171,8 @@ describe('§8 connection costs', () => {
 
   it('refuses a city the player cannot pay for', () => {
     const { state, actor } = builder((s, a) => {
+      s.step = 2;
+      s.step2Triggered = true;
       placeHouse(s, a, 'essen');
       s.players[a]!.money = 20;
     });
@@ -143,6 +189,7 @@ describe('§8/§10 slot costs and Step capacity', () => {
   it('Step 1 allows only one house per city', () => {
     const { state, actor } = builder((s) => {
       const other = s.playerOrder[0]!;
+      placeHouse(s, other, 'fulda');
       placeHouse(s, other, 'essen');
     });
     expect(state.step).toBe(1);
@@ -157,6 +204,7 @@ describe('§8/§10 slot costs and Step capacity', () => {
     const { state, actor } = builder((s) => {
       s.step = 2;
       s.step2Triggered = true;
+      placeHouse(s, s.playerOrder[0]!, 'fulda');
       placeHouse(s, s.playerOrder[0]!, 'essen');
     });
     expect(buildCost(state, actor, 'essen')).toEqual({
@@ -174,7 +222,9 @@ describe('§8/§10 slot costs and Step capacity', () => {
     const { state, actor } = builder((s) => {
       s.step = 3;
       s.step2Triggered = true;
+      placeHouse(s, s.playerOrder[0]!, 'fulda');
       placeHouse(s, s.playerOrder[0]!, 'essen', 0);
+      placeHouse(s, s.playerOrder[1]!, 'aachen');
       placeHouse(s, s.playerOrder[1]!, 'essen', 1);
     });
     expect(buildCost(state, actor, 'essen')!.slotCost).toBe(20);
@@ -230,7 +280,10 @@ describe('§8 turn flow and undo', () => {
   });
 
   it('undo returns the house, the money and the network count', () => {
-    const { state, actor } = builder();
+    const { state, actor } = builder((s) => {
+      s.step = 2;
+      s.step2Triggered = true;
+    });
     let t = act(state, actor, build('essen'));
     t = act(t, actor, build('aachen'));
     expect(t.players[actor]!.money).toBe(19);
@@ -280,11 +333,12 @@ describe('§2 experienced-player starting cities', () => {
   });
 
   it('keeps a marker available when the Trust occupies its 15-Elektro slot', () => {
+    const trustZone = ['west', 'southwest'];
     const s = deepClone(
       start({
         playerCount: 2,
         seed: 'MARKED-TRUST',
-        zone: ZONE,
+        zone: trustZone,
         experiencedStart: true,
         againstTheTrust: true,
       }),

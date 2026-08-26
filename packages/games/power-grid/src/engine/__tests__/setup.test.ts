@@ -35,6 +35,7 @@ describe('§2 setup — acceptance 1: every player count on either map', () => {
         // Zone size and contiguity.
         const map = getMap(mapId);
         expect(s.zone).toHaveLength(ZONE_AREA_COUNT[playerCount]!);
+        expect(s.zone).toHaveLength(playerCount);
         expect(isZoneContiguous(map, s.zone)).toBe(true);
 
         // 8. Opening market: 8 plug plants, four lowest current.
@@ -136,6 +137,8 @@ describe('§2 optional experienced-player starting cities', () => {
     const marked = s.playerOrder.map((id) => s.players[id]!.markedStartCity);
     expect(marked.every((c) => typeof c === 'string')).toBe(true);
     expect(new Set(marked).size).toBe(3);
+    const map = getMap(s.settings.mapId);
+    expect(new Set(marked.map((id) => map.cities.find((c) => c.id === id)!.area)).size).toBe(3);
   });
 
   it('does not ask for starting cities when the option is off', () => {

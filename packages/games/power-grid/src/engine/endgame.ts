@@ -12,9 +12,14 @@ import type { GameState, PlayerId } from '../types.js';
 import { END_GAME_THRESHOLD } from './constants.js';
 import { getPlayer, humanPlayers, pushLog, type FinalEvaluationRow } from './state.js';
 import { bestSupply } from './production.js';
+import { stateMap, zoneCities } from './mapAccess.js';
 
 export function endGameThreshold(state: GameState): number {
-  return END_GAME_THRESHOLD[state.settings.playerCount] ?? 17;
+  const printed = END_GAME_THRESHOLD[state.settings.playerCount] ?? 17;
+  // A player-count-sized zone contains only 14 cities in a two-player game.
+  // Keep the end condition reachable under that requested setup variant.
+  if (state.zone.length === 0) return printed;
+  return Math.min(printed, zoneCities(stateMap(state), state.zone).length);
 }
 
 /** §11 / §13: only human networks can trigger the end of the game. */

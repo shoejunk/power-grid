@@ -56,7 +56,8 @@ describe('§11 thresholds', () => {
     expect(END_GAME_THRESHOLD).toMatchObject({ 2: 18, 3: 17, 4: 17, 5: 15, 6: 14 });
     for (const playerCount of [2, 3, 4, 5, 6]) {
       const s = start({ playerCount, seed: `T-${playerCount}` });
-      expect(endGameThreshold(s)).toBe(END_GAME_THRESHOLD[playerCount]);
+      const maxCities = zoneCities(stateMap(s), s.zone).length;
+      expect(endGameThreshold(s)).toBe(Math.min(END_GAME_THRESHOLD[playerCount]!, maxCities));
     }
   });
 });
