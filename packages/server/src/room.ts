@@ -18,7 +18,13 @@
 import type { AnyGamePlugin, GameKey, LobbyState, PlayerId, SeatColor } from '@tt/core';
 import type { ServerConfig } from './config.js';
 import type { Logger } from './logger.js';
-import type { ChatEntry, GameStore, PersistedGame, Seat } from './persistence/types.js';
+import type {
+  ChatEntry,
+  GameAuditEventInput,
+  GameStore,
+  PersistedGame,
+  Seat,
+} from './persistence/types.js';
 import type { Connection } from './wire.js';
 import { CLOSE } from './wire.js';
 
@@ -53,6 +59,12 @@ export class GameRoom {
   /** Live sockets, keyed by seat. Never persisted. */
   private readonly sockets = new Map<PlayerId, Connection>();
   private turnTimer: NodeJS.Timeout | null = null;
+  /** Game mutations waiting for the next atomic snapshot commit. */
+  private pendingAudit: GameAuditEventInput[] = [];
+  /** Highest event sequence included in the durable snapshot. */
+  private auditSequence: number;
+  /** Legacy snapshots have no complete setup event and remain snapshot-only. */
+  private auditEnabled: boolean;
   private disposed = false;
 
   constructor(
@@ -70,6 +82,8 @@ export class GameRoom {
     this.chat = record.chat;
     this.createdAt = record.createdAt;
     this.updatedAt = record.updatedAt;
+    this.auditSequence = record.auditSequence ?? 0;
+    this.auditEnabled = record.auditSequence !== undefined;
     // A freshly built room has no sockets attached. Doing this here is what
     // makes "everyone is offline after a restart" true the instant the server
     // boots, rather than only after the first broadcast.
@@ -290,6 +304,7 @@ export class GameRoom {
       settings: this.settings,
       seats: this.seats,
       state: this.state,
+      ...(this.auditEnabled ? { auditSequence: this.auditSequence } : {}),
       started: this.started,
       chat: this.chat,
       createdAt: this.createdAt,
@@ -302,7 +317,13 @@ export class GameRoom {
     if (this.disposed) return;
     this.updatedAt = Date.now();
     try {
-      this.deps.store.saveGame(this.toRecord());
+      const pending = this.pendingAudit;
+      const record = this.toRecord();
+      const events = this.auditEnabled ? pending : [];
+      if (this.auditEnabled) record.auditSequence = this.auditSequence + events.length;
+      this.deps.store.saveGameWithAudit(record, events);
+      if (this.auditEnabled) this.auditSequence = record.auditSequence ?? this.auditSequence;
+      this.pendingAudit = [];
     } catch (err) {
       this.deps.logger.error('Failed to persist game', {
         gameId: this.gameId,
@@ -426,6 +447,7 @@ export class GameRoom {
     const verdict = this.plugin.validateSettings(this.settings as never, this.seats.length);
     if (!verdict.ok) return fail('badSettings', verdict.reason);
 
+    const startedAt = Date.now();
     let state: unknown;
     try {
       state = this.plugin.createGame(
@@ -434,7 +456,7 @@ export class GameRoom {
           code: this.code,
           hostId: this.hostId,
           seed: `${this.code}-${this.createdAt}`,
-          now: Date.now(),
+          now: startedAt,
         },
         this.settings as never,
         this.seats.map((s) => ({ playerId: s.playerId, name: s.name, color: s.color, isBot: s.isBot })),
@@ -450,6 +472,14 @@ export class GameRoom {
 
     this.state = state;
     this.started = true;
+    this.auditEnabled = true;
+    this.pendingAudit.push({
+      type: 'start',
+      at: startedAt,
+      hostId: this.hostId,
+      settings: structuredClone(this.settings),
+      seats: structuredClone(this.seats),
+    });
     this.syncPresence();
     this.deps.logger.info('Game started', {
       gameId: this.gameId,
@@ -477,10 +507,12 @@ export class GameRoom {
     const connected = bySeniority.find((s) => this.isConnected(s.playerId));
     const chosen = connected ?? bySeniority[0];
     if (!chosen) return null;
+    const changedAt = Date.now();
     this.hostId = chosen.playerId;
     if (this.state != null && this.plugin.applyHostChange) {
       try {
-        this.state = this.plugin.applyHostChange(this.state as never, chosen.playerId, Date.now());
+        this.state = this.plugin.applyHostChange(this.state as never, chosen.playerId, changedAt);
+        this.pendingAudit.push({ type: 'hostChange', at: changedAt, hostId: chosen.playerId });
       } catch (err) {
         this.deps.logger.error('applyHostChange threw; the table may be stranded', {
           gameId: this.gameId,
@@ -534,9 +566,10 @@ export class GameRoom {
     const verdict = this.plugin.validateAction(state, playerId, action);
     if (!verdict.ok) return fail('illegalAction', verdict.reason);
 
+    const appliedAt = Date.now();
     let next: unknown;
     try {
-      next = this.plugin.applyAction(state, playerId, action, Date.now());
+      next = this.plugin.applyAction(state, playerId, action, appliedAt);
     } catch (err) {
       this.deps.logger.error('Game threw while applying an action', {
         gameId: this.gameId,
@@ -548,6 +581,12 @@ export class GameRoom {
     }
 
     this.state = next;
+    this.pendingAudit.push({
+      type: 'action',
+      at: appliedAt,
+      playerId,
+      action: structuredClone(action),
+    });
     this.syncPresence();
     return done;
   }

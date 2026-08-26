@@ -10,12 +10,19 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import type { GameStore, PersistedGame, SessionRecord } from './types.js';
+import type {
+  GameAuditEvent,
+  GameAuditEventInput,
+  GameStore,
+  PersistedGame,
+  SessionRecord,
+} from './types.js';
 
 interface FileShape {
-  version: 1;
+  version: 1 | 2;
   games: PersistedGame[];
   sessions: SessionRecord[];
+  auditEvents?: Record<string, GameAuditEvent[]>;
 }
 
 export class JsonFileGameStore implements GameStore {
@@ -23,6 +30,7 @@ export class JsonFileGameStore implements GameStore {
   readonly location: string;
   private games = new Map<string, PersistedGame>();
   private sessions = new Map<string, SessionRecord>();
+  private auditEvents = new Map<string, GameAuditEvent[]>();
   private closed = false;
 
   constructor(filePath: string) {
@@ -37,6 +45,9 @@ export class JsonFileGameStore implements GameStore {
       const parsed = JSON.parse(fs.readFileSync(this.location, 'utf8')) as FileShape;
       for (const g of parsed.games ?? []) this.games.set(g.gameId, g);
       for (const s of parsed.sessions ?? []) this.sessions.set(s.token, s);
+      for (const [gameId, events] of Object.entries(parsed.auditEvents ?? {})) {
+        this.auditEvents.set(gameId, structuredClone(events));
+      }
     } catch {
       // Corrupt file: keep it around for forensics, start clean.
       try {
@@ -51,9 +62,12 @@ export class JsonFileGameStore implements GameStore {
   private flush(): void {
     if (this.closed) return;
     const payload: FileShape = {
-      version: 1,
+      version: 2,
       games: [...this.games.values()],
       sessions: [...this.sessions.values()],
+      auditEvents: Object.fromEntries(
+        [...this.auditEvents.entries()].map(([gameId, events]) => [gameId, structuredClone(events)]),
+      ),
     };
     const tmp = `${this.location}.${process.pid}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(payload), 'utf8');
@@ -69,10 +83,39 @@ export class JsonFileGameStore implements GameStore {
     this.flush();
   }
 
+  saveGameWithAudit(game: PersistedGame, events: readonly GameAuditEventInput[]): void {
+    const current = this.auditEvents.get(game.gameId) ?? [];
+    const expected = game.auditSequence ?? current.length + events.length;
+    if (expected !== current.length + events.length) {
+      throw new Error(`Audit sequence mismatch for ${game.gameId}`);
+    }
+    const nextEvents = [...current];
+    for (const event of events) {
+      nextEvents.push({ ...structuredClone(event), sequence: nextEvents.length + 1 } as GameAuditEvent);
+    }
+    this.auditEvents.set(game.gameId, nextEvents);
+    this.games.set(game.gameId, structuredClone(game));
+    this.flush();
+  }
+
   deleteGame(gameId: string): void {
     this.games.delete(gameId);
+    this.auditEvents.delete(gameId);
     for (const [token, s] of this.sessions) if (s.gameId === gameId) this.sessions.delete(token);
     this.flush();
+  }
+
+  loadAuditEvents(gameId: string): GameAuditEvent[] {
+    return structuredClone(this.auditEvents.get(gameId) ?? []);
+  }
+
+  appendAuditEvent(gameId: string, event: GameAuditEventInput): GameAuditEvent {
+    const events = this.auditEvents.get(gameId) ?? [];
+    const appended = { ...structuredClone(event), sequence: events.length + 1 } as GameAuditEvent;
+    events.push(appended);
+    this.auditEvents.set(gameId, events);
+    this.flush();
+    return structuredClone(appended);
   }
 
   loadSessions(): SessionRecord[] {

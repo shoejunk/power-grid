@@ -22,6 +22,7 @@ import {
 import type { ServerConfig } from './config.js';
 import type { Logger } from './logger.js';
 import type { GameStore, PersistedGame, SessionRecord } from './persistence/types.js';
+import { replayPersistedGame } from './persistence/replay.js';
 import { GameRoom } from './room.js';
 import type { Connection } from './wire.js';
 
@@ -68,7 +69,35 @@ export class GameHub {
       });
       return null;
     }
-    return new GameRoom({ ...this.deps, plugin, logger: this.logger.child(record.code) }, record);
+    let hydrated = record;
+    if (record.started) {
+      try {
+        const events = this.deps.store.loadAuditEvents(record.gameId);
+        const auditSequence = record.auditSequence;
+        if (auditSequence === undefined && events.length > 0) {
+          throw new Error('Audit events exist without a snapshot watermark');
+        }
+        if (auditSequence !== undefined && auditSequence !== events.length) {
+          throw new Error(
+            `Audit watermark mismatch: snapshot=${auditSequence}, events=${events.length}`,
+          );
+        }
+        if (events.length > 0) {
+          hydrated = { ...record, state: replayPersistedGame(plugin, record, events) };
+        }
+      } catch (err) {
+        // A damaged stream must fail closed. Leave the durable record intact so
+        // an operator can recover it instead of silently skipping actions.
+        this.logger.error('Could not replay a persisted game; leaving it offline', {
+          gameId: record.gameId,
+          code: record.code,
+          gameKey: record.gameKey,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return null;
+      }
+    }
+    return new GameRoom({ ...this.deps, plugin, logger: this.logger.child(record.code) }, hydrated);
   }
 
   /* ---------------------------------------------------------------- *

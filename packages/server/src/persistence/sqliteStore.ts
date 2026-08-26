@@ -17,7 +17,14 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import type { DatabaseSync as DatabaseSyncType } from 'node:sqlite';
-import { LEGACY_GAME_KEY, type GameStore, type PersistedGame, type SessionRecord } from './types.js';
+import {
+  LEGACY_GAME_KEY,
+  type GameAuditEvent,
+  type GameAuditEventInput,
+  type GameStore,
+  type PersistedGame,
+  type SessionRecord,
+} from './types.js';
 
 /**
  * `node:sqlite` is loaded through `createRequire` rather than a static import.
@@ -41,6 +48,7 @@ CREATE TABLE IF NOT EXISTS games (
   settings  TEXT NOT NULL,
   seats     TEXT NOT NULL,
   state     TEXT,
+  auditSequence INTEGER,
   started   INTEGER NOT NULL DEFAULT 0,
   chat      TEXT NOT NULL DEFAULT '[]',
   createdAt INTEGER NOT NULL,
@@ -59,6 +67,20 @@ CREATE TABLE IF NOT EXISTS sessions (
   lastSeen  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_game ON sessions(gameId);
+
+CREATE TABLE IF NOT EXISTS audit_events (
+  gameId    TEXT NOT NULL,
+  sequence  INTEGER NOT NULL,
+  type      TEXT NOT NULL,
+  at        INTEGER NOT NULL,
+  hostId    TEXT,
+  playerId  TEXT,
+  settings  TEXT,
+  seats     TEXT,
+  action    TEXT,
+  PRIMARY KEY (gameId, sequence)
+);
+CREATE INDEX IF NOT EXISTS idx_audit_events_game ON audit_events(gameId, sequence);
 `;
 
 interface GameRow {
@@ -69,6 +91,7 @@ interface GameRow {
   settings: string;
   seats: string;
   state: string | null;
+  auditSequence: number | null;
   started: number;
   chat: string;
   createdAt: number;
@@ -81,6 +104,18 @@ interface SessionRow {
   playerId: string;
   createdAt: number;
   lastSeen: number;
+}
+
+interface AuditRow {
+  gameId: string;
+  sequence: number;
+  type: string;
+  at: number;
+  hostId: string | null;
+  playerId: string | null;
+  settings: string | null;
+  seats: string | null;
+  action: string | null;
 }
 
 export class SqliteGameStore implements GameStore {
@@ -125,6 +160,11 @@ export class SqliteGameStore implements GameStore {
         `ALTER TABLE games ADD COLUMN gameKey TEXT NOT NULL DEFAULT '${LEGACY_GAME_KEY}'`,
       );
     }
+    if (!columns.has('auditSequence')) {
+      // NULL marks a pre-audit snapshot. It must keep using the snapshot path
+      // until a future start creates a complete stream with its setup event.
+      this.db.exec('ALTER TABLE games ADD COLUMN auditSequence INTEGER');
+    }
     // Safe to run every boot, and it must come after the ALTER above.
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_games_key ON games(gameKey)');
   }
@@ -142,6 +182,7 @@ export class SqliteGameStore implements GameStore {
           settings: JSON.parse(row.settings),
           seats: JSON.parse(row.seats),
           state: row.state ? JSON.parse(row.state) : null,
+          ...(row.auditSequence !== null ? { auditSequence: row.auditSequence } : {}),
           started: row.started === 1,
           chat: JSON.parse(row.chat),
           createdAt: row.createdAt,
@@ -155,15 +196,16 @@ export class SqliteGameStore implements GameStore {
     return games;
   }
 
-  saveGame(game: PersistedGame): void {
+  private writeGame(game: PersistedGame): void {
     this.db
       .prepare(
-        `INSERT INTO games (gameId, gameKey, code, hostId, settings, seats, state, started, chat, createdAt, updatedAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO games (gameId, gameKey, code, hostId, settings, seats, state, auditSequence, started, chat, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(gameId) DO UPDATE SET
            gameKey=excluded.gameKey, code=excluded.code, hostId=excluded.hostId,
            settings=excluded.settings, seats=excluded.seats, state=excluded.state,
-           started=excluded.started, chat=excluded.chat, updatedAt=excluded.updatedAt`,
+           auditSequence=excluded.auditSequence, started=excluded.started,
+           chat=excluded.chat, updatedAt=excluded.updatedAt`,
       )
       .run(
         game.gameId,
@@ -173,6 +215,7 @@ export class SqliteGameStore implements GameStore {
         JSON.stringify(game.settings),
         JSON.stringify(game.seats),
         game.state ? JSON.stringify(game.state) : null,
+        game.auditSequence === undefined ? null : game.auditSequence,
         game.started ? 1 : 0,
         JSON.stringify(game.chat),
         game.createdAt,
@@ -180,9 +223,102 @@ export class SqliteGameStore implements GameStore {
       );
   }
 
+  saveGame(game: PersistedGame): void {
+    this.writeGame(game);
+  }
+
+  saveGameWithAudit(game: PersistedGame, events: readonly GameAuditEventInput[]): void {
+    const row = this.db
+      .prepare('SELECT COALESCE(MAX(sequence), 0) AS lastSequence FROM audit_events WHERE gameId = ?')
+      .get(game.gameId) as unknown as { lastSequence: number };
+    const expected = game.auditSequence ?? row.lastSequence + events.length;
+    if (expected !== row.lastSequence + events.length) {
+      throw new Error(`Audit sequence mismatch for ${game.gameId}`);
+    }
+
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      for (let i = 0; i < events.length; i += 1) {
+        const event = events[i]!;
+        const sequence = row.lastSequence + i + 1;
+        const settings = event.type === 'start' ? JSON.stringify(event.settings) : null;
+        const seats = event.type === 'start' ? JSON.stringify(event.seats) : null;
+        const action = event.type === 'action' ? JSON.stringify(event.action) : null;
+        const hostId = event.type === 'start' || event.type === 'hostChange' ? event.hostId : null;
+        const playerId = event.type === 'action' ? event.playerId : null;
+        this.db
+          .prepare(
+            `INSERT INTO audit_events (gameId, sequence, type, at, hostId, playerId, settings, seats, action)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .run(game.gameId, sequence, event.type, event.at, hostId, playerId, settings, seats, action);
+      }
+      this.writeGame(game);
+      this.db.exec('COMMIT');
+    } catch (err) {
+      try {
+        this.db.exec('ROLLBACK');
+      } catch {
+        /* preserve the original failure */
+      }
+      throw err;
+    }
+  }
+
   deleteGame(gameId: string): void {
     this.db.prepare('DELETE FROM games WHERE gameId = ?').run(gameId);
+    this.db.prepare('DELETE FROM audit_events WHERE gameId = ?').run(gameId);
     this.deleteSessionsForGame(gameId);
+  }
+
+  loadAuditEvents(gameId: string): GameAuditEvent[] {
+    const rows = this.db
+      .prepare('SELECT * FROM audit_events WHERE gameId = ? ORDER BY sequence')
+      .all(gameId) as unknown as AuditRow[];
+    return rows.map((row) => {
+      if (row.type === 'start' && row.hostId && row.settings && row.seats) {
+        return {
+          sequence: row.sequence,
+          type: 'start',
+          at: row.at,
+          hostId: row.hostId,
+          settings: JSON.parse(row.settings),
+          seats: JSON.parse(row.seats),
+        };
+      }
+      if (row.type === 'action' && row.playerId && row.action) {
+        return {
+          sequence: row.sequence,
+          type: 'action',
+          at: row.at,
+          playerId: row.playerId,
+          action: JSON.parse(row.action),
+        };
+      }
+      if (row.type === 'hostChange' && row.hostId) {
+        return { sequence: row.sequence, type: 'hostChange', at: row.at, hostId: row.hostId };
+      }
+      throw new Error(`Corrupt audit event ${gameId}:${row.sequence}`);
+    });
+  }
+
+  appendAuditEvent(gameId: string, event: GameAuditEventInput): GameAuditEvent {
+    const row = this.db
+      .prepare('SELECT COALESCE(MAX(sequence), 0) + 1 AS nextSequence FROM audit_events WHERE gameId = ?')
+      .get(gameId) as unknown as { nextSequence: number };
+    const sequence = row.nextSequence;
+    const settings = event.type === 'start' ? JSON.stringify(event.settings) : null;
+    const seats = event.type === 'start' ? JSON.stringify(event.seats) : null;
+    const action = event.type === 'action' ? JSON.stringify(event.action) : null;
+    const hostId = event.type === 'start' || event.type === 'hostChange' ? event.hostId : null;
+    const playerId = event.type === 'action' ? event.playerId : null;
+    this.db
+      .prepare(
+        `INSERT INTO audit_events (gameId, sequence, type, at, hostId, playerId, settings, seats, action)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(gameId, sequence, event.type, event.at, hostId, playerId, settings, seats, action);
+    return { ...structuredClone(event), sequence } as GameAuditEvent;
   }
 
   loadSessions(): SessionRecord[] {

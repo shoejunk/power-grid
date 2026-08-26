@@ -11,6 +11,7 @@ import { MemoryGameStore } from './memoryStore.js';
 import type { GameStore } from './types.js';
 
 export * from './types.js';
+export { replayPersistedGame } from './replay.js';
 export { JsonFileGameStore } from './jsonStore.js';
 export { MemoryGameStore } from './memoryStore.js';
 export { SqliteGameStore } from './sqliteStore.js';

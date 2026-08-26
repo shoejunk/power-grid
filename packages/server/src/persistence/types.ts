@@ -38,11 +38,48 @@ export interface PersistedGame {
   seats: Seat[];
   /** Null while the game is still in the lobby. Opaque to the platform. */
   state: unknown;
+  /** Highest audit sequence included in this snapshot; legacy rows may omit it. */
+  auditSequence?: number;
   started: boolean;
   chat: ChatEntry[];
   createdAt: number;
   updatedAt: number;
 }
+
+/**
+ * One immutable entry in a table's authoritative replay stream.
+ *
+ * The server never interprets `action`; it records the already-parsed payload
+ * and gives it back to the owning plugin during replay. `start` captures the
+ * exact setup inputs because lobby edits and host changes are not game moves.
+ */
+export type GameAuditEvent =
+  | {
+      sequence: number;
+      type: 'start';
+      at: number;
+      hostId: PlayerId;
+      settings: unknown;
+      seats: Seat[];
+    }
+  | {
+      sequence: number;
+      type: 'action';
+      at: number;
+      playerId: PlayerId;
+      action: unknown;
+    }
+  | {
+      sequence: number;
+      type: 'hostChange';
+      at: number;
+      hostId: PlayerId;
+    };
+
+export type GameAuditEventInput =
+  | Omit<Extract<GameAuditEvent, { type: 'start' }>, 'sequence'>
+  | Omit<Extract<GameAuditEvent, { type: 'action' }>, 'sequence'>
+  | Omit<Extract<GameAuditEvent, { type: 'hostChange' }>, 'sequence'>;
 
 /** Maps an opaque bearer token to a seat. Persisted so reloads can resume. */
 export interface SessionRecord {
@@ -61,7 +98,14 @@ export interface GameStore {
 
   loadGames(): PersistedGame[];
   saveGame(game: PersistedGame): void;
+  /** Atomically persists a snapshot and appends its new audit events. */
+  saveGameWithAudit(game: PersistedGame, events: readonly GameAuditEventInput[]): void;
   deleteGame(gameId: string): void;
+
+  /** Returns the immutable, ordered action/event stream for one table. */
+  loadAuditEvents(gameId: string): GameAuditEvent[];
+  /** Appends exactly one event and assigns its next per-game sequence. */
+  appendAuditEvent(gameId: string, event: GameAuditEventInput): GameAuditEvent;
 
   loadSessions(): SessionRecord[];
   saveSession(session: SessionRecord): void;
