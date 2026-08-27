@@ -17,11 +17,43 @@ active fixture pack with an honest shipping content boundary and adding named §
 regressions where the evidence is still missing. Sub-agents own disjoint files, run no git, and
 must loop each unit against a harsh critic; I integrate and push each green unit separately.
 
-**Baseline and critic verdicts:** pending.
+**Baseline verified on Windows:** the global `npm`/`npx` shims still point at a missing user-prefix
+CLI, so the installed Node npm CLI and local `.bin` tools were used. `npm install` completed with
+the one-run Windows optional-binary override; its platform-generated `package-lock.json` remains
+unstaged. All five TypeScript checks passed. Power Grid passed **231** tests, Dead of Winter passed
+**279** tests, and the server passed **54** tests.
 
-**State changes:** pending.
+**Landed and pushed:**
 
-**Next run should do first:** pending until this run's verification is complete.
+- `f1b7ba1` (`wip(dow): start nightly engine test run`) recorded this run's intent before work.
+- `0491c9b` (`wip(dow): gate replay through plugin migration`) makes server boot fail closed when
+  a persisted state is not accepted by the owning plugin's migration gate, with an integrity test.
+- `3a43b5d` (`wip(dow): activate authored item catalog`) activates `dow-base` v0.2, adds exactly
+  25 starter and 120 location item definitions, and adds the public A14 suite. The live pack is
+  intentionally transitional: its survivors, crises, crossroads, and most objectives still come
+  from `TEST_PACK`.
+
+**Critic verdicts:**
+
+- Harvey's strict A15 review remains **FAIL**. Engine replay, redaction, migration gating, and the
+  existing generic audit/replay tests pass, but there is no real WebSocket + SQLite restart with a
+  non-empty effect stack or deferred morale check, and the audit stream does not yet record explicit
+  before/after automatic-transition snapshots or public explanations.
+- Russell's re-review is **PASS** for the bounded A14 public slice: `acceptance-a14-public-rulings.test.ts`
+  is 13/13, with all named cases routed through the public plugin. It remains **FAIL** for full A14:
+  fixture-derived content is still active in several families, and Old Divisions negative/removal,
+  Hoarder tie-fails, and Hunger colony-food negative controls are absent.
+- Hypatia's strict location-card review is **PASS**: all 120 authored location items have valid,
+  non-placeholder definitions, 20 per location, with no duplicates or invalid fields.
+
+**State changes:** the live plugin now pins new games to `dow-base@0.2.0`; the focused public A14
+coverage grew from 9 tests plus 4 TODOs to 13 passing tests; the server migration boundary is tested.
+No visual, browser-full-game, or AAA Wingspan comparison work was attempted this run.
+
+**Next run should do first:** stay on `engine-tests` and prove the strict A15 gap with a real DoW
+WebSocket/SQLite restart while a pending effect stack or deferred morale check is durable. Extend the
+append-only audit records with explicit before/after state and transition explanation evidence, then
+re-run the strict critic before moving further into the remaining retail content families.
 
 ## 2026-08-27 — nightly run 13
 

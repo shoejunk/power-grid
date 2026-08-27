@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-08-25** (A14/A15 evidence and real reconnection slice)
+Last updated: **2026-08-27** (nightly run 14: authored item boundary and public A14 slice)
 
 ---
 
@@ -30,13 +30,13 @@ When that holds, write `.dow-agent/.aaa-complete` and disable the routine.
 ## Current focus
 
 **Workstream: `engine-tests`** — still the first non-PASS item in the queue and the bottleneck.
-Run 11 added public-plugin A14 plumbing evidence, a setup-to-terminal engine replay proof, and a
-real DoW WebSocket/session-token reconnection test across a SQLite restart. Independent critics pass
-the narrow engine replay, redaction, and reconnection slices, but A14 remains FAIL because the active
-plugin is explicitly `TEST_PACK` and most §18 rulings are not public-boundary tests. Full product A15
-also remains FAIL because the server persists opaque snapshots rather than an append-only action/event
-audit stream that can rebuild a match. The next run stays on `engine-tests` and starts with that
-server audit/replay boundary, then the retail content boundary.
+Run 14 pushed `0491c9b` (plugin migration gating before replay) and `3a43b5d` (the transitional
+`dow-base` pack, 120 authored location items, and 13 public §18 regression tests). The public A14
+slice is green, but the strict critic still FAILs full A14 because the pack spreads fixture-derived
+survivors, crises, crossroads, and most objectives, and several negative controls are absent. A15's
+append-only stream exists and engine replay is green, but strict A15 still FAILs: no real server test
+restarts with a non-empty effect stack or deferred morale check, and the audit format lacks explicit
+before/after transition snapshots and public explanations. The next run starts with that A15 proof.
 
 ## Scorecard
 
@@ -44,11 +44,11 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 
 | Discipline | State | Notes |
 | --- | --- | --- |
-| Platform / multiplayer plumbing | **PASS** | 43 server tests green; game-agnostic boundary audited |
-| Power Grid (regression guard) | **PASS** | 230 engine tests green; must never go red |
+| Platform / multiplayer plumbing | **PASS** | 54 server tests green; game-agnostic boundary audited |
+| Power Grid (regression guard) | **PASS** | 231 engine tests green; must never go red |
 | DoW engine — code exists | **PASS** | ~5,400 lines under `engine/`; plugin implements the full `GamePlugin` contract |
-| DoW engine — tested | **PARTIAL** | 266 tests pass. A1–A10 plus A11/A12/A13 are covered; A14 and full A15 still fail strict evidence review |
-| DoW content pack | **PARTIAL** | All 30 base-game survivor names, occupations, stats and portraits now exist; the game still uses `testPack` and lacks the complete retail abilities/items/crossroads catalog |
+| DoW engine — tested | **PARTIAL** | 279 tests pass. The public A14 slice is green; full A14/A15 still fail strict evidence review |
+| DoW content pack | **PARTIAL** | Live plugin uses `dow-base` v0.2 with exactly 25 starter and 120 location items; survivors, crises, crossroads, and most objectives remain fixture-derived |
 | DoW client UI — exists | **PASS** | Run 4 landed the match screen (`packages/client/src/games/dead-of-winter/`) |
 | DoW client UI — judged | **PARTIAL** | Live 1280×720 screenshot verified named chips, setup previews and survivor detail modal; no Wingspan blind critic pass yet |
 | DoW art | **PARTIAL** | 30 cohesive generated survivor portraits shipped; item/card/board/zombie art and a full visual critic pass remain |
@@ -59,8 +59,9 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 
 ## Build and test status
 
-Verify the baseline yourself every run; do not trust this table. Figures below were measured at the
-end of this pass on Windows, against the exact tree committed as `9e9ac9e`.
+Verify the baseline yourself every run; do not trust this table. Figures below were measured on
+Windows on 2026-08-27. The exact green source commits are `0491c9b` and `3a43b5d`; the install-generated
+`package-lock.json` remains intentionally uncommitted.
 
 | Check | Command | Status |
 | --- | --- | --- |
@@ -70,16 +71,17 @@ end of this pass on Windows, against the exact tree committed as `9e9ac9e`.
 | Server | `npx tsc -b packages/server/tsconfig.json` | OK |
 | Client | `npx tsc -p packages/client/tsconfig.json --noEmit` | OK |
 | Client production build | `npm run build -w @tt/client` | OK |
-| Power Grid tests | `npm test -w @game/power-grid` | 230 passed |
-| Server tests | `npx vitest run --root packages/server` | 43 passed |
-| DoW tests | `npm test -w @game/dead-of-winter` | 266 passed |
+| Power Grid tests | `npm test -w @game/power-grid` | 231 passed |
+| Server tests | `npx vitest run --root packages/server` | 54 passed |
+| DoW tests | `npm test -w @game/dead-of-winter` | 279 passed |
 
 ## Queue — next workstreams, in dependency order
 
-1. **`engine-tests`** — persist a validated append-only action/event audit stream and prove replay
-   across restart; then close A14's named §18 public-boundary coverage and shipping-content boundary.
-   The engine replay, whole-view redaction, and real session-token reconnection slices are green, but
-   the strict A14/A15 critics still FAIL the full criteria.
+1. **`engine-tests`** — prove the append-only stream with a real Dead of Winter WebSocket + SQLite
+   restart while an effect stack or deferred morale check is pending, and add explicit automatic
+   transition audit evidence. Then close A14's negative public cases and shipping-content boundary.
+   Engine replay, whole-view redaction, session-token reconnection, and the 13-test public A14 slice
+   are green; the strict A14/A15 critics still FAIL the full criteria.
 2. **`content-pack`** — the shipping catalog at the §2.0 counts: 30 survivors, 25 starter items,
    6×20 location items, 20 crisis, 80 crossroads, 10 dual-sided main objectives, 24 non-betrayal +
    10 betrayal + 10 exiled secret objectives. **Original names and text** — the retail card text is
@@ -107,13 +109,12 @@ end of this pass on Windows, against the exact tree committed as `9e9ac9e`.
   the remaining retail card families are not yet a shipping catalog.
 - **The execution environment varies between Linux and Windows.** Anything platform-specific can
   silently make a whole run a no-op. Run the baseline before believing any claim in this file.
-- **Run 11 strict-review debts:** A14's new public suite is green but only covers active-pack pinning,
-  Attract, and betrayal omission; the strict critic still FAILs all unproven named §18 rulings and the
-  fact that `plugin.ts` activates `TEST_PACK`. A15's engine replay and redaction slices pass, and the
-  server reconnection test proves same-seat private restoration across SQLite restart, but full A15
-  still lacks a persisted action/event audit log and replay harness. Multiplayer critics also still
-  require hostile-action proof, pending-effect restart proof, and a full browser game with exile,
-  bite-chain, overrun, and winner evaluation.
+- **Run 14 strict-review debts:** the public A14 suite is green at 13/13, but full retail compliance
+  still FAILs because `BASE_PACK` spreads `TEST_PACK` for survivors, crises, crossroads, and most
+  objectives. Old Divisions has no public negative/removal case; Hoarder has no tie-fails case; Hunger
+  has no colony-food negative control. A15's engine replay and redaction slices pass, and the server
+  audit stream now has migration gating, but there is no real pending-effect/deferred-morale restart
+  proof and no explicit before/after automatic-transition audit records or explanations.
 - **Windows package-manager environment:** the global `npm`/`npx` shims resolve a missing user-prefix
   CLI, and the user npm config forces `os=linux` on this Windows checkout. This run used the installed
   Node npm CLI directly and a one-run `--os=win32 --package-lock=false` optional-binary install; no
