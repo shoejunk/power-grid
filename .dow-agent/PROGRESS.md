@@ -8,6 +8,21 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-27 — nightly run 14
+
+**Intent:** continue the first queue item, `engine-tests`, with two bounded units: (1) obtain a
+fresh strict A15 verdict against the persisted append-only audit/replay stream and strengthen it if
+the critic finds a real gap; (2) close the highest-value A14 public-boundary gap by replacing the
+active fixture pack with an honest shipping content boundary and adding named §18 public-path
+regressions where the evidence is still missing. Sub-agents own disjoint files, run no git, and
+must loop each unit against a harsh critic; I integrate and push each green unit separately.
+
+**Baseline and critic verdicts:** pending.
+
+**State changes:** pending.
+
+**Next run should do first:** pending until this run's verification is complete.
+
 ## 2026-08-27 — nightly run 13
 
 **Baseline verified before any work** (not trusted from `STATE.md`): `npm install` clean on Linux,
