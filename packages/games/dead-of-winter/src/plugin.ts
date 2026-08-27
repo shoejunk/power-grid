@@ -25,7 +25,7 @@ import {
 } from '@tt/core';
 
 import { descriptor, MAX_PLAYERS, MIN_PLAYERS } from './descriptor.js';
-import { TEST_PACK } from './content/testPack.js';
+import { BASE_PACK } from './content/basePack/index.js';
 import type { ContentIndex } from './content/schema.js';
 import {
   applyHostChange as engineHostChange,
@@ -36,6 +36,7 @@ import {
   validateAction as engineValidate,
 } from './engine/index.js';
 import { fallbackActions, planAction } from './engine/bot.js';
+import { getContentPack } from './engine/state.js';
 import {
   GAME_MODES,
   STATE_VERSION,
@@ -57,11 +58,13 @@ import {
  * rather than passed in per game: `createGame` records `id@version` in state,
  * and `engine/state.getContentPack` refuses to substitute anything else.
  *
- * Until the licensed catalog ships this is the engine's own fixture, and the
- * lobby says so through the pack's name. Swapping it is a one-line change plus
- * a registration.
+ * The authored base catalog is registered here rather than passed in per game:
+ * `createGame` records `id@version` in state, and `engine/state.getContentPack`
+ * refuses to substitute anything else. Card families still being authored are
+ * intentionally visible through `validateManifest` while the match remains
+ * pinned to this version.
  */
-const ACTIVE_PACK: ContentIndex = registerContentPack(TEST_PACK);
+const ACTIVE_PACK: ContentIndex = registerContentPack(BASE_PACK);
 
 /* ------------------------------------------------------------------ *
  * Settings
@@ -447,7 +450,16 @@ function migrateState(raw: unknown): GameState | null {
   if (!isRecord(raw) || !isInt(raw.version)) return null;
   if (raw.version !== STATE_VERSION) return null;
   if (!isString(raw.contentPackId) || !isString(raw.contentVersion)) return null;
-  if (raw.contentPackId !== TEST_PACK.id || raw.contentVersion !== TEST_PACK.version) return null;
+  if (raw.contentPackId !== ACTIVE_PACK.pack.id || raw.contentVersion !== ACTIVE_PACK.pack.version) {
+    // Engine tests may register an isolated historical fixture. Accept it only
+    // when this process has that exact id@version registered; production never
+    // registers the fixture, so a stale or unknown pack still fails closed.
+    try {
+      getContentPack(raw.contentPackId, raw.contentVersion);
+    } catch {
+      return null;
+    }
+  }
   return raw as unknown as GameState;
 }
 
