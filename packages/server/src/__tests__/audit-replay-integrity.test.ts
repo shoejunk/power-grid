@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { Seat } from '@tt/core';
+import { erase, GameRegistry, type Seat } from '@tt/core';
 import { silentLogger } from '../logger.js';
 import { JsonFileGameStore } from '../persistence/jsonStore.js';
 import type { GameAuditEvent, GameAuditEventInput, PersistedGame } from '../persistence/types.js';
@@ -181,6 +181,32 @@ describe('generic audit and replay persistence integrity', () => {
       dataDir,
       storeKind: 'json',
       registry: stubRegistry(),
+      logger: silentLogger,
+    });
+    try {
+      expect(server.hub.roomByCode(record.code)).toBeUndefined();
+      expect(server.hub.roomCount).toBe(0);
+      expect(server.store.loadGames()).toEqual([record]);
+      expect(server.store.loadAuditEvents(record.gameId)).toEqual(events);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('runs the plugin migration gate before replaying an opaque snapshot', async () => {
+    dataDir = makeDataDir();
+    const record = makeStartedRecord('migration-gate');
+    const events = [startEvent(record), actionEvent(record)];
+    writeJsonSnapshot(dataDir, [record], { [record.gameId]: events });
+
+    const unreadablePlugin = {
+      ...stubGame,
+      migrateState: () => null,
+    };
+    const server = await boot({
+      dataDir,
+      storeKind: 'json',
+      registry: new GameRegistry([erase(unreadablePlugin)]),
       logger: silentLogger,
     });
     try {

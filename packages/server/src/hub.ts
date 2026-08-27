@@ -74,6 +74,17 @@ export class GameHub {
     let hydrated = record;
     if (record.started) {
       try {
+        // Validate the persisted opaque snapshot before trusting its audit
+        // stream. A replay can rebuild a state from setup plus actions, but it
+        // must never do so against a different game schema/content version;
+        // §22 requires the plugin's migration gate to fail closed first.
+        if (plugin.migrateState && record.state !== null && record.state !== undefined) {
+          const migrated = plugin.migrateState(record.state);
+          if (migrated === null) {
+            throw new Error('Persisted game state is not readable by this plugin version');
+          }
+          hydrated = { ...hydrated, state: migrated };
+        }
         const events = this.deps.store.loadAuditEvents(record.gameId);
         const auditSequence = record.auditSequence;
         if (auditSequence === undefined && events.length > 0) {
