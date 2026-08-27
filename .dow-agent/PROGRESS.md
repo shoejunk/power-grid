@@ -8,6 +8,64 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-27 — nightly run 13
+
+**Baseline verified before any work** (not trusted from `STATE.md`): `npm install` clean on Linux,
+all five typechecks clean (core, power-grid, dead-of-winter, server, client), Power Grid **231**,
+Dead of Winter **266**, server **50**. Working tree clean at `018a22f`. The tree run 12 left is
+green — nothing to repair tonight.
+
+**Housekeeping first:** run 12 appended its intent to the *bottom* of this file, against the
+"newest entry at the top" convention, and was then killed before writing a result. That stray block
+has been moved up here and completed from its commits, so the log reads in one direction again.
+
+**Intent:** stay on the first queue item, `engine-tests`. Two bounded areas:
+
+1. **Close A15.** Run 12 landed a persisted append-only audit/event stream and a replay harness at
+   the server boundary — the exact thing run 11's strict critic said A15 lacked. Re-run that
+   criterion against the tree as it now stands, under a fresh harsh critic, and record PASS or FAIL
+   with evidence rather than assuming run 12's work finished the job.
+2. **Start the A14 content boundary.** A14 fails today for one honest reason: `plugin.ts` activates
+   `TEST_PACK`, so every gameplay claim is a claim about a fixture. Begin the shipping catalog
+   (queue item 2) with original names and text, keeping the ~18 cards named in §18 under their real
+   names so the errata regressions keep meaning something, and add the named §18 public-boundary
+   rulings that the strict critic listed as unproven.
+
+Sub-agents own disjoint files, run no git, and loop against their own harsh critics; I integrate,
+verify the full suite, commit and push each green unit on its own.
+
+(in progress)
+
+---
+
+## 2026-08-26 — nightly run 12 result
+
+**Reconstructed from commits.** Run 12 was killed before writing its own result; the entry below is
+built from `git log` and the tree it left, not from its own account of itself.
+
+**Intent** (as it recorded before starting): continue `engine-tests` with a bounded audit/replay
+persistence slice at the server boundary — the smallest durable append-only event record and replay
+proof preserving hidden information and random-state determinism across restart.
+
+**Landed and pushed:**
+
+- `e4e4b99` (`wip(dow): begin nightly audit replay work`) recorded the intent before work began.
+- `018a22f` (`feat(dow): persist generic audit replay streams`) is the real deliverable: a generic,
+  game-agnostic audit stream in the persistence layer. It adds `persistence/replay.ts` and audit
+  types, teaches all three stores (`sqliteStore`, `jsonStore`, `memoryStore`) to append and read an
+  ordered event stream, and wires `room.ts` and `hub.ts` to record every applied action. It ships
+  with three suites — `audit-replay.test.ts`, `audit-replay-integrity.test.ts` and
+  `dead-of-winter-audit-replay.test.ts` — taking the server from 43 tests to 50.
+
+**State change:** server tests 43 → 50, all green. The persisted audit stream that run 11's A15
+critic named as the missing piece now exists; whether it is *sufficient* for A15 is run 13's first
+question, not a settled fact.
+
+**Not done:** no critic verdict was recorded for this work, and the A14 content boundary was
+untouched. `plugin.ts` still activates `TEST_PACK`.
+
+---
+
 ## 2026-08-25 — nightly run 11 result
 
 **Intent:** continue the first queue item, `engine-tests`, on `master`: close the strict A14
@@ -495,15 +553,3 @@ absent.
 
 **Next run should do first:** `engine-tests`. Nothing downstream can be trusted until the engine is
 verified against §23 and §18.
----
-
-## 2026-08-26 — nightly run 12
-
-**Intent:** continue the first queue item, `engine-tests`, with a bounded audit/replay persistence
-slice at the server boundary. First inspect the current persistence and plugin contracts, then add
-the smallest durable append-only event record and replay proof that preserves hidden information
-and random-state determinism across restart. If that slice is green, take the next bounded A14
-content-boundary item only if the remaining budget allows. Sub-agents will own disjoint test or
-engine-support files and run no git; I will integrate, verify, commit, and push each green unit.
-
-(in progress)
