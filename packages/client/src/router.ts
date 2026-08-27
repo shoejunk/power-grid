@@ -8,10 +8,10 @@ import { useCallback, useSyncExternalStore } from 'react';
  * `/join/ABC123` can be pasted into a chat window and they work.
  *
  * What the URL deliberately does *not* encode is the player's seat. A seat is
- * bound to the session token in localStorage, so a reload restores it whatever
- * the path says; the shell shows the lobby or the match because the server
- * said so, not because of where the browser happens to be pointing. That is
- * why `Route` has no 'lobby' or 'match' member.
+ * bound to the authenticated account on the server, so a reload restores it
+ * whatever the path says; the shell shows the lobby or the match because the
+ * server said so, not because of where the browser happens to be pointing.
+ * That is why `Route` has no 'lobby' or 'match' member.
  */
 
 export type Route =

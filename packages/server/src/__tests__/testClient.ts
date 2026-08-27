@@ -12,7 +12,7 @@
  */
 
 import type { ServerMessage } from '@tt/core';
-import WebSocket from 'ws';
+import WebSocket, { type ClientOptions } from 'ws';
 import type { StubState } from './stubGame.js';
 
 type MessageOfType<T extends ServerMessage['t']> = Extract<ServerMessage, { t: T }>;
@@ -63,9 +63,9 @@ export class TestClient {
     });
   }
 
-  static connect(url: string): Promise<TestClient> {
+  static connect(url: string, options?: ClientOptions): Promise<TestClient> {
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(url);
+      const ws = new WebSocket(url, options);
       const timer = setTimeout(() => reject(new Error(`timed out connecting to ${url}`)), 5000);
       ws.once('open', () => {
         clearTimeout(timer);

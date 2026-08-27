@@ -32,6 +32,7 @@ import type { GameUiModule } from '@/games/types';
 import { ConnectionPill, net, selectIsHost, selectMyLobbyPlayer, useGameStore } from '@/net';
 
 import { PortalBackdrop, PortalMark } from './Chrome';
+import { AuthControls } from './AuthControls';
 
 /**
  * Pre-game lobby — the same screen for every game on the site.
@@ -137,7 +138,10 @@ export function Lobby(): JSX.Element {
           Leave
         </Button>
         <PortalMark compact />
-        <ConnectionPill />
+        <span className="tt-topbar__right">
+          <AuthControls />
+          <ConnectionPill />
+        </span>
       </header>
 
       <motion.main

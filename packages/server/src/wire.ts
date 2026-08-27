@@ -3,7 +3,7 @@
  *
  * Everything the rest of the server needs from a WebSocket is here: a typed
  * `send`, backpressure protection, and the identity bound to the socket once
- * the client has authenticated with a session token.
+ * the client has authenticated with its account cookie (or legacy seat token).
  *
  * Backpressure: a client that stops reading (throttled mobile, suspended tab)
  * makes `bufferedAmount` grow without bound, and a `GameState` is not small.
@@ -31,6 +31,8 @@ export class Connection {
   playerId: string | null = null;
   gameId: string | null = null;
   sessionToken: string | null = null;
+  /** Google account authenticated by the HttpOnly cookie, when configured. */
+  accountId: string | null = null;
   /** Heartbeat bookkeeping — see `heartbeat.ts` usage in server.ts. */
   isAlive = true;
 

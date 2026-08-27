@@ -6,13 +6,13 @@ import type { ConnectionStatus } from './types';
  * Session persistence
  * ------------------------------------------------------------------ */
 
-const SESSION_KEY = 'tt.sessionToken';
-const NAME_KEY = 'tt.playerName';
+/** Read only for upgrading a browser from the old anonymous-token build. */
+const LEGACY_SESSION_KEY = 'tt.sessionToken';
 
 /**
- * localStorage can throw (private mode, disabled storage, quota). Every access
- * goes through these so a hostile storage environment degrades to "no session
- * persistence" rather than a white screen.
+ * The local-storage helpers exist only to read and retire the one legacy seat
+ * token created by pre-account builds. Normal account sessions use cookies and
+ * never depend on browser storage.
  */
 export function readStored(key: string): string | null {
   try {
@@ -31,10 +31,9 @@ export function writeStored(key: string, value: string | null): void {
   }
 }
 
-export const loadSessionToken = (): string | null => readStored(SESSION_KEY);
-export const saveSessionToken = (token: string | null): void => writeStored(SESSION_KEY, token);
-export const loadPlayerName = (): string | null => readStored(NAME_KEY);
-export const savePlayerName = (name: string): void => writeStored(NAME_KEY, name);
+export const loadLegacySessionToken = (): string | null => readStored(LEGACY_SESSION_KEY);
+export const clearLegacySessionToken = (): void => writeStored(LEGACY_SESSION_KEY, null);
+export const saveLegacySessionToken = (token: string | null): void => writeStored(LEGACY_SESSION_KEY, token);
 
 /* ------------------------------------------------------------------ *
  * Backoff
@@ -80,8 +79,8 @@ export interface SocketHandlers {
  *  · reconnect automatically with jittered exponential backoff, and instantly
  *    when the tab is refocused or the network comes back;
  *  · re-establish identity on every reconnect by sending
- *    `{ t: 'rejoin', sessionToken }` with the token persisted in localStorage,
- *    so a refresh or a server restart puts the player back in their seat;
+ *    `{ t: 'hello' }`; the server resolves the account from its HttpOnly
+ *    Google-login cookie and finds the player's persisted seat;
  *  · queue outbound messages while the socket is down and flush them on open;
  *  · heartbeat with `ping`/`pong` to detect half-open connections that never
  *    fire a `close` event, and to measure latency.
@@ -245,12 +244,12 @@ export class GameSocket {
    * ---------------------------------------------------------------- */
 
   /**
-   * First frame after every open. With a stored token we `rejoin`, which asks
-   * the server to put us back in whatever game the token belongs to; without
-   * one we `hello`, and the server mints a fresh session.
+   * First frame after every open. A legacy token is sent once so a signed-in
+   * browser can claim an old anonymous seat; normal account sessions use the
+   * HttpOnly cookie automatically attached to the WebSocket request.
    */
   private identify(): void {
-    const token = loadSessionToken();
+    const token = loadLegacySessionToken();
     if (token !== null && token.length > 0) {
       this.ws?.send(JSON.stringify({ t: 'rejoin', sessionToken: token } satisfies ClientMessage));
     } else {

@@ -3,10 +3,8 @@ import { create } from 'zustand';
 
 import {
   GameSocket,
-  loadPlayerName,
-  loadSessionToken,
-  savePlayerName,
-  saveSessionToken,
+  clearLegacySessionToken,
+  saveLegacySessionToken,
 } from './socket';
 import type { ConnectionStatus, Toast, ToastInput } from './types';
 
@@ -22,6 +20,31 @@ export interface ChatLine {
   at: number;
 }
 
+export interface AuthAccount {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string;
+}
+
+export interface AccountGame {
+  gameId: string;
+  gameKey: GameKey;
+  code: string;
+  started: boolean;
+  updatedAt: number;
+  playerName: string;
+}
+
+export interface AuthState {
+  configured: boolean;
+  required: boolean;
+  authenticated: boolean;
+  account: AuthAccount | null;
+  games: AccountGame[];
+  loading: boolean;
+}
+
 /* ------------------------------------------------------------------ *
  * Store shape
  * ------------------------------------------------------------------ */
@@ -35,6 +58,7 @@ export interface GameStore {
   /* --- identity --- */
   myPlayerId: PlayerId | null;
   playerName: string;
+  auth: AuthState;
 
   /* --- server state --- */
   lobby: LobbyState | null;
@@ -69,6 +93,7 @@ export interface GameStore {
   dismissToast: (id: string) => void;
   clearError: () => void;
   applyServerMessage: (message: ServerMessage) => void;
+  setAuth: (auth: AuthState) => void;
 }
 
 let toastSeq = 0;
@@ -85,7 +110,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
   latencyMs: null,
 
   myPlayerId: null,
-  playerName: loadPlayerName() ?? '',
+  playerName: '',
+  auth: {
+    configured: false,
+    required: false,
+    authenticated: false,
+    account: null,
+    games: [],
+    loading: true,
+  },
 
   lobby: null,
   gameKey: null,
@@ -97,9 +130,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   pending: false,
 
   setPlayerName: (name) => {
-    savePlayerName(name);
     set({ playerName: name });
   },
+
+  setAuth: (auth) => set({ auth }),
 
   pushToast: (input) => {
     const toast: Toast = {
@@ -130,9 +164,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   applyServerMessage: (message) => {
     switch (message.t) {
       case 'welcome': {
-        // The token is our seat. Persisting it is what makes a refresh, a tab
-        // close, or a full server restart recoverable.
-        saveSessionToken(message.sessionToken);
+        // Account sessions are recovered through the server's HttpOnly
+        // cookie. Only anonymous legacy servers still need the old browser
+        // token, and an account-bearing welcome retires it immediately.
+        if (message.accountId) clearLegacySessionToken();
+        else saveLegacySessionToken(message.sessionToken);
         set({ myPlayerId: message.playerId, gameKey: message.gameKey });
         break;
       }
@@ -185,7 +221,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
          * player. Every other code is a genuine error.
          */
         if (message.code === 'noSession' || message.code === 'unknownSession') {
-          saveSessionToken(null);
+          clearLegacySessionToken();
           set({ pending: false });
           break;
         }
@@ -306,6 +342,56 @@ export const net = {
     socket.connect();
   },
 
+  async loadAuth(): Promise<void> {
+    useGameStore.setState((state) => ({ auth: { ...state.auth, loading: true } }));
+    try {
+      const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
+      if (!response.ok) throw new Error(`Authentication status returned ${response.status}`);
+      const payload = (await response.json()) as {
+        configured: boolean;
+        required: boolean;
+        authenticated: boolean;
+        account: AuthAccount | null;
+        games: AccountGame[];
+      };
+      useGameStore.getState().setAuth({ ...payload, loading: false });
+      // Refresh the account's table list after an OAuth callback or reload.
+      if (payload.authenticated) useGameStore.setState({ playerName: payload.account?.name ?? '' });
+    } catch {
+      useGameStore.setState((state) => ({
+        auth: { ...state.auth, loading: false },
+      }));
+    }
+  },
+
+  login(): void {
+    window.location.assign('/auth/google/start');
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' });
+    } finally {
+      socket.disconnect();
+      clearLegacySessionToken();
+      useGameStore.setState({
+        auth: {
+          configured: useGameStore.getState().auth.configured,
+          required: useGameStore.getState().auth.required,
+          authenticated: false,
+          account: null,
+          games: [],
+          loading: false,
+        },
+        lobby: null,
+        state: null,
+        gameKey: null,
+        myPlayerId: null,
+        chat: [],
+      });
+    }
+  },
+
   stop(): void {
     socket.disconnect();
   },
@@ -316,7 +402,7 @@ export const net = {
   },
 
   hello(): void {
-    socket.send({ t: 'hello', sessionToken: loadSessionToken() ?? undefined });
+    socket.send({ t: 'hello' });
   },
 
   createGame(gameKey: GameKey, name: string, settings: unknown): void {
@@ -335,10 +421,15 @@ export const net = {
     socket.send({ t: 'rejoin', sessionToken });
   },
 
+  resumeGame(gameId: string): void {
+    useGameStore.setState({ pending: true, lastError: null });
+    socket.send({ t: 'resumeGame', gameId });
+  },
+
   leaveGame(): void {
     socket.send({ t: 'leaveGame' });
     socket.clearQueue();
-    saveSessionToken(null);
+    clearLegacySessionToken();
     useGameStore.setState({
       lobby: null,
       gameKey: null,
@@ -361,7 +452,7 @@ export const net = {
     socket.send({ t: 'setColor', color });
   },
 
-  /** Rename in place; also persisted locally so the next game pre-fills it. */
+  /** Rename in place; keep the current form value ready for the next game. */
   setName(name: string): void {
     useGameStore.getState().setPlayerName(name);
     socket.send({ t: 'setName', name });

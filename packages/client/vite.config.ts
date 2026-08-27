@@ -65,6 +65,12 @@ export default defineConfig({
         target: SERVER_ORIGIN,
         changeOrigin: true,
       },
+      '/auth': {
+        target: SERVER_ORIGIN,
+        // Preserve the browser's localhost:5173 host so the server builds a
+        // callback URL that returns through this dev proxy.
+        changeOrigin: false,
+      },
     },
   },
 

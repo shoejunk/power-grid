@@ -14,12 +14,13 @@ import {
 } from '@tt/ui';
 import { motion } from 'framer-motion';
 
-import { ConnectionPill, loadSessionToken, net } from '@/net';
+import { ConnectionPill, net, useGameStore } from '@/net';
 import { hasGameUi } from '@/games/registry';
 import { navigate } from '@/router';
 
 import { useCatalogue } from './catalogue';
 import { PortalBackdrop, PortalMark } from './Chrome';
+import { AuthControls } from './AuthControls';
 
 /**
  * The front door.
@@ -35,13 +36,8 @@ import { PortalBackdrop, PortalMark } from './Chrome';
  */
 export function Portal(): JSX.Element {
   const { games, loading, error } = useCatalogue();
-
-  /**
-   * A stored session token means the server may still be holding a seat for
-   * this browser. We surface "Resume" rather than silently dropping the player
-   * back in — they might deliberately want a fresh game.
-   */
-  const hasSession = loadSessionToken() !== null;
+  const auth = useGameStore((state) => state.auth);
+  const latestGame = auth.games[0] ?? null;
 
   return (
     <div className="tt-screen tt-portal">
@@ -49,8 +45,10 @@ export function Portal(): JSX.Element {
 
       <header className="tt-topbar">
         <PortalMark compact />
-        <span />
-        <ConnectionPill />
+        <span className="tt-topbar__right">
+          <AuthControls />
+          <ConnectionPill />
+        </span>
       </header>
 
       <main className="tt-portal__inner">
@@ -75,15 +73,20 @@ export function Portal(): JSX.Element {
           </motion.p>
 
           <motion.div variants={staggerItem} className="tt-portal__actions">
-            {hasSession ? (
+            {latestGame ? (
               <Button
                 variant="live"
                 size="lg"
                 icon={<IconPlay />}
-                onClick={() => net.retry()}
-                title="Reconnect to the game this browser was last seated in"
+                onClick={() => net.resumeGame(latestGame.gameId)}
+                title={`Resume ${latestGame.gameKey} · ${latestGame.code}`}
               >
-                Resume game
+                Resume latest game
+              </Button>
+            ) : null}
+            {auth.required && !auth.account ? (
+              <Button variant="live" size="lg" icon={<IconUsers />} onClick={() => net.login()}>
+                Sign in to play
               </Button>
             ) : null}
             <Button
@@ -95,6 +98,28 @@ export function Portal(): JSX.Element {
               Join with a code
             </Button>
           </motion.div>
+
+          {auth.account && auth.games.length > 0 ? (
+            <motion.div variants={staggerItem} className="tt-account-games">
+              <span className="tt-overline">Your tables</span>
+              {auth.games.map((game) => (
+                <button
+                  key={game.gameId}
+                  type="button"
+                  className="tt-account-game"
+                  onClick={() => net.resumeGame(game.gameId)}
+                >
+                  <span>
+                    <strong>{game.gameKey}</strong>
+                    <small>
+                      {game.code} · {game.playerName}
+                    </small>
+                  </span>
+                  <span>{game.started ? 'Resume' : 'Open lobby'}</span>
+                </button>
+              ))}
+            </motion.div>
+          ) : null}
         </motion.div>
 
         <section className="tt-portal__catalogue" aria-label="Games">

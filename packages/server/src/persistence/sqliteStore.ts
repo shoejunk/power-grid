@@ -18,6 +18,8 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import type { DatabaseSync as DatabaseSyncType } from 'node:sqlite';
 import {
+  type AccountRecord,
+  type AuthSessionRecord,
   LEGACY_GAME_KEY,
   type GameAuditEvent,
   type GameAuditEventInput,
@@ -63,10 +65,29 @@ CREATE TABLE IF NOT EXISTS sessions (
   token     TEXT PRIMARY KEY,
   gameId    TEXT NOT NULL,
   playerId  TEXT NOT NULL,
+  accountId TEXT,
   createdAt INTEGER NOT NULL,
   lastSeen  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_game ON sessions(gameId);
+
+CREATE TABLE IF NOT EXISTS accounts (
+  accountId TEXT PRIMARY KEY,
+  email     TEXT NOT NULL,
+  name      TEXT NOT NULL,
+  picture   TEXT,
+  createdAt INTEGER NOT NULL,
+  lastSeen  INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS auth_sessions (
+  token     TEXT PRIMARY KEY,
+  accountId TEXT NOT NULL,
+  createdAt INTEGER NOT NULL,
+  lastSeen  INTEGER NOT NULL,
+  expiresAt INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_account ON auth_sessions(accountId);
 
 CREATE TABLE IF NOT EXISTS audit_events (
   gameId    TEXT NOT NULL,
@@ -102,8 +123,26 @@ interface SessionRow {
   token: string;
   gameId: string;
   playerId: string;
+  accountId: string | null;
   createdAt: number;
   lastSeen: number;
+}
+
+interface AccountRow {
+  accountId: string;
+  email: string;
+  name: string;
+  picture: string | null;
+  createdAt: number;
+  lastSeen: number;
+}
+
+interface AuthSessionRow {
+  token: string;
+  accountId: string;
+  createdAt: number;
+  lastSeen: number;
+  expiresAt: number;
 }
 
 interface AuditRow {
@@ -164,6 +203,16 @@ export class SqliteGameStore implements GameStore {
       // NULL marks a pre-audit snapshot. It must keep using the snapshot path
       // until a future start creates a complete stream with its setup event.
       this.db.exec('ALTER TABLE games ADD COLUMN auditSequence INTEGER');
+    }
+    const sessionColumns = new Set(
+      (this.db.prepare('PRAGMA table_info(sessions)').all() as unknown as { name: string }[]).map(
+        (c) => c.name,
+      ),
+    );
+    if (!sessionColumns.has('accountId')) {
+      // Existing seat tokens remain valid as anonymous migration tokens. A
+      // signed-in player can claim their old token once after Google login.
+      this.db.exec('ALTER TABLE sessions ADD COLUMN accountId TEXT');
     }
     // Safe to run every boot, and it must come after the ALTER above.
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_games_key ON games(gameKey)');
@@ -327,6 +376,7 @@ export class SqliteGameStore implements GameStore {
       token: r.token,
       gameId: r.gameId,
       playerId: r.playerId,
+      ...(r.accountId !== null ? { accountId: r.accountId } : {}),
       createdAt: r.createdAt,
       lastSeen: r.lastSeen,
     }));
@@ -335,15 +385,87 @@ export class SqliteGameStore implements GameStore {
   saveSession(session: SessionRecord): void {
     this.db
       .prepare(
-        `INSERT INTO sessions (token, gameId, playerId, createdAt, lastSeen)
-         VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(token) DO UPDATE SET lastSeen=excluded.lastSeen`,
+        `INSERT INTO sessions (token, gameId, playerId, accountId, createdAt, lastSeen)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(token) DO UPDATE SET
+           gameId=excluded.gameId, playerId=excluded.playerId,
+           accountId=excluded.accountId, createdAt=excluded.createdAt,
+           lastSeen=excluded.lastSeen`,
       )
-      .run(session.token, session.gameId, session.playerId, session.createdAt, session.lastSeen);
+      .run(
+        session.token,
+        session.gameId,
+        session.playerId,
+        session.accountId ?? null,
+        session.createdAt,
+        session.lastSeen,
+      );
+  }
+
+  deleteSession(token: string): void {
+    this.db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
   }
 
   deleteSessionsForGame(gameId: string): void {
     this.db.prepare('DELETE FROM sessions WHERE gameId = ?').run(gameId);
+  }
+
+  loadAccounts(): AccountRecord[] {
+    const rows = this.db.prepare('SELECT * FROM accounts').all() as unknown as AccountRow[];
+    return rows.map((row) => ({
+      accountId: row.accountId,
+      email: row.email,
+      name: row.name,
+      ...(row.picture !== null ? { picture: row.picture } : {}),
+      createdAt: row.createdAt,
+      lastSeen: row.lastSeen,
+    }));
+  }
+
+  saveAccount(account: AccountRecord): void {
+    this.db
+      .prepare(
+        `INSERT INTO accounts (accountId, email, name, picture, createdAt, lastSeen)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(accountId) DO UPDATE SET
+           email=excluded.email, name=excluded.name, picture=excluded.picture,
+           lastSeen=excluded.lastSeen`,
+      )
+      .run(
+        account.accountId,
+        account.email,
+        account.name,
+        account.picture ?? null,
+        account.createdAt,
+        account.lastSeen,
+      );
+  }
+
+  loadAuthSessions(): AuthSessionRecord[] {
+    const rows = this.db.prepare('SELECT * FROM auth_sessions').all() as unknown as AuthSessionRow[];
+    return rows.map((row) => ({
+      token: row.token,
+      accountId: row.accountId,
+      createdAt: row.createdAt,
+      lastSeen: row.lastSeen,
+      expiresAt: row.expiresAt,
+    }));
+  }
+
+  saveAuthSession(session: AuthSessionRecord): void {
+    this.db
+      .prepare(
+        `INSERT INTO auth_sessions (token, accountId, createdAt, lastSeen, expiresAt)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(token) DO UPDATE SET
+           accountId=excluded.accountId, createdAt=excluded.createdAt,
+           lastSeen=excluded.lastSeen, expiresAt=excluded.expiresAt`,
+      )
+      .run(session.token, session.accountId, session.createdAt, session.lastSeen, session.expiresAt);
+  }
+
+  deleteAuthSession(token: string): void {
+    this.db.prepare('DELETE FROM auth_sessions WHERE token = ?').run(token);
   }
 
   close(): void {

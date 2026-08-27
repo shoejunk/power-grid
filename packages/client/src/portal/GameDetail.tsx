@@ -22,6 +22,7 @@ import { navigate } from '@/router';
 import { useDescriptor } from './catalogue';
 import { PortalBackdrop, PortalMark } from './Chrome';
 import { NotFound } from './NotFound';
+import { AuthControls } from './AuthControls';
 
 /**
  * A game's page: what it is, and the form that seats a table at it.
@@ -37,11 +38,12 @@ export function GameDetail({ gameKey }: { gameKey: string }): JSX.Element {
   const { module, loading: moduleLoading } = useGameUi(gameKey);
 
   const storedName = useGameStore((s) => s.playerName);
+  const auth = useGameStore((s) => s.auth);
   const pending = useGameStore((s) => s.pending);
   const lastError = useGameStore((s) => s.lastError);
   const status = useGameStore((s) => s.connectionStatus);
 
-  const [name, setName] = useState(storedName);
+  const [name, setName] = useState(storedName || auth.account?.name || '');
   const [touched, setTouched] = useState(false);
   /*
    * The draft settings, seeded from the game's own defaults the moment its
@@ -56,6 +58,10 @@ export function GameDetail({ gameKey }: { gameKey: string }): JSX.Element {
       setSettings(module.defaultSettings() as Record<string, unknown>);
     }
   }, [module, settings]);
+
+  useEffect(() => {
+    if (!name && (storedName || auth.account?.name)) setName(storedName || auth.account?.name || '');
+  }, [auth.account?.name, name, storedName]);
 
   const patchSettings = useCallback((patch: unknown) => {
     setSettings((current) => ({ ...current, ...(patch as Record<string, unknown>) }));
@@ -83,7 +89,8 @@ export function GameDetail({ gameKey }: { gameKey: string }): JSX.Element {
   const nameError = touched && name.trim().length < 2 ? 'Enter at least 2 characters.' : null;
   const comingSoon = module?.comingSoon === true;
   const canSubmit =
-    !comingSoon && name.trim().length >= 2 && status === 'connected' && !pending;
+    !comingSoon && name.trim().length >= 2 && status === 'connected' && !pending &&
+    !auth.loading && (!auth.required || auth.authenticated);
 
   const submit = (): void => {
     setTouched(true);
@@ -109,7 +116,10 @@ export function GameDetail({ gameKey }: { gameKey: string }): JSX.Element {
           All games
         </Button>
         <PortalMark compact />
-        <ConnectionPill />
+        <span className="tt-topbar__right">
+          <AuthControls />
+          <ConnectionPill />
+        </span>
       </header>
 
       <motion.main
@@ -182,6 +192,10 @@ export function GameDetail({ gameKey }: { gameKey: string }): JSX.Element {
                   </p>
                 </Panel>
               )}
+
+              {auth.required && !auth.authenticated ? (
+                <p className="tt-auth-hint">Sign in with Google above to create a persistent table.</p>
+              ) : null}
 
               {lastError !== null ? (
                 <motion.div

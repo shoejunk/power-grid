@@ -12,6 +12,7 @@ import { GameRegistry } from '@tt/core';
 import { WebSocketServer } from 'ws';
 import { loadConfig, type ServerConfig } from './config.js';
 import { createRegistry } from './games.js';
+import { GoogleAuth } from './auth.js';
 import { GameHub } from './hub.js';
 import { createHttpApp } from './httpApp.js';
 import { createLogger, type Logger } from './logger.js';
@@ -50,11 +51,13 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
 
   const store = options.store ?? (await createStore(config, logger));
   const registry = options.registry ?? createRegistry();
+  const auth = new GoogleAuth({ config, store, logger: logger.child('auth') });
+  auth.load();
 
-  const hub = new GameHub({ store, registry, config, logger });
+  const hub = new GameHub({ store, registry, config, logger, auth });
   hub.load();
 
-  const app = createHttpApp({ config, hub, store, logger, startedAt });
+  const app = createHttpApp({ config, hub, store, logger, startedAt, auth });
   const httpServer = http.createServer(app);
 
   /**
@@ -76,6 +79,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
       maxMessagesPerSecond: config.maxMessagesPerSecond,
       logger,
     });
+    conn.accountId = auth.accountIdForCookie(req.headers.cookie);
     connections.add(conn);
     logger.debug('Socket opened', { connection: conn.id, ip: req.socket.remoteAddress });
 

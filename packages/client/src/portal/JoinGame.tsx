@@ -18,6 +18,7 @@ import { ConnectionPill, net, useGameStore } from '@/net';
 import { navigate } from '@/router';
 
 import { PortalBackdrop, PortalMark } from './Chrome';
+import { AuthControls } from './AuthControls';
 
 const CODE_LENGTH = 6;
 
@@ -34,19 +35,26 @@ const CODE_LENGTH = 6;
  */
 export function JoinGame({ initialCode }: { initialCode: string | null }): JSX.Element {
   const storedName = useGameStore((s) => s.playerName);
+  const auth = useGameStore((s) => s.auth);
   const pending = useGameStore((s) => s.pending);
   const lastError = useGameStore((s) => s.lastError);
   const clearError = useGameStore((s) => s.clearError);
   const status = useGameStore((s) => s.connectionStatus);
 
   const [code, setCode] = useState(initialCode ?? '');
-  const [name, setName] = useState(storedName);
+  const [name, setName] = useState(storedName || auth.account?.name || '');
   const [touched, setTouched] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
   const nameValid = name.trim().length >= 2;
   const codeValid = code.length === CODE_LENGTH;
-  const canSubmit = nameValid && codeValid && status === 'connected' && !pending;
+  const canSubmit =
+    nameValid && codeValid && status === 'connected' && !pending &&
+    !auth.loading && (!auth.required || auth.authenticated);
+
+  useEffect(() => {
+    if (!name && (storedName || auth.account?.name)) setName(storedName || auth.account?.name || '');
+  }, [auth.account?.name, name, storedName]);
 
   /* A rejected code should not silently persist as an error on the next keystroke. */
   useEffect(() => {
@@ -79,7 +87,10 @@ export function JoinGame({ initialCode }: { initialCode: string | null }): JSX.E
           Back
         </Button>
         <PortalMark compact />
-        <ConnectionPill />
+        <span className="tt-topbar__right">
+          <AuthControls />
+          <ConnectionPill />
+        </span>
       </header>
 
       <main className="tt-join__main">
@@ -155,6 +166,10 @@ export function JoinGame({ initialCode }: { initialCode: string | null }): JSX.E
                       <strong>{lastError.code}</strong> &mdash; {lastError.message}
                     </span>
                   </motion.div>
+                ) : null}
+
+                {auth.required && !auth.authenticated ? (
+                  <p className="tt-auth-hint">Sign in with Google above to join this table.</p>
                 ) : null}
 
                 <Button

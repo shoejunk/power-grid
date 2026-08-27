@@ -70,6 +70,36 @@
   }
 }
 
+.tt-topbar__right {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--tt-space-3);
+  min-width: 0;
+}
+
+.tt-account-control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tt-space-2);
+  min-width: 0;
+}
+
+.tt-account-control__identity {
+  max-width: 14ch;
+  overflow: hidden;
+  color: var(--tt-text-secondary);
+  font-size: var(--tt-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tt-auth-hint {
+  margin: var(--tt-space-3) 0 0;
+  color: var(--tt-accent-bright);
+  font-size: var(--tt-text-sm);
+}
+
 .tt-stat {
   display: flex;
   flex-direction: column;

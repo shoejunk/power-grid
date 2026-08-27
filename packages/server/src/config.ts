@@ -44,6 +44,15 @@ export interface ServerConfig {
   chatHistoryLimit: number;
   /** Games untouched for longer than this are pruned on boot. */
   gameTtlMs: number;
+  /** Google OAuth client credentials. Authentication is enabled when both exist. */
+  googleClientId: string | null;
+  googleClientSecret: string | null;
+  /** Require Google authentication for creating, joining and resuming games. */
+  googleAuthRequired: boolean;
+  /** Canonical public origin used to build the Google callback URL. */
+  publicOrigin: string | null;
+  /** Lifetime of the HttpOnly account-login cookie. */
+  authSessionTtlMs: number;
   logLevel: LogLevel;
 }
 
@@ -106,6 +115,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     // 30 days: long enough that "we'll finish it next month" works, short
     // enough that abandoned lobbies do not accumulate forever.
     gameTtlMs: num(read('GAME_TTL_MS'), 30 * 24 * 60 * 60 * 1000),
+    googleClientId: read('GOOGLE_CLIENT_ID') ?? null,
+    googleClientSecret: read('GOOGLE_CLIENT_SECRET') ?? null,
+    googleAuthRequired: bool(read('GOOGLE_AUTH_REQUIRED'), true),
+    publicOrigin: read('PUBLIC_ORIGIN') ?? null,
+    authSessionTtlMs: num(read('AUTH_SESSION_TTL_MS'), 30 * 24 * 60 * 60 * 1000),
     logLevel: (read('LOG_LEVEL') as LogLevel | undefined) ?? (isProd ? 'info' : 'debug'),
   };
 }

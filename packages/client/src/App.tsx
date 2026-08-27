@@ -20,8 +20,8 @@ import { ErrorBoundary } from '@tt/ui';
  *   · the URL says where the player navigated — the portal, a game's page,
  *     a join link. It is real history, so those links can be shared.
  *   · the store says whether the player is *seated* at a table. A seat is
- *     bound to the session token in localStorage, not to a path, so a reload
- *     restores it whatever the address bar happens to say.
+ *     bound to the Google account's server-side session, not to a path or
+ *     browser storage, so a reload on any machine can restore it.
  *
  * A seat therefore wins over the URL: if the server has put us in a lobby or a
  * match, that is what we render. This is what makes reconnection invisible
@@ -37,6 +37,7 @@ export function App(): JSX.Element {
      reconnection; we only tear it down on unload. */
   useEffect(() => {
     net.start();
+    void net.loadAuth();
     return () => net.stop();
   }, []);
 

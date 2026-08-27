@@ -138,6 +138,48 @@
   padding-top: var(--tt-space-2);
 }
 
+.tt-account-games {
+  display: grid;
+  gap: var(--tt-space-2);
+  width: min(100%, 32rem);
+}
+
+.tt-account-game {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tt-space-4);
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--tt-line-hairline);
+  border-radius: var(--tt-radius-md);
+  color: var(--tt-text-secondary);
+  background: rgba(255, 255, 255, 0.035);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--tt-accent);
+    color: var(--tt-text-bright);
+  }
+
+  > span:first-child {
+    display: grid;
+    gap: 2px;
+  }
+
+  strong {
+    color: var(--tt-text-bright);
+    font-family: var(--tt-font-display);
+    text-transform: uppercase;
+  }
+
+  small {
+    color: var(--tt-text-faint);
+    font-size: var(--tt-text-2xs);
+  }
+}
+
 .tt-portal__catalogue {
   display: flex;
   flex-direction: column;

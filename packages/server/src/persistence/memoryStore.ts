@@ -4,6 +4,8 @@
  */
 
 import type {
+  AccountRecord,
+  AuthSessionRecord,
   GameAuditEvent,
   GameAuditEventInput,
   GameStore,
@@ -16,6 +18,8 @@ export class MemoryGameStore implements GameStore {
   readonly location = ':memory:';
   private games = new Map<string, PersistedGame>();
   private sessions = new Map<string, SessionRecord>();
+  private accounts = new Map<string, AccountRecord>();
+  private authSessions = new Map<string, AuthSessionRecord>();
   private auditEvents = new Map<string, GameAuditEvent[]>();
 
   loadGames(): PersistedGame[] {
@@ -67,8 +71,32 @@ export class MemoryGameStore implements GameStore {
     this.sessions.set(session.token, { ...session });
   }
 
+  deleteSession(token: string): void {
+    this.sessions.delete(token);
+  }
+
   deleteSessionsForGame(gameId: string): void {
     for (const [token, s] of this.sessions) if (s.gameId === gameId) this.sessions.delete(token);
+  }
+
+  loadAccounts(): AccountRecord[] {
+    return [...this.accounts.values()].map((account) => ({ ...account }));
+  }
+
+  saveAccount(account: AccountRecord): void {
+    this.accounts.set(account.accountId, { ...account });
+  }
+
+  loadAuthSessions(): AuthSessionRecord[] {
+    return [...this.authSessions.values()].map((session) => ({ ...session }));
+  }
+
+  saveAuthSession(session: AuthSessionRecord): void {
+    this.authSessions.set(session.token, { ...session });
+  }
+
+  deleteAuthSession(token: string): void {
+    this.authSessions.delete(token);
   }
 
   close(): void {

@@ -24,6 +24,7 @@ export const MAX_CHAT_LENGTH = 500;
 export const MAX_CODE_LENGTH = 12;
 export const MAX_TOKEN_LENGTH = 128;
 export const MAX_GAME_KEY_LENGTH = 48;
+export const MAX_GAME_ID_LENGTH = 80;
 
 const bad = (code: string, message: string): ParseResult => ({ ok: false, code, message });
 
@@ -53,6 +54,13 @@ export function parseClientMessage(raw: string): ParseResult {
         return bad('badMessage', 'rejoin requires a sessionToken.');
       }
       return { ok: true, message: { t: 'rejoin', sessionToken: parsed.sessionToken } };
+    }
+
+    case 'resumeGame': {
+      if (!isString(parsed.gameId) || parsed.gameId.length > MAX_GAME_ID_LENGTH) {
+        return bad('badMessage', 'resumeGame requires a gameId.');
+      }
+      return { ok: true, message: { t: 'resumeGame', gameId: parsed.gameId } };
     }
 
     case 'createGame': {

@@ -86,8 +86,29 @@ export interface SessionRecord {
   token: string;
   gameId: string;
   playerId: PlayerId;
+  /** Google account that owns this seat. Absent only on legacy anonymous rows. */
+  accountId?: string;
   createdAt: number;
   lastSeen: number;
+}
+
+/** Durable account profile keyed by Google's stable subject identifier. */
+export interface AccountRecord {
+  accountId: string;
+  email: string;
+  name: string;
+  picture?: string;
+  createdAt: number;
+  lastSeen: number;
+}
+
+/** Opaque, server-side login session represented by an HttpOnly cookie. */
+export interface AuthSessionRecord {
+  token: string;
+  accountId: string;
+  createdAt: number;
+  lastSeen: number;
+  expiresAt: number;
 }
 
 export interface GameStore {
@@ -109,7 +130,14 @@ export interface GameStore {
 
   loadSessions(): SessionRecord[];
   saveSession(session: SessionRecord): void;
+  deleteSession(token: string): void;
   deleteSessionsForGame(gameId: string): void;
+
+  loadAccounts(): AccountRecord[];
+  saveAccount(account: AccountRecord): void;
+  loadAuthSessions(): AuthSessionRecord[];
+  saveAuthSession(session: AuthSessionRecord): void;
+  deleteAuthSession(token: string): void;
 
   close(): void;
 }

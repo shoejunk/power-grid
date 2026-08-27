@@ -2,7 +2,7 @@
  * The hub owns every table on this server and routes client messages to them.
  *
  * On boot it rehydrates itself completely from the store — rooms, seats, game
- * states, chat and session tokens — so a restart is invisible to players
+ * states, chat and account/seat sessions — so a restart is invisible to players
  * beyond a dropped socket. Nothing in here holds game-rules knowledge; it is
  * pure routing, identity and lifecycle.
  *
@@ -20,6 +20,7 @@ import {
   type PlayerId,
 } from '@tt/core';
 import type { ServerConfig } from './config.js';
+import type { GoogleAuth } from './auth.js';
 import type { Logger } from './logger.js';
 import type { GameStore, PersistedGame, SessionRecord } from './persistence/types.js';
 import { replayPersistedGame } from './persistence/replay.js';
@@ -31,6 +32,7 @@ export interface HubDeps {
   registry: GameRegistry;
   config: ServerConfig;
   logger: Logger;
+  auth: GoogleAuth;
 }
 
 const seatKey = (gameId: string, playerId: PlayerId): string => `${gameId}:${playerId}`;
@@ -193,6 +195,34 @@ export class GameHub {
     return { games: this.rooms.size, started, seats, sessions: this.sessions.size, byGame };
   }
 
+  /** Tables owned by one authenticated account, for the portal's resume list. */
+  gamesForAccount(accountId: string): Array<{
+    gameId: string;
+    gameKey: GameKey;
+    code: string;
+    started: boolean;
+    updatedAt: number;
+    playerName: string;
+  }> {
+    return [...this.sessions.values()]
+      .filter((session) => session.accountId === accountId)
+      .map((session) => {
+        const room = this.rooms.get(session.gameId);
+        const seat = room?.seat(session.playerId);
+        if (!room || !seat) return null;
+        return {
+          gameId: room.gameId,
+          gameKey: room.gameKey,
+          code: room.code,
+          started: room.started,
+          updatedAt: room.updatedAt,
+          playerName: seat.name,
+        };
+      })
+      .filter((game): game is NonNullable<typeof game> => game !== null)
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+
   /* ---------------------------------------------------------------- *
    * Codes and sessions
    * ---------------------------------------------------------------- */
@@ -217,7 +247,7 @@ export class GameHub {
   }
 
   /** One opaque bearer token per seat. Reused if the seat already has one. */
-  private issueSession(gameId: string, playerId: PlayerId): SessionRecord {
+  private issueSession(gameId: string, playerId: PlayerId, accountId: string | null): SessionRecord {
     const existing = this.tokenBySeat.get(seatKey(gameId, playerId));
     if (existing) {
       const session = this.sessions.get(existing);
@@ -231,6 +261,7 @@ export class GameHub {
       token: randomBytes(24).toString('base64url'),
       gameId,
       playerId,
+      ...(accountId ? { accountId } : {}),
       createdAt: Date.now(),
       lastSeen: Date.now(),
     };
@@ -246,6 +277,7 @@ export class GameHub {
     if (token) {
       this.sessions.delete(token);
       this.tokenBySeat.delete(key);
+      this.deps.store.deleteSession(token);
     }
   }
 
@@ -263,6 +295,9 @@ export class GameHub {
         return;
       case 'rejoin':
         this.onRejoin(conn, message.sessionToken);
+        return;
+      case 'resumeGame':
+        this.onResumeGame(conn, message.gameId);
         return;
       case 'createGame':
         this.onCreateGame(conn, message.gameKey, message.name, message.settings);
@@ -377,14 +412,48 @@ export class GameHub {
    * ---------------------------------------------------------------- */
 
   private onHello(conn: Connection, token?: string): void {
-    if (token && this.resume(conn, token)) return;
+    // A legacy browser may still have one local seat token. Once the browser
+    // is signed in, bind that token to the Google account and clear it client
+    // side through the account-bearing welcome message.
+    if (token && conn.accountId && this.claimLegacySession(token, conn.accountId) && this.resume(conn, token)) {
+      return;
+    }
+    if (conn.accountId && this.resumeLatestForAccount(conn, conn.accountId)) return;
+    if (token && !this.deps.auth.required && this.resume(conn, token)) return;
+    if (this.deps.auth.required && !conn.accountId) {
+      conn.error('authRequired', 'Sign in with Google before creating or joining a game.');
+      return;
+    }
     // No usable session: the client should show the game picker.
     conn.error('noSession', 'No active session. Create or join a game.');
   }
 
   private onRejoin(conn: Connection, token: string): void {
     if (this.resume(conn, token)) return;
+    if (conn.accountId && this.claimLegacySession(token, conn.accountId) && this.resume(conn, token)) {
+      return;
+    }
+    if (this.deps.auth.required && !conn.accountId) {
+      conn.error('authRequired', 'Sign in with Google before creating or joining a game.');
+      return;
+    }
     conn.error('unknownSession', 'That session is no longer valid. Join the game again by code.');
+  }
+
+  private onResumeGame(conn: Connection, gameId: string): void {
+    if (!conn.accountId) {
+      conn.error(
+        this.deps.auth.required ? 'authRequired' : 'unknownSession',
+        'Sign in with Google to resume a saved game.',
+      );
+      return;
+    }
+    const session = [...this.sessions.values()].find(
+      (candidate) => candidate.gameId === gameId && candidate.accountId === conn.accountId,
+    );
+    if (!session || !this.resume(conn, session.token)) {
+      conn.error('unknownGame', 'That saved game is no longer available.');
+    }
   }
 
   /**
@@ -394,16 +463,27 @@ export class GameHub {
   private resume(conn: Connection, token: string): boolean {
     const session = this.sessions.get(token);
     if (!session) return false;
+    if (conn.accountId !== null) {
+      if (session.accountId !== conn.accountId) return false;
+    } else if (this.deps.auth.required) {
+      return false;
+    }
     const room = this.rooms.get(session.gameId);
     if (!room) {
       this.sessions.delete(token);
+      this.deps.store.deleteSession(token);
       return false;
     }
     const seat = room.seat(session.playerId);
     if (!seat) {
       this.sessions.delete(token);
       this.tokenBySeat.delete(seatKey(session.gameId, session.playerId));
+      this.deps.store.deleteSession(token);
       return false;
+    }
+
+    if (conn.gameId && (conn.gameId !== session.gameId || conn.playerId !== session.playerId)) {
+      this.detachFromCurrentRoom(conn, 'resuming a different account table');
     }
 
     session.lastSeen = Date.now();
@@ -416,6 +496,7 @@ export class GameHub {
       sessionToken: token,
       playerId: session.playerId,
       gameKey: room.gameKey,
+      ...(session.accountId ? { accountId: session.accountId } : {}),
     });
     room.sendSnapshot(session.playerId, conn);
     // Everyone else needs to see them light up again.
@@ -433,12 +514,42 @@ export class GameHub {
     return true;
   }
 
+  /** Claims a pre-authentication seat token once for the currently signed-in account. */
+  private claimLegacySession(token: string, accountId: string): boolean {
+    const session = this.sessions.get(token);
+    if (!session || session.accountId) return false;
+    const room = this.rooms.get(session.gameId);
+    if (!room?.seat(session.playerId)) return false;
+    const alreadyOwned = [...this.sessions.values()].some(
+      (candidate) =>
+        candidate.accountId === accountId && candidate.gameId === session.gameId,
+    );
+    if (alreadyOwned) return false;
+    session.accountId = accountId;
+    session.lastSeen = Date.now();
+    this.deps.store.saveSession(session);
+    return true;
+  }
+
+  private resumeLatestForAccount(conn: Connection, accountId: string): boolean {
+    const candidates = [...this.sessions.values()]
+      .filter((session) => session.accountId === accountId && this.rooms.has(session.gameId))
+      .sort((a, b) => {
+        const aUpdated = this.rooms.get(a.gameId)?.updatedAt ?? 0;
+        const bUpdated = this.rooms.get(b.gameId)?.updatedAt ?? 0;
+        return bUpdated - aUpdated;
+      });
+    for (const session of candidates) if (this.resume(conn, session.token)) return true;
+    return false;
+  }
+
   private onCreateGame(
     conn: Connection,
     gameKey: GameKey,
     name: string,
     rawSettings: unknown,
   ): void {
+    if (!this.canPlay(conn)) return;
     const plugin = this.deps.registry.get(gameKey);
     if (!plugin) {
       conn.error('noSuchGame', `This server does not host '${gameKey}'.`);
@@ -504,16 +615,23 @@ export class GameHub {
     this.roomsByCode.set(code, gameId);
     room.persist();
 
-    const session = this.issueSession(gameId, hostId);
+    const session = this.issueSession(gameId, hostId, conn.accountId);
     conn.sessionToken = session.token;
     room.attach(hostId, conn);
-    conn.send({ t: 'welcome', sessionToken: session.token, playerId: hostId, gameKey });
+    conn.send({
+      t: 'welcome',
+      sessionToken: session.token,
+      playerId: hostId,
+      gameKey,
+      ...(session.accountId ? { accountId: session.accountId } : {}),
+    });
     room.sendSnapshot(hostId, conn);
 
     this.logger.info('Game created', { gameId, gameKey, code, host: name });
   }
 
   private onJoinGame(conn: Connection, code: string, name: string): void {
+    if (!this.canPlay(conn)) return;
     const room = this.roomByCode(code);
     if (!room) {
       conn.error('noSuchGame', `No game found with code ${code}.`);
@@ -523,6 +641,15 @@ export class GameHub {
       // A started game accepts reconnections by token, never brand-new joiners.
       conn.error('gameStarted', 'That game has already started. Rejoin with your session link instead.');
       return;
+    }
+
+    // Joining from another machine should recover the account's existing
+    // lobby seat instead of creating a duplicate seat at the same table.
+    if (conn.accountId) {
+      const existing = [...this.sessions.values()].find(
+        (session) => session.gameId === room.gameId && session.accountId === conn.accountId,
+      );
+      if (existing && this.resume(conn, existing.token)) return;
     }
     if (room.seats.length >= room.capacity) {
       conn.error('gameFull', 'That game is full.');
@@ -538,7 +665,7 @@ export class GameHub {
       return;
     }
 
-    const session = this.issueSession(room.gameId, playerId);
+    const session = this.issueSession(room.gameId, playerId, conn.accountId);
     conn.sessionToken = session.token;
     room.persist();
     room.attach(playerId, conn);
@@ -547,6 +674,7 @@ export class GameHub {
       sessionToken: session.token,
       playerId,
       gameKey: room.gameKey,
+      ...(session.accountId ? { accountId: session.accountId } : {}),
     });
     room.sendSnapshot(playerId, conn);
     room.broadcast();
@@ -558,6 +686,14 @@ export class GameHub {
       name,
       playerId,
     });
+  }
+
+  private canPlay(conn: Connection): boolean {
+    if (this.deps.auth.required && !conn.accountId) {
+      conn.error('authRequired', 'Sign in with Google before creating or joining a game.');
+      return false;
+    }
+    return true;
   }
 
   /**

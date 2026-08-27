@@ -13,6 +13,7 @@ import cors from 'cors';
 import express, { type Express, type Request, type Response } from 'express';
 import type { ServerConfig } from './config.js';
 import type { GameHub } from './hub.js';
+import type { GoogleAuth } from './auth.js';
 import type { Logger } from './logger.js';
 import type { GameStore } from './persistence/types.js';
 
@@ -22,6 +23,7 @@ export interface HttpAppDeps {
   store: GameStore;
   logger: Logger;
   startedAt: number;
+  auth: GoogleAuth;
 }
 
 export function createHttpApp(deps: HttpAppDeps): Express {
@@ -31,6 +33,27 @@ export function createHttpApp(deps: HttpAppDeps): Express {
   app.disable('x-powered-by');
   app.use(cors());
   app.use(express.json({ limit: '32kb' }));
+
+  app.get('/auth/google/start', (req: Request, res: Response) => {
+    deps.auth.start(req, res);
+  });
+
+  app.get('/auth/google/callback', (req: Request, res: Response) => {
+    void deps.auth.callback(req, res);
+  });
+
+  app.post('/auth/logout', (req: Request, res: Response) => {
+    deps.auth.logout(req, res);
+  });
+
+  app.get('/api/auth/me', (req: Request, res: Response) => {
+    const status = deps.auth.status(req);
+    const accountId = status.account?.id;
+    res.json({
+      ...status,
+      games: accountId ? hub.gamesForAccount(accountId) : [],
+    });
+  });
 
   /** Liveness + a little operational insight. */
   app.get('/health', (_req: Request, res: Response) => {

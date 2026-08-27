@@ -18,6 +18,8 @@ export type ClientMessage =
   /** Opening frame. A token, if present, resumes an existing seat. */
   | { t: 'hello'; sessionToken?: string }
   | { t: 'rejoin'; sessionToken: string }
+  /** Selects one of the authenticated player's persisted tables. */
+  | { t: 'resumeGame'; gameId: string }
   /** `settings` is opaque here and parsed by the plugin named by `gameKey`. */
   | { t: 'createGame'; gameKey: GameKey; name: string; settings: unknown }
   | { t: 'joinGame'; code: string; name: string }
@@ -39,7 +41,14 @@ export type ClientMessage =
  * ------------------------------------------------------------------ */
 
 export type ServerMessage =
-  | { t: 'welcome'; sessionToken: string; playerId: PlayerId; gameKey: GameKey }
+  | {
+      t: 'welcome';
+      sessionToken: string;
+      playerId: PlayerId;
+      gameKey: GameKey;
+      /** Present when this seat is associated with a Google account. */
+      accountId?: string;
+    }
   | { t: 'lobby'; lobby: LobbyState }
   /** A redacted game-state snapshot. Shape is the game's own. */
   | { t: 'state'; gameKey: GameKey; state: unknown }

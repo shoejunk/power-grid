@@ -81,6 +81,26 @@ npm run dev:client
 
 The client dev server proxies WebSocket traffic to the game server on port 8787.
 
+### Google sign-in
+
+Games are account-backed when Google OAuth is configured. Create a Google Cloud
+OAuth client of type **Web application**, add the exact redirect URI
+`https://your.domain/auth/google/callback` (and
+`http://localhost:5173/auth/google/callback` for local development), then set:
+
+```bash
+TT_GOOGLE_CLIENT_ID=...
+TT_GOOGLE_CLIENT_SECRET=...
+TT_PUBLIC_ORIGIN=https://your.domain
+TT_GOOGLE_AUTH_REQUIRED=true
+```
+
+The server exchanges the authorization code with Google using PKCE, stores the
+Google subject and account session on the server, and gives the browser only a
+`Secure`/`HttpOnly` account cookie. No game seat token is written to browser
+storage. If the old client left a `tt.sessionToken` behind, the first signed-in
+connection may claim that seat and then retires the legacy token.
+
 ## Checks
 
 ```bash
@@ -277,6 +297,11 @@ Each also accepts its legacy `PG_`-prefixed name.
 | `TT_SERVE_CLIENT` | on when `NODE_ENV=production` | Serve the built client |
 | `TT_CLIENT_DIST` | `packages/client/dist` | Where the client bundle is |
 | `TT_LOG_LEVEL` | `info` in production | `debug`, `info`, `warn`, `error` |
+| `TT_GOOGLE_CLIENT_ID` | unset | Google OAuth web-client id |
+| `TT_GOOGLE_CLIENT_SECRET` | unset | Google OAuth web-client secret |
+| `TT_PUBLIC_ORIGIN` | request origin | Canonical origin used for the OAuth callback |
+| `TT_GOOGLE_AUTH_REQUIRED` | `true` | Require Google sign-in when both credentials are configured |
+| `TT_AUTH_SESSION_TTL_MS` | 30 days | Server-side account-login lifetime |
 
 ### Hosting the client separately
 
@@ -294,10 +319,11 @@ origin, which is what the single-instance setup above relies on.
 
 One player picks a game and creates a table, receiving a six-character join code. Codes are unique across
 every title, so a player only ever needs the code — never the game's name as well. Anyone with the code can
-take a seat until the host starts the match. Each seated player holds a session token in `localStorage`.
+take a seat until the host starts the match. When Google authentication is enabled, each seat is associated
+with the authenticated Google account and the server keeps a list of that account's tables.
 
 Games are persisted on every applied action. Closing the tab, losing the network, or restarting the server
-does not end a game — reconnecting with the session token restores the exact seat and position, including
+does not end a game — signing in from another machine restores the exact seat and position, including
 private information such as a hand of cards or a secret objective.
 
 Games are asynchronous: a human player's turn has no time limit. If they disconnect while active, the server

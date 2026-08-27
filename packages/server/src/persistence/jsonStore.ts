@@ -11,6 +11,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type {
+  AccountRecord,
+  AuthSessionRecord,
   GameAuditEvent,
   GameAuditEventInput,
   GameStore,
@@ -19,9 +21,11 @@ import type {
 } from './types.js';
 
 interface FileShape {
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   games: PersistedGame[];
   sessions: SessionRecord[];
+  accounts?: AccountRecord[];
+  authSessions?: AuthSessionRecord[];
   auditEvents?: Record<string, GameAuditEvent[]>;
 }
 
@@ -30,6 +34,8 @@ export class JsonFileGameStore implements GameStore {
   readonly location: string;
   private games = new Map<string, PersistedGame>();
   private sessions = new Map<string, SessionRecord>();
+  private accounts = new Map<string, AccountRecord>();
+  private authSessions = new Map<string, AuthSessionRecord>();
   private auditEvents = new Map<string, GameAuditEvent[]>();
   private closed = false;
 
@@ -45,6 +51,8 @@ export class JsonFileGameStore implements GameStore {
       const parsed = JSON.parse(fs.readFileSync(this.location, 'utf8')) as FileShape;
       for (const g of parsed.games ?? []) this.games.set(g.gameId, g);
       for (const s of parsed.sessions ?? []) this.sessions.set(s.token, s);
+      for (const account of parsed.accounts ?? []) this.accounts.set(account.accountId, account);
+      for (const session of parsed.authSessions ?? []) this.authSessions.set(session.token, session);
       for (const [gameId, events] of Object.entries(parsed.auditEvents ?? {})) {
         this.auditEvents.set(gameId, structuredClone(events));
       }
@@ -62,9 +70,11 @@ export class JsonFileGameStore implements GameStore {
   private flush(): void {
     if (this.closed) return;
     const payload: FileShape = {
-      version: 2,
+      version: 3,
       games: [...this.games.values()],
       sessions: [...this.sessions.values()],
+      accounts: [...this.accounts.values()],
+      authSessions: [...this.authSessions.values()],
       auditEvents: Object.fromEntries(
         [...this.auditEvents.entries()].map(([gameId, events]) => [gameId, structuredClone(events)]),
       ),
@@ -127,8 +137,36 @@ export class JsonFileGameStore implements GameStore {
     this.flush();
   }
 
+  deleteSession(token: string): void {
+    this.sessions.delete(token);
+    this.flush();
+  }
+
   deleteSessionsForGame(gameId: string): void {
     for (const [token, s] of this.sessions) if (s.gameId === gameId) this.sessions.delete(token);
+    this.flush();
+  }
+
+  loadAccounts(): AccountRecord[] {
+    return [...this.accounts.values()].map((account) => structuredClone(account));
+  }
+
+  saveAccount(account: AccountRecord): void {
+    this.accounts.set(account.accountId, structuredClone(account));
+    this.flush();
+  }
+
+  loadAuthSessions(): AuthSessionRecord[] {
+    return [...this.authSessions.values()].map((session) => structuredClone(session));
+  }
+
+  saveAuthSession(session: AuthSessionRecord): void {
+    this.authSessions.set(session.token, structuredClone(session));
+    this.flush();
+  }
+
+  deleteAuthSession(token: string): void {
+    this.authSessions.delete(token);
     this.flush();
   }
 

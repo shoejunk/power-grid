@@ -12,10 +12,9 @@
  */
 export {
   GameSocket,
-  loadPlayerName,
-  loadSessionToken,
-  savePlayerName,
-  saveSessionToken,
+  clearLegacySessionToken,
+  loadLegacySessionToken,
+  saveLegacySessionToken,
 } from './socket';
 export {
   net,
@@ -25,6 +24,6 @@ export {
   selectOnline,
   useGameStore,
 } from './store';
-export type { ChatLine, GameStore } from './store';
+export type { AccountGame, AuthAccount, AuthState, ChatLine, GameStore } from './store';
 export { ConnectionPill, Toaster } from './indicators';
 export type { ConnectionStatus, Toast, ToastInput, ToastTone } from './types';
