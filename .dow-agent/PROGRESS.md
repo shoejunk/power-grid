@@ -24,8 +24,35 @@ CLIs, so the installed Node npm CLI and local `.bin` tools were used after the e
 attempted. All five TypeScript checks passed. Power Grid passed **231** tests, Dead of Winter passed
 **279** tests, and the server passed **54** tests. `master` was up to date with `origin/master`.
 
-**In progress:** workers are being briefed for the two A15/A14 units above. No source changes have
-landed yet; this entry is pushed before spawning so the run remains auditable if it is interrupted.
+**Landed and pushed:**
+
+- `0d61097` (`feat(dow): prove pending audit restart`) adds append-only audit metadata, replay hash
+  checkpoints, migration-safe persistence, and a real DoW WebSocket + SQLite restart test with a
+  non-empty pending effect stack that resumes and continues the same game.
+- `3852ae1` (`feat(dow): expose public content boundary`) makes the active `dow-base@0.3.0-dev`
+  boundary explicitly non-shipping and adds public negative controls for Old Divisions, Hoarder, and
+  Hunger. The public A14 suite is now 20/20.
+
+**Verification:** all five TypeScript checks passed; Power Grid **231/231**, Dead of Winter
+**284/284**, and server **55/55** passed; `git diff --check` passed and `master` is clean and synced
+with `origin/master`. The global npm/npx shims remain broken, so the installed Node npm CLI and local
+tools were used after attempting the required commands.
+
+**Critic verdicts:** Pascal's A15 implementation review and Ampere's A14 implementation review both
+remained **FAIL** under the strict loop. Euclid's independent A15 review **FAILed** despite confirming
+the real pending-effect restart, because deferred morale, per-automatic-transition snapshots and
+explanations, and action-driven random replay are not proven. Hilbert's independent A14 review
+**FAILed**: all named §18 rulings have targeted tests and the public suite is green, but the active
+pack is still fixture-derived, contains placeholder content, and explicitly cannot be called
+shipping.
+
+**State changes:** A15 evidence materially strengthened with a real runtime restart and contiguous
+hash checks; A14 gained the requested public controls and an honest content status. The queue remains
+on `engine-tests`; no client, art, visual, motion, or multiplayer end-to-end work was attempted.
+
+**Next run should do first:** prove deferred-morale restart and action-driven random replay, then
+change the audit format to retain explicit per-automatic-transition before/after evidence and public
+explanations. Continue replacing fixture-backed A14 families before moving to `content-pack`.
 
 ---
 
