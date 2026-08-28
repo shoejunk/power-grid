@@ -8,6 +8,27 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-28 — nightly run 15
+
+**Intent:** continue the first queue item, `engine-tests`, with two bounded units: (1) prove A15
+with a real Dead of Winter WebSocket + SQLite restart while an effect stack or deferred morale
+checkpoint is pending, and make the audit stream record explicit before/after snapshots and a
+public explanation for each automatic transition; (2) close the highest-value A14 public-boundary
+gaps, including negative controls for Old Divisions, Hoarder, and Hunger and evidence that the
+shipping content boundary does not silently fall back to fixture families. Workers own disjoint
+files, run no git, and must loop each unit against a harsh critic. I will integrate and push each
+green unit separately.
+
+**Baseline verified on Windows:** the repository `npm`/`npx` shims still point at missing user-prefix
+CLIs, so the installed Node npm CLI and local `.bin` tools were used after the exact commands were
+attempted. All five TypeScript checks passed. Power Grid passed **231** tests, Dead of Winter passed
+**279** tests, and the server passed **54** tests. `master` was up to date with `origin/master`.
+
+**In progress:** workers are being briefed for the two A15/A14 units above. No source changes have
+landed yet; this entry is pushed before spawning so the run remains auditable if it is interrupted.
+
+---
+
 ## 2026-08-27 — nightly run 14
 
 **Intent:** continue the first queue item, `engine-tests`, with two bounded units: (1) obtain a
