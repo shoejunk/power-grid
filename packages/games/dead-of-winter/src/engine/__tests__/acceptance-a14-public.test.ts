@@ -102,6 +102,21 @@ function logEvents(state: GameState, event: string) {
 }
 
 describe('A14 §18 through the active Dead of Winter GamePlugin boundary', () => {
+  it('exposes the incomplete fixture-backed catalog as non-shipping', () => {
+    expect(deadOfWinter.contentStatus).toMatchObject({
+      shipping: false,
+      kind: 'non-shipping',
+    });
+    expect(deadOfWinter.contentStatus.fixtureBackedFamilies).toEqual([
+      'survivors',
+      'crises',
+      'crossroads',
+      'mainObjectives',
+      'secretObjectives',
+    ]);
+    expect(ACTIVE_PACK.pack.name).toMatch(/non-shipping/i);
+  });
+
   it('pins the exact active content pack through public setup and audit state', () => {
     const state = setupThroughPlugin('A14-PUBLIC-CONTENT', {
       playerCount: 4,
@@ -111,9 +126,8 @@ describe('A14 §18 through the active Dead of Winter GamePlugin boundary', () =>
     const setupStart = logEvents(state, 'setupStart')[0]?.data;
 
     // This proves the plugin cannot silently substitute a different pack while
-    // a match is running. Retail catalog completeness is intentionally a
-    // separate content-pack workstream; the current active pack is still the
-    // engine fixture and remains a documented A14/content debt.
+    // a match is running. The separate status test above is the explicit
+    // boundary evidence that this fixture-backed pack is not retail content.
     expect(state.contentPackId).toBe(ACTIVE_PACK.pack.id);
     expect(state.contentVersion).toBe(ACTIVE_PACK.pack.version);
     expect(setupStart?.contentPack).toBe(`${ACTIVE_PACK.pack.id}@${ACTIVE_PACK.pack.version}`);

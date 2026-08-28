@@ -77,6 +77,15 @@ function itemFor(state: GameState, playerId: PlayerId, cardId: string): string |
   return state.players[playerId]!.hand.find((iid) => state.items[iid]?.cardId === cardId);
 }
 
+function foodItemsFor(state: GameState, playerId: PlayerId): string[] {
+  return state.players[playerId]!.hand.filter((iid) =>
+    state.items[iid] &&
+    ['it-canned-food', 'it-soup-pot', 'it-dog-food', 'it-seed-packets', 'it-baby-formula'].includes(
+      state.items[iid]!.cardId,
+    ),
+  );
+}
+
 function survivorFor(state: GameState, playerId: PlayerId, cardId: string): string | undefined {
   return Object.values(state.survivors).find(
     (survivor) => survivor.controllerId === playerId && survivor.cardId === cardId,
@@ -258,6 +267,41 @@ function publicGame(requirements: PublicGameRequirements): GameState {
   throw new Error(`No public setup found for '${requirements.label}'.`);
 }
 
+/** Find a real next-player turn with a crisis contribution already present. */
+function publicOldDivisionsWithContribution(): GameState {
+  for (let attempt = 0; attempt < 2_000; attempt += 1) {
+    const seed = `A14-PUBLIC-RULINGS-old-divisions-removal-${attempt}`;
+    const gameSettings = settings({
+      playerCount: 4,
+      mainObjectiveId: 'mo-old-divisions-public',
+      includeBetrayalObjective: false,
+    });
+    const initial = deadOfWinter.createGame(
+      context(seed),
+      gameSettings,
+      seats(gameSettings.playerCount),
+    );
+    let state = finishSetup(initial, []);
+    if (state.activePlayerId !== P1 || state.pendingChoices.length > 0) continue;
+    // The initial turn has no prior contribution; this card must be drawn on
+    // the next player's turn so its thumbs-up option has something to remove.
+    if (!state.crisis.cardId || state.turn?.crossroadsCardId === 'xr-old-divisions') continue;
+    const contribution = state.players[P1]!.hand[0];
+    if (!contribution) continue;
+    const action = parseAction({ type: 'contributeCrisis', iids: [contribution] });
+    if (!deadOfWinter.validateAction(state, P1, action).ok) continue;
+    state = applyPublic(state, P1, { type: 'contributeCrisis', iids: [contribution] });
+    state = applyPublic(state, P1, { type: 'endTurn' });
+    if (
+      state.turn?.crossroadsCardId === 'xr-old-divisions' &&
+      state.pendingChoices.some((choice) => choice.kind === 'effectOption')
+    ) {
+      return state;
+    }
+  }
+  throw new Error('No public Old Divisions removal setup found.');
+}
+
 function barricadesAtColony(state: GameState): number {
   return state.colony.entrances.reduce((total, entrance) => total + entrance.barricades, 0);
 }
@@ -292,7 +336,10 @@ function searchOnePublicCard(
   state: GameState,
   playerId: PlayerId,
 ): { state: GameState; iid: string } | null {
-  let current = state;
+  // Ending a turn can legitimately open the next player's crossroads choice
+  // before that player receives their action clock. Settle only that public
+  // choice through the plugin boundary before looking for a search action.
+  let current = resolveIncidentalChoices(state);
   let survivor = Object.values(current.survivors).find(
     (candidate) => candidate.controllerId === playerId && candidate.location !== 'colony',
   );
@@ -443,6 +490,55 @@ describe('A14 §18.1 through the public Dead of Winter plugin', () => {
     expect(choice?.playerId).toBe(P1);
     expect(choice?.options.map((option) => option.id)).toEqual(['thumbs-up', 'thumbs-down']);
   });
+
+  it('Old Divisions does not trigger when the colony has no helpless survivor', () => {
+    const state = publicGame({
+      label: 'old-divisions-requires-helpless',
+      patch: { playerCount: 4, mainObjectiveId: 'mo-stockpile', includeBetrayalObjective: false },
+      check: (candidate) =>
+        candidate.turn?.crossroadsCardId === 'xr-old-divisions' &&
+        candidate.pendingChoices.length === 0,
+    });
+    const activePlayer = state.turn!.playerId;
+    expect(state.colony.helpless).toBe(0);
+    expect(
+      Object.values(state.survivors).some(
+        (survivor) => survivor.controllerId === activePlayer && survivor.location === 'colony',
+      ),
+    ).toBe(true);
+    expect(state.turn!.crossroadsTriggered).toBe(false);
+    expect(
+      logEvents(state, 'crossroadsTriggered').some(
+        (entry) => entry.data?.cardId === 'xr-old-divisions',
+      ),
+    ).toBe(false);
+  });
+
+  it('Old Divisions thumbs-up removes crisis cards without revealing their identities', () => {
+    let state = publicOldDivisionsWithContribution();
+    const contribution = state.crisis.contributions[0]!.iid;
+    const chooser = state.pendingChoices.find((choice) => choice.kind === 'effectOption');
+    expect(chooser?.playerId).toBe(state.turn!.playerId);
+    expect(state.crisis.contributions).toHaveLength(1);
+
+    const publicBefore = deadOfWinter.redactStateFor(state, null);
+    expect(publicBefore.crisis.contributions).toEqual([
+      { playerId: P1, iid: 'hidden:crisis:0' },
+    ]);
+    expect(publicBefore.items[contribution]).toBeUndefined();
+
+    state = applyPublic(state, chooser!.playerId!, {
+      type: 'resolveChoice',
+      choiceId: chooser!.id,
+      optionIds: ['thumbs-up'],
+    });
+
+    expect(state.crisis.contributions).toEqual([]);
+    expect(state.turn!.crossroadsTriggered).toBe(true);
+    const removed = logEvents(state, 'crisisContributionsRemoved').at(-1);
+    expect(removed?.data).toMatchObject({ count: 1, revealed: false });
+    expect(JSON.stringify(removed)).not.toContain(contribution);
+  });
 });
 
 describe('A14 §18.2 objective semantics through public actions', () => {
@@ -482,6 +578,53 @@ describe('A14 §18.2 objective semantics through public actions', () => {
     expect(p1Result).toMatchObject({ secretObjectiveIds: ['so-n1'], objectiveComplete: true, won: true });
   });
 
+  it('Hoarder fails when a public end check leaves two players tied for most cards', () => {
+    let state = publicGame({
+      label: 'hoarder-tie-fails',
+      patch: {
+        playerCount: 4,
+        mainObjectiveId: 'mo-old-divisions-public',
+      },
+      p1SecretObjective: 'so-n1',
+      safeMoveCount: 1,
+      check: (candidate) => {
+        const first = searchOnePublicCard(candidate, P1);
+        if (!first) return false;
+        const secondTurn = endTurnPublic(first.state);
+        const second = searchOnePublicCard(secondTurn, 'p2');
+        if (!second) return false;
+        try {
+          const ended = finishToGameOver(endTurnPublic(second.state));
+          const tied = ended.seating.filter((playerId) => ended.players[playerId]!.hand.length >= 6);
+          return (
+            ended.players[P1]!.hand.length === 6 &&
+            ended.players.p2!.hand.length === 6 &&
+            tied.length === 2
+          );
+        } catch {
+          return false;
+        }
+      },
+    });
+    let searched = searchOnePublicCard(state, P1);
+    expect(searched).not.toBeNull();
+    state = endTurnPublic(searched!.state);
+
+    const p2 = state.turn!.playerId;
+    searched = searchOnePublicCard(state, p2);
+    expect(searched).not.toBeNull();
+    state = endTurnPublic(searched!.state);
+    state = finishToGameOver(state);
+
+    const tied = state.seating.filter((playerId) => state.players[playerId]!.hand.length >= 6);
+    const p1Result = state.outcome!.results.find((result) => result.playerId === P1);
+    expect(state.players[P1]!.hand).toHaveLength(6);
+    expect(state.players[p2]!.hand).toHaveLength(6);
+    expect(tied).toEqual(expect.arrayContaining([P1, p2]));
+    expect(tied).toHaveLength(2);
+    expect(p1Result).toMatchObject({ secretObjectiveIds: ['so-n1'], objectiveComplete: false, won: false });
+  });
+
   it('Hunger counts food cards rather than colony food tokens', () => {
     let state = publicGame({
       label: 'hunger-food-cards-public',
@@ -513,6 +656,35 @@ describe('A14 §18.2 objective semantics through public actions', () => {
       secretObjectiveIds: ['so-hunger'],
       objectiveComplete: true,
       won: true,
+    });
+  });
+
+  it('Hunger fails when only colony food tokens meet the apparent threshold', () => {
+    let state = publicGame({
+      label: 'hunger-food-cards-public',
+      patch: {
+        playerCount: 4,
+        mainObjectiveId: 'mo-stockpile',
+        includeBetrayalObjective: false,
+      },
+      p1SecretObjective: 'so-hunger',
+      check: (candidate) => foodItemsFor(candidate, P1).length >= 3,
+    });
+    const foodItems = foodItemsFor(state, P1).slice(0, 3);
+    for (const iid of foodItems) {
+      state = applyPublic(state, P1, { type: 'playItem', iid });
+      state = resolveIncidentalChoices(state);
+    }
+    expect(foodItemsFor(state, P1)).toEqual([]);
+    expect(state.colony.food).toBeGreaterThanOrEqual(3);
+
+    state = collectStockpileThroughSearch(state);
+    state = finishToGameOver(state);
+    const result = state.outcome!.results.find((candidate) => candidate.playerId === P1);
+    expect(result).toMatchObject({
+      secretObjectiveIds: ['so-hunger'],
+      objectiveComplete: false,
+      won: false,
     });
   });
 });

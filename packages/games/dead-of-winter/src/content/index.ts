@@ -11,5 +11,5 @@ export * from './primitives.js';
 export * from './effects.js';
 export * from './schema.js';
 export * from './validate.js';
-export { BASE_PACK } from './basePack/index.js';
+export { BASE_PACK, BASE_PACK_STATUS } from './basePack/index.js';
 export { TEST_PACK } from './testPack.js';

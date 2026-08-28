@@ -2,9 +2,11 @@
  * The authored Dead of Winter base catalog.
  *
  * Content is assembled here so the plugin has one stable, versioned pack to
- * register. The authored item decks are already in this directory; the
- * remaining card families continue to be replaced from the fixture as the
- * catalog is completed, and are deliberately visible in the manifest checks.
+ * register. This is a development pack, not a retail release: the item decks
+ * in this directory are authored test content, while the other card families
+ * are explicitly sourced from the engine fixture below. The provenance is
+ * exported and surfaced by the public plugin so matching §2.0 counts cannot be
+ * mistaken for a licensed, shipping catalog.
  */
 
 import { TEST_PACK } from '../testPack.js';
@@ -12,11 +14,37 @@ import type { ContentPack, MainObjectiveDefinition, SecretObjectiveDefinition } 
 import { BASE_LOCATION_ITEMS } from './itemsLocations.js';
 import { BASE_STARTER_ITEMS } from './itemsStarter.js';
 
+/**
+ * This boundary is intentionally non-shipping until the licensed card catalog
+ * replaces every fixture-backed family. Keep this explicit even while the
+ * fixture happens to satisfy the physical §2.0 count table.
+ */
+export const BASE_PACK_STATUS = {
+  shipping: false,
+  kind: 'non-shipping',
+  reason:
+    'The licensed base-game catalog is incomplete; the listed card families remain fixture-backed.',
+  fixtureBackedFamilies: [
+    'survivors',
+    'crises',
+    'crossroads',
+    'mainObjectives',
+    'secretObjectives',
+  ],
+  authoredFamilies: ['items'],
+} as const;
+
 export const BASE_PACK: ContentPack = {
-  ...TEST_PACK,
   id: 'dow-base',
-  version: '0.2.0',
-  name: 'Dead of Winter Base Catalog',
+  version: '0.3.0-dev',
+  name: 'Dead of Winter Development Pack (Non-shipping)',
+  rulesVersion: TEST_PACK.rulesVersion,
+  colony: TEST_PACK.colony,
+  locations: TEST_PACK.locations,
+  exposureDie: TEST_PACK.exposureDie,
+  survivors: TEST_PACK.survivors,
+  crises: TEST_PACK.crises,
+  crossroads: TEST_PACK.crossroads,
   items: [...BASE_STARTER_ITEMS, ...BASE_LOCATION_ITEMS],
   // These authored entries replace fixture placeholders while keeping the
   // manifest count stable. They make the named public-boundary rulings

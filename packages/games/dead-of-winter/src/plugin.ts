@@ -25,7 +25,7 @@ import {
 } from '@tt/core';
 
 import { descriptor, MAX_PLAYERS, MIN_PLAYERS } from './descriptor.js';
-import { BASE_PACK } from './content/basePack/index.js';
+import { BASE_PACK, BASE_PACK_STATUS } from './content/basePack/index.js';
 import type { ContentIndex } from './content/schema.js';
 import {
   applyHostChange as engineHostChange,
@@ -58,13 +58,14 @@ import {
  * rather than passed in per game: `createGame` records `id@version` in state,
  * and `engine/state.getContentPack` refuses to substitute anything else.
  *
- * The authored base catalog is registered here rather than passed in per game:
+ * The development pack is registered here rather than passed in per game:
  * `createGame` records `id@version` in state, and `engine/state.getContentPack`
- * refuses to substitute anything else. Card families still being authored are
- * intentionally visible through `validateManifest` while the match remains
- * pinned to this version.
+ * refuses to substitute anything else. It is explicitly marked non-shipping
+ * because matching the §2.0 component counts does not make fixture-backed
+ * families a licensed retail catalog.
  */
 const ACTIVE_PACK: ContentIndex = registerContentPack(BASE_PACK);
+export const ACTIVE_PACK_STATUS = BASE_PACK_STATUS;
 
 /* ------------------------------------------------------------------ *
  * Settings
@@ -467,8 +468,9 @@ function migrateState(raw: unknown): GameState | null {
  * The plugin
  * ------------------------------------------------------------------ */
 
-export const deadOfWinter: GamePlugin<GameState, GameAction, GameSettings> = {
-  descriptor,
+export const deadOfWinter = Object.assign(
+  {
+    descriptor,
 
   defaultSettings,
   parseSettingsPatch,
@@ -492,7 +494,9 @@ export const deadOfWinter: GamePlugin<GameState, GameAction, GameSettings> = {
   safeDefaultActions: fallbackActions,
 
   migrateState,
-};
+  } satisfies GamePlugin<GameState, GameAction, GameSettings>,
+  { contentStatus: ACTIVE_PACK_STATUS },
+);
 
 export default deadOfWinter;
 
