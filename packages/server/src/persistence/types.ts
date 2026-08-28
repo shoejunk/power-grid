@@ -46,6 +46,19 @@ export interface PersistedGame {
   updatedAt: number;
 }
 
+/** The actor recorded for a server-side transition. */
+export type AuditActor = PlayerId | 'system';
+
+/** Replay checkpoints attached to events produced by the current server. */
+export interface AuditTransitionMetadata {
+  actor: AuditActor;
+  trigger: string;
+  beforeHash: string;
+  afterHash: string;
+  /** Safe to show in a public audit projection; never contains card ids. */
+  publicExplanation: string;
+}
+
 /**
  * One immutable entry in a table's authoritative replay stream.
  *
@@ -61,6 +74,11 @@ export type GameAuditEvent =
       hostId: PlayerId;
       settings: unknown;
       seats: Seat[];
+      /** Optional on legacy streams written before replay checkpoints. */
+      afterHash?: string;
+      actor?: AuditActor;
+      trigger?: string;
+      publicExplanation?: string;
     }
   | {
       sequence: number;
@@ -68,18 +86,36 @@ export type GameAuditEvent =
       at: number;
       playerId: PlayerId;
       action: unknown;
+      /** Optional on legacy streams written before replay checkpoints. */
+      beforeHash?: string;
+      afterHash?: string;
+      actor?: AuditActor;
+      trigger?: string;
+      publicExplanation?: string;
     }
   | {
       sequence: number;
       type: 'hostChange';
       at: number;
       hostId: PlayerId;
-    };
+      /** Optional on legacy streams written before replay checkpoints. */
+      beforeHash?: string;
+      afterHash?: string;
+      actor?: AuditActor;
+      trigger?: string;
+      publicExplanation?: string;
+    }
+  | ({
+      sequence: number;
+      type: 'automatic';
+      at: number;
+    } & AuditTransitionMetadata);
 
 export type GameAuditEventInput =
   | Omit<Extract<GameAuditEvent, { type: 'start' }>, 'sequence'>
   | Omit<Extract<GameAuditEvent, { type: 'action' }>, 'sequence'>
-  | Omit<Extract<GameAuditEvent, { type: 'hostChange' }>, 'sequence'>;
+  | Omit<Extract<GameAuditEvent, { type: 'hostChange' }>, 'sequence'>
+  | Omit<Extract<GameAuditEvent, { type: 'automatic' }>, 'sequence'>;
 
 /** Maps an opaque bearer token to a seat. Persisted so reloads can resume. */
 export interface SessionRecord {

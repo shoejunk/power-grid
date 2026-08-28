@@ -21,7 +21,7 @@ import type {
 } from './types.js';
 
 interface FileShape {
-  version: 1 | 2 | 3;
+  version: 1 | 2 | 3 | 4;
   games: PersistedGame[];
   sessions: SessionRecord[];
   accounts?: AccountRecord[];
@@ -70,7 +70,7 @@ export class JsonFileGameStore implements GameStore {
   private flush(): void {
     if (this.closed) return;
     const payload: FileShape = {
-      version: 3,
+      version: 4,
       games: [...this.games.values()],
       sessions: [...this.sessions.values()],
       accounts: [...this.accounts.values()],

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { deadOfWinter, type GameState, type PendingChoice, type PlayerId } from '@game/dead-of-winter';
-import { erase } from '@tt/core';
+import { erase, type CreateGameContext, type SeatSeed } from '@tt/core';
 import { createRegistry } from '../games.js';
 import { replayPersistedGame } from '../persistence/replay.js';
 import type { RunningServer } from '../server.js';
@@ -31,7 +31,14 @@ function ownChoice(state: GameState, playerId: PlayerId, kind: PendingChoice['ki
 }
 
 async function answerChoice(seat: Seated, kind: PendingChoice['kind']): Promise<void> {
-  const state = seat.client.lastState<GameState>() ?? (await seat.client.waitAnyState<GameState>()).state;
+  let state = seat.client.lastState<GameState>();
+  if (!state?.pendingChoices.some((choice) => choice.playerId === seat.playerId && choice.kind === kind)) {
+    state = (
+      await seat.client.waitState<GameState>((candidate) =>
+        candidate.pendingChoices.some((choice) => choice.playerId === seat.playerId && choice.kind === kind),
+      )
+    ).state;
+  }
   const choice = ownChoice(state, seat.playerId, kind);
   const legal = choice.options.filter((option) => option.legal);
   const minPicks = choice.minPicks ?? 1;
@@ -57,6 +64,64 @@ function privateIdentities(state: GameState, playerId: PlayerId): string[] {
 function containsExactToken(serialized: string, identity: string): boolean {
   const escaped = identity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp(`(^|[^A-Za-z0-9_-])${escaped}($|[^A-Za-z0-9_-])`).test(serialized);
+}
+
+const PURE_SEAT_COLORS = ['ember', 'frost', 'moss'] as const;
+
+function pureSeats(): SeatSeed[] {
+  return PURE_SEAT_COLORS.map((color, index) => ({
+    playerId: `p${index + 1}`,
+    name: `P${index + 1}`,
+    color,
+    isBot: false,
+  }));
+}
+
+function pureContext(seed: string): CreateGameContext {
+  return {
+    gameId: `dow-audit-pending-${seed}`,
+    code: 'DOWAUD',
+    hostId: 'p1',
+    seed,
+    now: 1_000,
+  };
+}
+
+function finishPureSetup(initial: GameState): GameState {
+  let state = initial;
+  for (let guard = 0; state.phase === 'setup' && guard < 100; guard += 1) {
+    const choice = state.pendingChoices[0];
+    if (!choice?.playerId) throw new Error('Pure setup choice has no player');
+    const legal = choice.options.filter((option) => option.legal);
+    const count = Math.max(1, choice.minPicks ?? 1);
+    if (legal.length < count) throw new Error(`Pure setup has too few legal options: ${choice.kind}`);
+    state = deadOfWinter.applyAction(state, choice.playerId, {
+      type: 'resolveChoice',
+      choiceId: choice.id,
+      optionIds: legal.slice(0, count).map((option) => option.id),
+    }, 1_000);
+  }
+  if (state.phase !== 'playerTurns') throw new Error('Pure setup did not reach player turns');
+  return state;
+}
+
+function findPendingEffectSeed(): string {
+  for (let attempt = 0; attempt < 2_000; attempt += 1) {
+    const seed = `DOW-AUDIT-PENDING-${attempt}`;
+    const settings = {
+      ...deadOfWinter.defaultSettings(),
+      playerCount: 3,
+      seed,
+      mainObjectiveId: 'mo-stockpile',
+      includeBetrayalObjective: false,
+    };
+    const state = finishPureSetup(deadOfWinter.createGame(pureContext(seed), settings, pureSeats()));
+    const p1 = state.players.p1;
+    if (state.activePlayerId === 'p1' && p1?.hand.some((iid) => state.items[iid]?.cardId === 'it-toolbox')) {
+      return seed;
+    }
+  }
+  throw new Error('Could not find a deterministic setup with an active host toolbox.');
 }
 
 describe('Dead of Winter server audit and replay', () => {
@@ -168,9 +233,138 @@ describe('Dead of Winter server audit and replay', () => {
       finalEvents.map((_, index) => index + 1),
     );
     expect(finalEvents[0]?.type).toBe('start');
-    expect(finalEvents.slice(1).every((event) => event.type === 'action')).toBe(true);
+    const transitionEvents = finalEvents.slice(1);
+    expect(transitionEvents.some((event) => event.type === 'action')).toBe(true);
+    expect(transitionEvents.some((event) => event.type === 'automatic')).toBe(true);
+    expect(transitionEvents.every((event) => event.type === 'action' || event.type === 'automatic')).toBe(true);
+    expect(
+      transitionEvents.filter((event) => event.type === 'automatic').every((event) =>
+        event.actor === 'system' &&
+        event.trigger === 'action-settled' &&
+        event.beforeHash.length === 64 &&
+        event.afterHash.length === 64 &&
+        event.publicExplanation.length > 0,
+      ),
+    ).toBe(true);
     expect(finalRecord.auditSequence).toBe(finalEvents.length);
     const replayFinal = replayPersistedGame(deadOfWinter, finalRecord, finalEvents) as GameState;
     expect(normalizePresence(replayFinal)).toEqual(normalizePresence(finalRecord.state as GameState));
+  });
+
+  it('restarts a real pending effect choice with its effect stack and audit checkpoints intact', async () => {
+    dataDir = makeDataDir();
+    const seed = findPendingEffectSeed();
+    const first = await boot({ dataDir, registry: registry() });
+    servers.push(first);
+
+    const host = await createGame(
+      first,
+      'Ada',
+      { playerCount: 3, seed, mainObjectiveId: 'mo-stockpile', includeBetrayalObjective: false },
+      deadOfWinter.descriptor.key,
+    );
+    clients.push(host.client);
+    const grace = await joinGame(first, host.code, 'Grace');
+    clients.push(grace.client);
+    const linus = await joinGame(first, host.code, 'Linus');
+    clients.push(linus.client);
+    const seats = [host, grace, linus];
+
+    grace.client.send({ t: 'setReady', ready: true });
+    linus.client.send({ t: 'setReady', ready: true });
+    await host.client.waitLobby((lobby) => lobby.players.every((player) => player.ready || player.isHost));
+    host.client.clear();
+    host.client.send({ t: 'startGame' });
+    await Promise.all(seats.map((seat) => seat.client.wait('state')));
+    for (const seat of seats) await answerChoice(seat, 'setupKeepSurvivors');
+    for (const seat of seats) await answerChoice(seat, 'setupChooseLeader');
+
+    const playing = await host.client.waitState<GameState>(
+      (state) => state.phase === 'playerTurns' && state.activePlayerId === host.playerId,
+    );
+    const actorState = playing.state;
+    const toolbox = actorState.players[host.playerId]!.hand.find(
+      (iid) => actorState.items[iid]?.cardId === 'it-toolbox',
+    );
+    expect(toolbox).toBeDefined();
+    const survivorId = Object.values(actorState.survivors).find(
+      (survivor) => survivor.controllerId === host.playerId,
+    )!.id;
+
+    host.client.clear();
+    host.client.send({
+      t: 'action',
+      action: { type: 'playItem', iid: toolbox, targetSurvivorId: survivorId },
+    });
+    const equipped = await host.client.waitState<GameState>((state) =>
+      state.survivors[survivorId]?.equipped.includes(toolbox!),
+    );
+
+    host.client.clear();
+    host.client.send({
+      t: 'action',
+      action: {
+        type: 'useAbility',
+        survivorId,
+        abilityId: 'toolbox-work',
+        itemIid: toolbox,
+      },
+    });
+    const pending = await host.client.waitState<GameState>(
+      (state) => state.pendingChoices.some((choice) => choice.kind === 'effectOption') && state.effectStack.length > 0,
+    );
+    const pendingState = pending.state;
+    expect(pendingState.effectStack.length).toBeGreaterThan(0);
+    expect(pendingState.pendingChoices[0]?.kind).toBe('effectOption');
+
+    const record = first.store.loadGames().find((game) => game.code === host.code)!;
+    const authoritativePendingState = record.state as GameState;
+    expect(authoritativePendingState.effectStack.length).toBeGreaterThan(0);
+    const events = first.store.loadAuditEvents(record.gameId);
+    expect(events.some((event) => event.type === 'automatic')).toBe(true);
+    expect(
+      events.filter((event) => event.type === 'automatic').every((event) =>
+        event.actor === 'system' &&
+        event.beforeHash.length === 64 &&
+        event.afterHash.length === 64 &&
+        event.publicExplanation.length > 0,
+      ),
+    ).toBe(true);
+    expect(record.auditSequence).toBe(events.length);
+
+    const code = host.code;
+    const token = host.sessionToken;
+    await closeAll(...clients.splice(0));
+    await first.close();
+    servers.splice(servers.indexOf(first), 1);
+
+    const second = await boot({ dataDir, registry: registry() });
+    servers.push(second);
+    const restored = second.hub.roomByCode(code)!;
+    expect(restored.started).toBe(true);
+    expect(normalizePresence(restored.state as GameState)).toEqual(normalizePresence(authoritativePendingState));
+    expect(second.store.loadAuditEvents(record.gameId)).toEqual(events);
+    expect(replayPersistedGame(deadOfWinter, record, events)).toBeDefined();
+
+    const hostBack = await TestClient.connect(second.wsUrl);
+    clients.push(hostBack);
+    hostBack.send({ t: 'rejoin', sessionToken: token });
+    expect((await hostBack.wait('welcome')).playerId).toBe(host.playerId);
+    const restoredView = await hostBack.waitAnyState<GameState>();
+    expect(restoredView.state.pendingChoices).toEqual(pendingState.pendingChoices);
+    expect(restoredView.state.effectStack).toEqual(pendingState.effectStack);
+
+    const choice = restoredView.state.pendingChoices[0]!;
+    const option = choice.options.find((candidate) => candidate.legal)!;
+    hostBack.clear();
+    hostBack.send({
+      t: 'action',
+      action: { type: 'resolveChoice', choiceId: choice.id, optionIds: [option.id] },
+    });
+    const settled = await hostBack.waitState<GameState>(
+      (state) => state.pendingChoices.length === 0 && state.effectStack.length === 0,
+    );
+    expect(settled.state.survivors[survivorId]?.equipped).toContain(toolbox);
+    expect(settled.state.log.length).toBeGreaterThan(equipped.state.log.length);
   });
 });

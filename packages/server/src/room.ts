@@ -27,6 +27,7 @@ import type {
 } from './persistence/types.js';
 import type { Connection } from './wire.js';
 import { CLOSE } from './wire.js';
+import { hashReplayState } from './persistence/replay.js';
 
 /** The `chat` variant of the outbound union, named for readability. */
 type ChatMessageOut = { t: 'chat'; from: PlayerId; name: string; text: string; at: number };
@@ -65,6 +66,8 @@ export class GameRoom {
   private auditSequence: number;
   /** Legacy snapshots have no complete setup event and remain snapshot-only. */
   private auditEnabled: boolean;
+  /** State at the last replay checkpoint, excluding live presence changes. */
+  private auditState: unknown | null;
   private disposed = false;
 
   constructor(
@@ -84,6 +87,7 @@ export class GameRoom {
     this.updatedAt = record.updatedAt;
     this.auditSequence = record.auditSequence ?? 0;
     this.auditEnabled = record.auditSequence !== undefined;
+    this.auditState = this.auditEnabled && record.state != null ? structuredClone(record.state) : null;
     // A freshly built room has no sockets attached. Doing this here is what
     // makes "everyone is offline after a restart" true the instant the server
     // boots, rather than only after the first broadcast.
@@ -473,12 +477,17 @@ export class GameRoom {
     this.state = state;
     this.started = true;
     this.auditEnabled = true;
+    this.auditState = structuredClone(state);
     this.pendingAudit.push({
       type: 'start',
       at: startedAt,
       hostId: this.hostId,
       settings: structuredClone(this.settings),
       seats: structuredClone(this.seats),
+      afterHash: hashReplayState(this.auditState),
+      actor: 'system',
+      trigger: 'game-start',
+      publicExplanation: 'Game setup resolved its automatic steps and is waiting for player choices.',
     });
     this.syncPresence();
     this.deps.logger.info('Game started', {
@@ -508,11 +517,31 @@ export class GameRoom {
     const chosen = connected ?? bySeniority[0];
     if (!chosen) return null;
     const changedAt = Date.now();
+    const auditBefore = this.auditState;
+    const auditBeforeHash = auditBefore == null ? undefined : hashReplayState(auditBefore);
     this.hostId = chosen.playerId;
     if (this.state != null && this.plugin.applyHostChange) {
       try {
         this.state = this.plugin.applyHostChange(this.state as never, chosen.playerId, changedAt);
-        this.pendingAudit.push({ type: 'hostChange', at: changedAt, hostId: chosen.playerId });
+        const auditAfter =
+          auditBefore == null
+            ? null
+            : this.plugin.applyHostChange(structuredClone(auditBefore) as never, chosen.playerId, changedAt);
+        this.auditState = auditAfter;
+        this.pendingAudit.push({
+          type: 'hostChange',
+          at: changedAt,
+          hostId: chosen.playerId,
+          ...(auditBeforeHash !== undefined && auditAfter !== null
+            ? {
+                actor: departingId,
+                trigger: 'host-left',
+                beforeHash: auditBeforeHash,
+                afterHash: hashReplayState(auditAfter),
+                publicExplanation: `${chosen.name} is now the host.`,
+              }
+            : {}),
+        });
       } catch (err) {
         this.deps.logger.error('applyHostChange threw; the table may be stranded', {
           gameId: this.gameId,
@@ -568,8 +597,19 @@ export class GameRoom {
 
     const appliedAt = Date.now();
     let next: unknown;
+    let auditBefore: unknown | null = null;
+    let auditNext: unknown | null = null;
     try {
       next = this.plugin.applyAction(state, playerId, action, appliedAt);
+      if (this.auditEnabled) {
+        auditBefore = this.auditState ?? structuredClone(state);
+        auditNext = this.plugin.applyAction(
+          structuredClone(auditBefore) as never,
+          playerId,
+          action,
+          appliedAt,
+        );
+      }
     } catch (err) {
       this.deps.logger.error('Game threw while applying an action', {
         gameId: this.gameId,
@@ -581,12 +621,41 @@ export class GameRoom {
     }
 
     this.state = next;
-    this.pendingAudit.push({
-      type: 'action',
-      at: appliedAt,
-      playerId,
-      action: structuredClone(action),
-    });
+    if (this.auditEnabled && auditBefore !== null && auditNext !== null) {
+      const beforeHash = hashReplayState(auditBefore);
+      const afterHash = hashReplayState(auditNext);
+      this.auditState = auditNext;
+      this.pendingAudit.push({
+        type: 'action',
+        at: appliedAt,
+        playerId,
+        action: structuredClone(action),
+        actor: playerId,
+        trigger: 'player-action',
+        beforeHash,
+        afterHash,
+        publicExplanation: 'A player action was validated and resolved by the authoritative rules engine.',
+      });
+      if (beforeHash !== afterHash) {
+        this.pendingAudit.push({
+          type: 'automatic',
+          at: appliedAt,
+          actor: 'system',
+          trigger: 'action-settled',
+          beforeHash,
+          afterHash,
+          publicExplanation:
+            'The rules engine resolved the action and all automatic consequences before play continued.',
+        });
+      }
+    } else {
+      this.pendingAudit.push({
+        type: 'action',
+        at: appliedAt,
+        playerId,
+        action: structuredClone(action),
+      });
+    }
     this.syncPresence();
     return done;
   }

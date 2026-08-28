@@ -19,6 +19,7 @@ import path from 'node:path';
 import type { DatabaseSync as DatabaseSyncType } from 'node:sqlite';
 import {
   type AccountRecord,
+  type AuditActor,
   type AuthSessionRecord,
   LEGACY_GAME_KEY,
   type GameAuditEvent,
@@ -99,6 +100,11 @@ CREATE TABLE IF NOT EXISTS audit_events (
   settings  TEXT,
   seats     TEXT,
   action    TEXT,
+  actor     TEXT,
+  triggerName TEXT,
+  beforeHash TEXT,
+  afterHash TEXT,
+  publicExplanation TEXT,
   PRIMARY KEY (gameId, sequence)
 );
 CREATE INDEX IF NOT EXISTS idx_audit_events_game ON audit_events(gameId, sequence);
@@ -155,6 +161,11 @@ interface AuditRow {
   settings: string | null;
   seats: string | null;
   action: string | null;
+  actor: string | null;
+  triggerName: string | null;
+  beforeHash: string | null;
+  afterHash: string | null;
+  publicExplanation: string | null;
 }
 
 export class SqliteGameStore implements GameStore {
@@ -216,6 +227,22 @@ export class SqliteGameStore implements GameStore {
     }
     // Safe to run every boot, and it must come after the ALTER above.
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_games_key ON games(gameKey)');
+
+    const auditColumns = new Set(
+      (this.db.prepare('PRAGMA table_info(audit_events)').all() as unknown as { name: string }[]).map(
+        (c) => c.name,
+      ),
+    );
+    const additions: Array<[string, string]> = [
+      ['actor', 'TEXT'],
+      ['triggerName', 'TEXT'],
+      ['beforeHash', 'TEXT'],
+      ['afterHash', 'TEXT'],
+      ['publicExplanation', 'TEXT'],
+    ];
+    for (const [name, definition] of additions) {
+      if (!auditColumns.has(name)) this.db.exec(`ALTER TABLE audit_events ADD COLUMN ${name} ${definition}`);
+    }
   }
 
   loadGames(): PersistedGame[] {
@@ -297,10 +324,27 @@ export class SqliteGameStore implements GameStore {
         const playerId = event.type === 'action' ? event.playerId : null;
         this.db
           .prepare(
-            `INSERT INTO audit_events (gameId, sequence, type, at, hostId, playerId, settings, seats, action)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO audit_events
+             (gameId, sequence, type, at, hostId, playerId, settings, seats, action,
+              actor, triggerName, beforeHash, afterHash, publicExplanation)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
-          .run(game.gameId, sequence, event.type, event.at, hostId, playerId, settings, seats, action);
+          .run(
+            game.gameId,
+            sequence,
+            event.type,
+            event.at,
+            hostId,
+            playerId,
+            settings,
+            seats,
+            action,
+            'actor' in event ? event.actor ?? null : null,
+            'trigger' in event ? event.trigger ?? null : null,
+            'beforeHash' in event ? event.beforeHash ?? null : null,
+            'afterHash' in event ? event.afterHash ?? null : null,
+            'publicExplanation' in event ? event.publicExplanation ?? null : null,
+          );
       }
       this.writeGame(game);
       this.db.exec('COMMIT');
@@ -325,6 +369,13 @@ export class SqliteGameStore implements GameStore {
       .prepare('SELECT * FROM audit_events WHERE gameId = ? ORDER BY sequence')
       .all(gameId) as unknown as AuditRow[];
     return rows.map((row) => {
+      const metadata = {
+        ...(row.actor !== null ? { actor: row.actor as AuditActor } : {}),
+        ...(row.triggerName !== null ? { trigger: row.triggerName } : {}),
+        ...(row.beforeHash !== null ? { beforeHash: row.beforeHash } : {}),
+        ...(row.afterHash !== null ? { afterHash: row.afterHash } : {}),
+        ...(row.publicExplanation !== null ? { publicExplanation: row.publicExplanation } : {}),
+      };
       if (row.type === 'start' && row.hostId && row.settings && row.seats) {
         return {
           sequence: row.sequence,
@@ -333,6 +384,7 @@ export class SqliteGameStore implements GameStore {
           hostId: row.hostId,
           settings: JSON.parse(row.settings),
           seats: JSON.parse(row.seats),
+          ...metadata,
         };
       }
       if (row.type === 'action' && row.playerId && row.action) {
@@ -342,10 +394,30 @@ export class SqliteGameStore implements GameStore {
           at: row.at,
           playerId: row.playerId,
           action: JSON.parse(row.action),
+          ...metadata,
+        };
+      }
+      if (
+        row.type === 'automatic' &&
+        row.actor !== null &&
+        row.triggerName !== null &&
+        row.beforeHash !== null &&
+        row.afterHash !== null &&
+        row.publicExplanation !== null
+      ) {
+        return {
+          sequence: row.sequence,
+          type: 'automatic',
+          at: row.at,
+          actor: row.actor as AuditActor,
+          trigger: row.triggerName,
+          beforeHash: row.beforeHash,
+          afterHash: row.afterHash,
+          publicExplanation: row.publicExplanation,
         };
       }
       if (row.type === 'hostChange' && row.hostId) {
-        return { sequence: row.sequence, type: 'hostChange', at: row.at, hostId: row.hostId };
+        return { sequence: row.sequence, type: 'hostChange', at: row.at, hostId: row.hostId, ...metadata };
       }
       throw new Error(`Corrupt audit event ${gameId}:${row.sequence}`);
     });
@@ -363,10 +435,27 @@ export class SqliteGameStore implements GameStore {
     const playerId = event.type === 'action' ? event.playerId : null;
     this.db
       .prepare(
-        `INSERT INTO audit_events (gameId, sequence, type, at, hostId, playerId, settings, seats, action)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO audit_events
+         (gameId, sequence, type, at, hostId, playerId, settings, seats, action,
+          actor, triggerName, beforeHash, afterHash, publicExplanation)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(gameId, sequence, event.type, event.at, hostId, playerId, settings, seats, action);
+      .run(
+        gameId,
+        sequence,
+        event.type,
+        event.at,
+        hostId,
+        playerId,
+        settings,
+        seats,
+        action,
+        'actor' in event ? event.actor ?? null : null,
+        'trigger' in event ? event.trigger ?? null : null,
+        'beforeHash' in event ? event.beforeHash ?? null : null,
+        'afterHash' in event ? event.afterHash ?? null : null,
+        'publicExplanation' in event ? event.publicExplanation ?? null : null,
+      );
     return { ...structuredClone(event), sequence } as GameAuditEvent;
   }
 

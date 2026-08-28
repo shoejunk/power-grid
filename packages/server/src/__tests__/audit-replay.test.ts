@@ -105,21 +105,28 @@ describe('generic server audit and replay boundary', () => {
         'chat',
       );
       events = first.store.loadAuditEvents(gameId);
-      expect(events).toHaveLength(2);
+      expect(events).toHaveLength(3);
+      expect(events.map((event) => event.type)).toEqual(['start', 'action', 'automatic']);
+      expect(events[2]).toMatchObject({
+        sequence: 3,
+        actor: 'system',
+        trigger: 'action-settled',
+        publicExplanation: expect.any(String),
+      });
 
       // An actual detach/reattach changes presence and must not add a replay event.
       await guest.client.close();
       await host.client.waitLobby((lobby) =>
         lobby.players.some((player) => player.id === guest.playerId && !player.connected),
       );
-      expect(first.store.loadAuditEvents(gameId)).toHaveLength(2);
+      expect(first.store.loadAuditEvents(gameId)).toHaveLength(3);
 
       const guestBack = await TestClient.connect(first.wsUrl);
       clients.push(guestBack);
       guestBack.send({ t: 'rejoin', sessionToken: guest.sessionToken });
       expect((await guestBack.wait('welcome')).playerId).toBe(guest.playerId);
       await guestBack.wait('state');
-      expect(first.store.loadAuditEvents(gameId)).toHaveLength(2);
+      expect(first.store.loadAuditEvents(gameId)).toHaveLength(3);
 
       const actionTwoBefore = Date.now();
       guestBack.clear();
@@ -131,9 +138,9 @@ describe('generic server audit and replay boundary', () => {
       const finalRecord = first.store.loadGames().find((game) => game.gameId === gameId);
       expect(finalRecord).toBeDefined();
       events = first.store.loadAuditEvents(gameId);
-      expect(events.map((event) => event.sequence)).toEqual([1, 2, 3]);
-      expect(events.map((event) => event.type)).toEqual(['start', 'action', 'action']);
-      expect(events).toHaveLength(3);
+      expect(events.map((event) => event.sequence)).toEqual([1, 2, 3, 4, 5]);
+      expect(events.map((event) => event.type)).toEqual(['start', 'action', 'automatic', 'action', 'automatic']);
+      expect(events).toHaveLength(5);
 
       const actionEvents = events.filter(
         (event): event is Extract<GameAuditEvent, { type: 'action' }> => event.type === 'action',
@@ -145,7 +152,7 @@ describe('generic server audit and replay boundary', () => {
         action: actionOne,
       });
       expect(actionEvents[1]).toMatchObject({
-        sequence: 3,
+        sequence: 4,
         playerId: guest.playerId,
         action: actionTwo,
       });
@@ -193,10 +200,10 @@ describe('generic server audit and replay boundary', () => {
       const actionAfterRestartAfter = Date.now();
 
       const continuedEvents = second.store.loadAuditEvents(gameId);
-      expect(continuedEvents.map((event) => event.sequence)).toEqual([1, 2, 3, 4]);
-      const continuedAction = continuedEvents[3];
+      expect(continuedEvents.map((event) => event.sequence)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+      const continuedAction = continuedEvents[5];
       expect(continuedAction).toMatchObject({
-        sequence: 4,
+        sequence: 6,
         type: 'action',
         playerId: host.playerId,
         action: actionAfterRestart,
