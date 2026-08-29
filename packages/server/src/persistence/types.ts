@@ -53,6 +53,10 @@ export type AuditActor = PlayerId | 'system';
 export interface AuditTransitionMetadata {
   actor: AuditActor;
   trigger: string;
+  /** Full private authoritative checkpoint before this transition. */
+  beforeState?: unknown;
+  /** Full private authoritative checkpoint after this transition. */
+  afterState?: unknown;
   beforeHash: string;
   afterHash: string;
   /** Safe to show in a public audit projection; never contains card ids. */
@@ -76,6 +80,8 @@ export type GameAuditEvent =
       seats: Seat[];
       /** Optional on legacy streams written before replay checkpoints. */
       afterHash?: string;
+      /** Optional on legacy streams written before replay checkpoints. */
+      afterState?: unknown;
       actor?: AuditActor;
       trigger?: string;
       publicExplanation?: string;
@@ -89,6 +95,9 @@ export type GameAuditEvent =
       /** Optional on legacy streams written before replay checkpoints. */
       beforeHash?: string;
       afterHash?: string;
+      /** Optional on legacy streams written before replay checkpoints. */
+      beforeState?: unknown;
+      afterState?: unknown;
       actor?: AuditActor;
       trigger?: string;
       publicExplanation?: string;
@@ -101,6 +110,9 @@ export type GameAuditEvent =
       /** Optional on legacy streams written before replay checkpoints. */
       beforeHash?: string;
       afterHash?: string;
+      /** Optional on legacy streams written before replay checkpoints. */
+      beforeState?: unknown;
+      afterState?: unknown;
       actor?: AuditActor;
       trigger?: string;
       publicExplanation?: string;

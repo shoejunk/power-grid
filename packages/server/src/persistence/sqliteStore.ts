@@ -104,6 +104,8 @@ CREATE TABLE IF NOT EXISTS audit_events (
   triggerName TEXT,
   beforeHash TEXT,
   afterHash TEXT,
+  beforeState TEXT,
+  afterState TEXT,
   publicExplanation TEXT,
   PRIMARY KEY (gameId, sequence)
 );
@@ -165,6 +167,8 @@ interface AuditRow {
   triggerName: string | null;
   beforeHash: string | null;
   afterHash: string | null;
+  beforeState: string | null;
+  afterState: string | null;
   publicExplanation: string | null;
 }
 
@@ -238,6 +242,8 @@ export class SqliteGameStore implements GameStore {
       ['triggerName', 'TEXT'],
       ['beforeHash', 'TEXT'],
       ['afterHash', 'TEXT'],
+      ['beforeState', 'TEXT'],
+      ['afterState', 'TEXT'],
       ['publicExplanation', 'TEXT'],
     ];
     for (const [name, definition] of additions) {
@@ -326,8 +332,8 @@ export class SqliteGameStore implements GameStore {
           .prepare(
             `INSERT INTO audit_events
              (gameId, sequence, type, at, hostId, playerId, settings, seats, action,
-              actor, triggerName, beforeHash, afterHash, publicExplanation)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              actor, triggerName, beforeHash, afterHash, beforeState, afterState, publicExplanation)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .run(
             game.gameId,
@@ -343,6 +349,8 @@ export class SqliteGameStore implements GameStore {
             'trigger' in event ? event.trigger ?? null : null,
             'beforeHash' in event ? event.beforeHash ?? null : null,
             'afterHash' in event ? event.afterHash ?? null : null,
+            'beforeState' in event && event.beforeState !== undefined ? JSON.stringify(event.beforeState) : null,
+            'afterState' in event && event.afterState !== undefined ? JSON.stringify(event.afterState) : null,
             'publicExplanation' in event ? event.publicExplanation ?? null : null,
           );
       }
@@ -374,6 +382,8 @@ export class SqliteGameStore implements GameStore {
         ...(row.triggerName !== null ? { trigger: row.triggerName } : {}),
         ...(row.beforeHash !== null ? { beforeHash: row.beforeHash } : {}),
         ...(row.afterHash !== null ? { afterHash: row.afterHash } : {}),
+        ...(row.beforeState !== null ? { beforeState: JSON.parse(row.beforeState) } : {}),
+        ...(row.afterState !== null ? { afterState: JSON.parse(row.afterState) } : {}),
         ...(row.publicExplanation !== null ? { publicExplanation: row.publicExplanation } : {}),
       };
       if (row.type === 'start' && row.hostId && row.settings && row.seats) {
@@ -413,6 +423,8 @@ export class SqliteGameStore implements GameStore {
           trigger: row.triggerName,
           beforeHash: row.beforeHash,
           afterHash: row.afterHash,
+          ...(row.beforeState !== null ? { beforeState: JSON.parse(row.beforeState) } : {}),
+          ...(row.afterState !== null ? { afterState: JSON.parse(row.afterState) } : {}),
           publicExplanation: row.publicExplanation,
         };
       }
@@ -437,8 +449,8 @@ export class SqliteGameStore implements GameStore {
       .prepare(
         `INSERT INTO audit_events
          (gameId, sequence, type, at, hostId, playerId, settings, seats, action,
-          actor, triggerName, beforeHash, afterHash, publicExplanation)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          actor, triggerName, beforeHash, afterHash, beforeState, afterState, publicExplanation)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         gameId,
@@ -454,6 +466,8 @@ export class SqliteGameStore implements GameStore {
         'trigger' in event ? event.trigger ?? null : null,
         'beforeHash' in event ? event.beforeHash ?? null : null,
         'afterHash' in event ? event.afterHash ?? null : null,
+        'beforeState' in event && event.beforeState !== undefined ? JSON.stringify(event.beforeState) : null,
+        'afterState' in event && event.afterState !== undefined ? JSON.stringify(event.afterState) : null,
         'publicExplanation' in event ? event.publicExplanation ?? null : null,
       );
     return { ...structuredClone(event), sequence } as GameAuditEvent;

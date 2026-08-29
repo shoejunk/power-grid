@@ -225,7 +225,7 @@ describe('Dead of Winter server audit and replay', () => {
     expect(deadOfWinter.validateAction(actorState, actorId, action).ok).toBe(true);
     actor.client.clear();
     actor.client.send({ t: 'action', action });
-    await actor.client.waitState<GameState>((state) => state.log.length > actorState.log.length);
+    await actor.client.waitAnyState<GameState>();
 
     const finalRecord = second.store.loadGames().find((record) => record.gameId === beforeRestart.gameId)!;
     const finalEvents = second.store.loadAuditEvents(finalRecord.gameId);
@@ -233,16 +233,28 @@ describe('Dead of Winter server audit and replay', () => {
       finalEvents.map((_, index) => index + 1),
     );
     expect(finalEvents[0]?.type).toBe('start');
+    expect(finalEvents[0]?.afterState).toBeDefined();
+    expect(finalEvents[0]?.publicExplanation).toBeTruthy();
     const transitionEvents = finalEvents.slice(1);
     expect(transitionEvents.some((event) => event.type === 'action')).toBe(true);
     expect(transitionEvents.some((event) => event.type === 'automatic')).toBe(true);
     expect(transitionEvents.every((event) => event.type === 'action' || event.type === 'automatic')).toBe(true);
+    expect(
+      transitionEvents.every((event) =>
+        event.beforeState !== undefined &&
+        event.afterState !== undefined &&
+        event.publicExplanation !== undefined &&
+        event.publicExplanation.length > 0,
+      ),
+    ).toBe(true);
     expect(
       transitionEvents.filter((event) => event.type === 'automatic').every((event) =>
         event.actor === 'system' &&
         event.trigger === 'action-settled' &&
         event.beforeHash.length === 64 &&
         event.afterHash.length === 64 &&
+        event.beforeState !== undefined &&
+        event.afterState !== undefined &&
         event.publicExplanation.length > 0,
       ),
     ).toBe(true);
@@ -327,6 +339,8 @@ describe('Dead of Winter server audit and replay', () => {
         event.actor === 'system' &&
         event.beforeHash.length === 64 &&
         event.afterHash.length === 64 &&
+        event.beforeState !== undefined &&
+        event.afterState !== undefined &&
         event.publicExplanation.length > 0,
       ),
     ).toBe(true);

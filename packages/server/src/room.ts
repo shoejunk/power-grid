@@ -44,6 +44,30 @@ export type RoomResult = { ok: true } | { ok: false; code: string; message: stri
 const fail = (code: string, message: string): RoomResult => ({ ok: false, code, message });
 const done: RoomResult = { ok: true };
 
+/**
+ * Extracts the owning game's already-public log messages without teaching the
+ * server any game rules. A game may expose a `log` array in its state; its
+ * message projection is safe to carry into the audit explanation because the
+ * plugin is responsible for making that log public-safe.
+ */
+function publicLogMessages(state: unknown): string[] {
+  if (state === null || typeof state !== 'object') return [];
+  const log = (state as { log?: unknown }).log;
+  if (!Array.isArray(log)) return [];
+  return log.flatMap((entry) => {
+    if (entry === null || typeof entry !== 'object') return [];
+    const message = (entry as { message?: unknown }).message;
+    return typeof message === 'string' && message.trim() !== '' ? [message] : [];
+  });
+}
+
+function publicTransitionExplanation(before: unknown, after: unknown, fallback: string): string {
+  const beforeMessages = publicLogMessages(before);
+  const afterMessages = publicLogMessages(after);
+  const delta = afterMessages.slice(beforeMessages.length);
+  return delta.length > 0 ? delta.join(' ') : fallback;
+}
+
 export class GameRoom {
   readonly gameId: string;
   readonly gameKey: GameKey;
@@ -485,9 +509,14 @@ export class GameRoom {
       settings: structuredClone(this.settings),
       seats: structuredClone(this.seats),
       afterHash: hashReplayState(this.auditState),
+      afterState: structuredClone(this.auditState),
       actor: 'system',
       trigger: 'game-start',
-      publicExplanation: 'Game setup resolved its automatic steps and is waiting for player choices.',
+      publicExplanation: publicTransitionExplanation(
+        null,
+        this.auditState,
+        'Game setup resolved its automatic steps and is waiting for player choices.',
+      ),
     });
     this.syncPresence();
     this.deps.logger.info('Game started', {
@@ -538,7 +567,13 @@ export class GameRoom {
                 trigger: 'host-left',
                 beforeHash: auditBeforeHash,
                 afterHash: hashReplayState(auditAfter),
-                publicExplanation: `${chosen.name} is now the host.`,
+                beforeState: structuredClone(auditBefore),
+                afterState: structuredClone(auditAfter),
+                publicExplanation: publicTransitionExplanation(
+                  auditBefore,
+                  auditAfter,
+                  `${chosen.name} is now the host.`,
+                ),
               }
             : {}),
         });
@@ -634,7 +669,13 @@ export class GameRoom {
         trigger: 'player-action',
         beforeHash,
         afterHash,
-        publicExplanation: 'A player action was validated and resolved by the authoritative rules engine.',
+        beforeState: structuredClone(auditBefore),
+        afterState: structuredClone(auditNext),
+        publicExplanation: publicTransitionExplanation(
+          auditBefore,
+          auditNext,
+          'A player action was validated and resolved by the authoritative rules engine.',
+        ),
       });
       if (beforeHash !== afterHash) {
         this.pendingAudit.push({
@@ -644,8 +685,13 @@ export class GameRoom {
           trigger: 'action-settled',
           beforeHash,
           afterHash,
-          publicExplanation:
+          beforeState: structuredClone(auditBefore),
+          afterState: structuredClone(auditNext),
+          publicExplanation: publicTransitionExplanation(
+            auditBefore,
+            auditNext,
             'The rules engine resolved the action and all automatic consequences before play continued.',
+          ),
         });
       }
     } else {

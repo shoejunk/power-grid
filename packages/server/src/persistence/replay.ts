@@ -41,6 +41,23 @@ function verifyHash(
   }
 }
 
+/** Verifies that a stored private checkpoint is the state it claims to be. */
+function verifySnapshotHash(
+  gameId: string,
+  sequence: number,
+  expected: string | undefined,
+  snapshot: unknown,
+  label: 'before' | 'after',
+): void {
+  if (snapshot === undefined || expected === undefined) return;
+  const actual = hashReplayState(snapshot);
+  if (actual !== expected) {
+    throw new Error(
+      `Audit ${label} snapshot mismatch for ${gameId}:${sequence}: expected ${expected}, got ${actual}`,
+    );
+  }
+}
+
 export function replayPersistedGame(
   plugin: AnyGamePlugin,
   record: PersistedGame,
@@ -83,6 +100,7 @@ export function replayPersistedGame(
   );
 
   verifyHash(record.gameId, start.sequence, start.afterHash, state, 'after');
+  verifySnapshotHash(record.gameId, start.sequence, start.afterHash, start.afterState, 'after');
   let lastTransition: { beforeHash: string; afterHash: string } | null = null;
 
   for (const event of events.slice(1)) {
@@ -101,6 +119,8 @@ export function replayPersistedGame(
       ) {
         throw new Error(`Automatic audit transition mismatch for ${record.gameId}:${event.sequence}`);
       }
+      verifySnapshotHash(record.gameId, event.sequence, event.beforeHash, event.beforeState, 'before');
+      verifySnapshotHash(record.gameId, event.sequence, event.afterHash, event.afterState, 'after');
       verifyHash(record.gameId, event.sequence, event.afterHash, state, 'after');
       continue;
     }
@@ -109,8 +129,10 @@ export function replayPersistedGame(
         throw new Error(`Plugin cannot replay host change for ${record.gameId}`);
       }
       verifyHash(record.gameId, event.sequence, event.beforeHash, state, 'before');
+      verifySnapshotHash(record.gameId, event.sequence, event.beforeHash, event.beforeState, 'before');
       state = plugin.applyHostChange(state as never, event.hostId, event.at);
       verifyHash(record.gameId, event.sequence, event.afterHash, state, 'after');
+      verifySnapshotHash(record.gameId, event.sequence, event.afterHash, event.afterState, 'after');
       if (event.beforeHash !== undefined && event.afterHash !== undefined) {
         lastTransition = { beforeHash: event.beforeHash, afterHash: event.afterHash };
       } else {
@@ -125,12 +147,14 @@ export function replayPersistedGame(
       throw new Error(`Malformed audited action: ${record.gameId}:${event.sequence}`);
     }
     verifyHash(record.gameId, event.sequence, event.beforeHash, state, 'before');
+    verifySnapshotHash(record.gameId, event.sequence, event.beforeHash, event.beforeState, 'before');
     const verdict = plugin.validateAction(state as never, event.playerId, action);
     if (!verdict.ok) {
       throw new Error(`Illegal audited action at ${record.gameId}:${event.sequence}: ${verdict.reason}`);
     }
     state = plugin.applyAction(state as never, event.playerId, action, event.at);
     verifyHash(record.gameId, event.sequence, event.afterHash, state, 'after');
+    verifySnapshotHash(record.gameId, event.sequence, event.afterHash, event.afterState, 'after');
     if (event.beforeHash !== undefined && event.afterHash !== undefined) {
       lastTransition = { beforeHash: event.beforeHash, afterHash: event.afterHash };
     } else {
