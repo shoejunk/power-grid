@@ -8,6 +8,34 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-29 — nightly run 16
+
+**Intent:** stay on the first queue item, `engine-tests`, and attack the two things that have kept it
+FAIL for five consecutive runs, in four bounded units on disjoint files:
+
+1. **A15 audit completeness** — a real deferred-morale checkpoint restart proof, explicit
+   per-automatic-transition before/after snapshots plus a public explanation in the persisted audit
+   stream, and an action-driven random replay proof.
+2. **Content: survivors** — replace the fixture-backed survivor family in `dow-base` with 30 authored
+   original survivors, keeping the ~18 §18-named cards under their real names.
+3. **Content: crises and crossroads** — 20 authored crises and 80 authored crossroads.
+4. **Content: objectives** — 10 dual-sided main objectives, 24 non-betrayal, 10 betrayal and 10 exiled
+   secret objectives.
+
+Units 2–4 together are what lets `BASE_PACK_STATUS.fixtureBackedFamilies` shrink to empty, which is
+the single stated reason both strict A14 critics have been failing the queue item.
+
+**Baseline verified on Linux before any work** (not trusted from `STATE.md`): `npm install` clean,
+all five typechecks OK, Power Grid **231**, Dead of Winter **284**, server **55**. Tree clean at
+`323f89c`, synced with `origin/master`.
+
+Sub-agents own disjoint files, run no git, and loop against their own harsh critics; I integrate,
+run the full suite, and push each green unit on its own.
+
+(in progress)
+
+---
+
 ## 2026-08-28 — nightly run 15
 
 **Intent:** continue the first queue item, `engine-tests`, with two bounded units: (1) prove A15
