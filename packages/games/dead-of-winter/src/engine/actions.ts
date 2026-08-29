@@ -1223,6 +1223,19 @@ function resolveChoice(
         for (const iid of optionIds) discardPlayedCard(state, iid, playerId);
         return;
       }
+      if (choice.data?.['source'] === 'crossroads') {
+        const selected = choice.options.find((option) => option.id === pick);
+        pushLog(state, now, {
+          category: 'crossroads',
+          playerId,
+          message: `${getPlayer(state, playerId).name} chooses ${selected?.label ?? pick} for ${choice.prompt}.`,
+          data: {
+            event: 'crossroadsResolved',
+            cardId: choice.data?.['cardId'],
+            optionId: pick,
+          },
+        });
+      }
       const outcome = choice.outcomes?.[pick];
       if (outcome) {
         const source = choice.data?.['cardId'] as string | undefined;

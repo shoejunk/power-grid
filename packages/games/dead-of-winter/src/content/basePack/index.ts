@@ -2,17 +2,21 @@
  * The authored Dead of Winter base catalog.
  *
  * Content is assembled here so the plugin has one stable, versioned pack to
- * register. This is a development pack, not a retail release: the item decks
- * in this directory are authored test content, while the other card families
- * are explicitly sourced from the engine fixture below. The provenance is
- * exported and surfaced by the public plugin so matching §2.0 counts cannot be
- * mistaken for a licensed, shipping catalog.
+ * register. This remains a development pack, not a retail release: the
+ * authored families in this directory are original content, while the
+ * objectives still awaiting a complete catalog are explicitly sourced from
+ * the engine fixture below. The provenance is exported and surfaced by the
+ * public plugin so matching §2.0 counts cannot be mistaken for a licensed,
+ * shipping catalog.
  */
 
 import { TEST_PACK } from '../testPack.js';
 import type { ContentPack, MainObjectiveDefinition, SecretObjectiveDefinition } from '../schema.js';
+import { BASE_CRISES } from './crises.js';
+import { BASE_CROSSROADS } from './crossroads.js';
 import { BASE_LOCATION_ITEMS } from './itemsLocations.js';
 import { BASE_STARTER_ITEMS } from './itemsStarter.js';
+import { BASE_SURVIVORS } from './survivors.js';
 
 /**
  * This boundary is intentionally non-shipping until the licensed card catalog
@@ -23,28 +27,25 @@ export const BASE_PACK_STATUS = {
   shipping: false,
   kind: 'non-shipping',
   reason:
-    'The licensed base-game catalog is incomplete; the listed card families remain fixture-backed.',
+    'The licensed base-game catalog is incomplete; main and secret objectives remain fixture-backed.',
   fixtureBackedFamilies: [
-    'survivors',
-    'crises',
-    'crossroads',
     'mainObjectives',
     'secretObjectives',
   ],
-  authoredFamilies: ['items'],
+  authoredFamilies: ['items', 'survivors', 'crises', 'crossroads'],
 } as const;
 
 export const BASE_PACK: ContentPack = {
   id: 'dow-base',
-  version: '0.3.0-dev',
+  version: '0.4.0-dev',
   name: 'Dead of Winter Development Pack (Non-shipping)',
   rulesVersion: TEST_PACK.rulesVersion,
   colony: TEST_PACK.colony,
   locations: TEST_PACK.locations,
   exposureDie: TEST_PACK.exposureDie,
-  survivors: TEST_PACK.survivors,
-  crises: TEST_PACK.crises,
-  crossroads: TEST_PACK.crossroads,
+  survivors: BASE_SURVIVORS,
+  crises: BASE_CRISES,
+  crossroads: BASE_CROSSROADS,
   items: [...BASE_STARTER_ITEMS, ...BASE_LOCATION_ITEMS],
   // These authored entries replace fixture placeholders while keeping the
   // manifest count stable. They make the named public-boundary rulings

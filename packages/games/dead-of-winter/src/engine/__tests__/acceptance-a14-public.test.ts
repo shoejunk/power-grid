@@ -108,9 +108,6 @@ describe('A14 §18 through the active Dead of Winter GamePlugin boundary', () =>
       kind: 'non-shipping',
     });
     expect(deadOfWinter.contentStatus.fixtureBackedFamilies).toEqual([
-      'survivors',
-      'crises',
-      'crossroads',
       'mainObjectives',
       'secretObjectives',
     ]);
