@@ -8,6 +8,28 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-29 — nightly run 17
+
+**Intent:** remain on the first non-PASS queue item, `engine-tests`, and take three bounded units
+forward on disjoint files:
+
+1. **A15 audit/replay completeness:** prove deferred-morale restart, action-driven random replay,
+   and explicit before/after plus public-explanation records for each automatic transition.
+2. **A14 survivor catalog:** replace the fixture-backed survivor family in `dow-base` with 30
+   authored, original survivor definitions while preserving the named §18 regression cards.
+3. **A14 crisis/crossroads catalog:** replace those two fixture-backed families with 20 crises and
+   80 authored crossroads cards, with public count and schema controls.
+
+Baseline verified after syncing `master`: all five TypeScript checks passed; Power Grid **231/231**,
+Dead of Winter **284/284**, and server **55/55** passed. The global `npm`/`npx` shims remain broken,
+so the installed Node CLI and local binaries were used after the required commands were attempted.
+No sub-agent has edited files yet; every worker will own a disjoint path, run no Git commands, and
+return to a harsh critic before I integrate and push its green unit.
+
+(in progress)
+
+---
+
 ## 2026-08-29 — nightly run 16
 
 **Intent:** stay on the first queue item, `engine-tests`, and attack the two things that have kept it
