@@ -23,10 +23,45 @@ forward on disjoint files:
 Baseline verified after syncing `master`: all five TypeScript checks passed; Power Grid **231/231**,
 Dead of Winter **284/284**, and server **55/55** passed. The global `npm`/`npx` shims remain broken,
 so the installed Node CLI and local binaries were used after the required commands were attempted.
-No sub-agent has edited files yet; every worker will own a disjoint path, run no Git commands, and
-return to a harsh critic before I integrate and push its green unit.
+Workers owned disjoint paths and ran no Git commands.
 
-(in progress)
+**Landed and pushed:**
+
+- `b496235` (`feat(dow): author base survivor crisis crossroads content`) adds authored 30-survivor,
+  20-crisis, and 80-crossroads families, activates them in `dow-base@0.4.0-dev`, adds catalog schema
+  tests, updates the honest fixture boundary, and logs crossroads resolutions even for no-op `if able`
+  outcomes.
+- `4b7140d` (`feat(dow): persist audit snapshots through restart`) persists full private before/after
+  checkpoints in SQLite, verifies them during plugin replay, derives public explanations from the
+  game's public log, and adds a real WebSocket test that reaches a tied overrun during the deferred
+  Add Zombies morale window, restarts, replays, restores private seat data, and resumes the action.
+
+**Verification:** all five TypeScript checks passed; Power Grid **231/231**, Dead of Winter **297/297**,
+and server **56/56** passed. `git diff --check` passed before the server commit. The required global
+`npm`/`npx` commands were attempted and still fail because their user-prefix shims point to a missing
+CLI; the installed Node npm CLI and local `.bin` tools produced the green results. No package-lock or
+other dependency files are tracked as part of this run.
+
+**Critic verdicts:** Locke's strict survivor-slice critic **PASSed**: 30 unique authored cards, the
+named §18 identities preserved, and 28 executable abilities with no placeholders. Lovelace's strict
+crisis/crossroads critic **PASSed**: 20 crises and 80 crossroads with valid triggers/outcomes and no
+placeholder/no-op content. The A15 worker did not return a verdict and was shut down after leaving a
+partial patch; the parent repaired and verified the unit, so no independent A15 PASS is claimed. The
+full test suites are green, but no visual/Wingspan critic, browser screenshot sweep, or full
+multiplayer judge was run.
+
+**State changes:** the active pack now has authored survivors, crises, crossroads, and items; only
+main and secret objectives remain fixture-backed and `BASE_PACK_STATUS` remains explicitly
+non-shipping. A15 now has runtime evidence for deferred morale, private checkpoint persistence,
+per-transition audit explanations, deterministic replay, and session-token resumption. The queue
+remains on `engine-tests` because the A14 content boundary is not complete and independent strict
+sign-off is absent.
+
+**Next run should do first:** replace the fixture-backed main and secret objective families with the
+remaining authored catalog and tests, then rerun the strict A14 boundary. Keep the A15 runtime proof
+and audit snapshots intact; after that, begin the required client/browser visual and multiplayer proof
+work. Do not claim AAA completion: visual, motion, UX, Wingspan comparison, and full browser
+multiplayer evidence remain unassessed.
 
 ---
 

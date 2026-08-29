@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-08-28** (nightly run 15: A15 restart proof and A14 public controls)
+Last updated: **2026-08-29** (nightly run 17: authored A14 families and deferred-morale audit proof)
 
 ---
 
@@ -30,13 +30,13 @@ When that holds, write `.dow-agent/.aaa-complete` and disable the routine.
 ## Current focus
 
 **Workstream: `engine-tests`** — still the first non-PASS item in the queue and the bottleneck.
-Run 15 pushed `0d61097` (real Dead of Winter WebSocket + SQLite pending-effect restart proof and
-append-only audit metadata) and `3852ae1` (explicit non-shipping content boundary plus Old Divisions,
-Hoarder, and Hunger public controls). The real pending-effect restart test and all current public A14
-tests are green, but the independent strict critics still FAIL the queue item: A15 has no deferred-
-morale restart proof, per-transition automatic audit snapshots/explanations, or action-driven random
-replay evidence; A14's active pack remains fixture-backed and explicitly non-shipping. No UI, visual,
-or Wingspan comparison work was attempted.
+Run 17 pushed `b496235` (authored survivor, crisis, and crossroads families) and `4b7140d` (full
+audit checkpoints plus a real deferred-morale WebSocket/SQLite restart test). The targeted A15 gaps
+now have green runtime tests: a tied overrun pauses with `deferMoraleCheck`, survives restart and
+replay, restores the private seat, and resumes; action/automatic audit entries retain before/after
+snapshots and public explanations. The active pack is still explicitly non-shipping because main and
+secret objectives remain fixture-backed, so the queue stays here until that A14 boundary is closed and
+an independent strict review agrees. No UI, visual, or Wingspan comparison work was attempted.
 
 ## Scorecard
 
@@ -44,11 +44,11 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 
 | Discipline | State | Notes |
 | --- | --- | --- |
-| Platform / multiplayer plumbing | **PASS** | 55 server tests green; game-agnostic boundary audited |
+| Platform / multiplayer plumbing | **PASS** | 56 server tests green; game-agnostic boundary audited |
 | Power Grid (regression guard) | **PASS** | 231 engine tests green; must never go red |
 | DoW engine — code exists | **PASS** | ~5,400 lines under `engine/`; plugin implements the full `GamePlugin` contract |
-| DoW engine — tested | **PARTIAL** | 284 tests pass. Real pending-effect restart and public A14 controls are green; strict A14/A15 evidence still fails |
-| DoW content pack | **PARTIAL** | Live plugin uses `dow-base` v0.3.0-dev and explicitly reports non-shipping; survivors, crises, crossroads, and most objectives remain fixture-derived |
+| DoW engine — tested | **PARTIAL** | 297 tests pass. Deferred-morale restart, audit checkpoints, replay, redaction, and public A14 controls are green; independent strict sign-off is pending |
+| DoW content pack | **PARTIAL** | Live plugin uses `dow-base` v0.4.0-dev and explicitly reports non-shipping; survivors, crises, and crossroads are authored, while main and secret objectives remain fixture-backed |
 | DoW client UI — exists | **PASS** | Run 4 landed the match screen (`packages/client/src/games/dead-of-winter/`) |
 | DoW client UI — judged | **PARTIAL** | Live 1280×720 screenshot verified named chips, setup previews and survivor detail modal; no Wingspan blind critic pass yet |
 | DoW art | **PARTIAL** | 30 cohesive generated survivor portraits shipped; item/card/board/zombie art and a full visual critic pass remain |
@@ -72,22 +72,22 @@ Windows on 2026-08-27. The exact green source commits are `0491c9b` and `3a43b5d
 | Client | `npx tsc -p packages/client/tsconfig.json --noEmit` | OK |
 | Client production build | `npm run build -w @tt/client` | OK |
 | Power Grid tests | `npm test -w @game/power-grid` | 231 passed |
-| Server tests | `npx vitest run --root packages/server` | 55 passed |
-| DoW tests | `npm test -w @game/dead-of-winter` | 284 passed |
+| Server tests | `npx vitest run --root packages/server` | 56 passed |
+| DoW tests | `npm test -w @game/dead-of-winter` | 297 passed |
 
 ## Queue — next workstreams, in dependency order
 
-1. **`engine-tests`** — add a real deferred-morale checkpoint/restart proof, record one auditable
-   before/after snapshot and public explanation per automatic transition, and prove replay of
-   action-driven randomness. Then replace A14 fixture families and complete the remaining public
+1. **`engine-tests`** — retain the new deferred-morale checkpoint/restart, per-transition snapshot,
+   public-explanation, and action-driven replay proofs while completing the remaining A14 public
    boundary evidence. Engine replay, whole-view redaction, session-token reconnection, the real
-   pending-effect restart, and the 20-test public A14 slice are green; the strict A14/A15 critics
-   still FAIL the full criteria.
+   pending-effect restart, and the 20-test public A14 slice are green; the active objectives are
+   still fixture-backed and strict independent sign-off is not recorded.
 2. **`content-pack`** — the shipping catalog at the §2.0 counts: 30 survivors, 25 starter items,
    6×20 location items, 20 crisis, 80 crossroads, 10 dual-sided main objectives, 24 non-betrayal +
    10 betrayal + 10 exiled secret objectives. **Original names and text** — the retail card text is
    not reproduced. The ~18 cards named in §18 keep their real names so those regression tests mean
-   something. Until this exists the shipped game is played with `testPack`.
+   something. Survivors, items, crises, and crossroads are now authored in `dow-base`; objectives
+   remain fixture-backed until this workstream is complete.
 3. **`client-ui`** — exists as of run 4 but unjudged. The next visual run does not start from
    nothing: it starts from `packages/client/src/games/dead-of-winter/` and a first critic pass.
 4. **`art`** — survivor portraits, item cards, zombies, board, tokens. Follow the procedural art
@@ -101,8 +101,8 @@ Windows on 2026-08-27. The exact green source commits are `0491c9b` and `3a43b5d
 - **Runs keep dying mid-night with unpushed work.** Runs 1, 2, 3 and 4 were all killed before
   writing their PROGRESS result; three of them lost their declared workstream entirely. Push each
   unit of work on its own the moment its tests are green. Do not batch.
-- **The shipped game uses the engine's test fixture as its content.** `testPack` is a fixture, not
-  a catalog. Anything judged about gameplay depth today is judging the fixture.
+- **The shipped game still uses fixture content for the main and secret objective families.**
+  `testPack` is a fixture, not a catalog; the live `dow-base` pack is still explicitly non-shipping.
 - The six executable errata survivor fixtures retain their regression-oriented engine values; their
   original occupations are now shown. Two newly named influence values remain deliberate tie
   sentinels for the setup regression; the other newly named cards use the base-game roster stats.
@@ -110,13 +110,12 @@ Windows on 2026-08-27. The exact green source commits are `0491c9b` and `3a43b5d
   the remaining retail card families are not yet a shipping catalog.
 - **The execution environment varies between Linux and Windows.** Anything platform-specific can
   silently make a whole run a no-op. Run the baseline before believing any claim in this file.
-- **Run 15 strict-review debts:** the public A14 suite is green at 20/20 and covers every named §18
-  ruling, but full retail compliance still FAILs because `BASE_PACK` is explicitly non-shipping and
-  remains fixture-backed for survivors, crises, crossroads, and most objectives. A15's real pending-
-  effect WebSocket/SQLite restart proof passes, but there is no deferred-morale restart proof, no
-  per-transition full before/after audit evidence or public explanation, and no action-driven random
-  replay proof. The strict critics also require stronger runtime redaction/replay evidence before A15
-  can be marked PASS.
+- **Run 17 strict-review debts:** the public A14 suite is green at 20/20 and the authored catalog now
+  covers survivors, crises, crossroads, and items, but full retail compliance still FAILs because
+  `BASE_PACK` is explicitly non-shipping and main/secret objectives remain fixture-backed. A15 now
+  has a real deferred-morale WebSocket/SQLite restart proof, full private checkpoint persistence,
+  per-transition public explanations, and action-driven replay evidence; an independent strict
+  critic has not yet recorded a final PASS for the new evidence.
 - **Windows package-manager environment:** the global `npm`/`npx` shims resolve a missing user-prefix
   CLI, and the user npm config forces `os=linux` on this Windows checkout. This run used the installed
   Node npm CLI directly and a one-run `--os=win32 --package-lock=false` optional-binary install; no
