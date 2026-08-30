@@ -5,10 +5,10 @@ This directory is the **shipping catalog** — the thing the game is actually pl
 
 ## Why this exists
 
-`testPack.ts` meets the §2.0 counts but 73 of its 80 crossroads are "Quiet Moment N — Nothing
-happens", all 120 location items are `noop` cards named "police-station find 7", and every crisis
-and secret objective is a generated placeholder. Acceptance criterion A14 cannot pass while the
-active pack is a fixture, and no visual or UX critic can judge a board covered in placeholder text.
+`testPack.ts` meets the §2.0 counts but remains an engine fixture: its 73 "Quiet Moment" crossroads,
+120 `noop` location items, and generated objective records exist only to make reducer tests compact.
+The active pack in this directory must never fall back to those fixture families, because no visual or
+UX critic can judge a board covered in placeholder text.
 
 ## The two hard rules
 

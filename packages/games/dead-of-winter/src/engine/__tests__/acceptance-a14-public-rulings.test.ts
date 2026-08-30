@@ -273,7 +273,7 @@ function publicOldDivisionsWithContribution(): GameState {
     const seed = `A14-PUBLIC-RULINGS-old-divisions-removal-${attempt}`;
     const gameSettings = settings({
       playerCount: 4,
-      mainObjectiveId: 'mo-old-divisions-public',
+      mainObjectiveId: 'mo-winter-ward',
       includeBetrayalObjective: false,
     });
     const initial = deadOfWinter.createGame(
@@ -477,7 +477,7 @@ describe('A14 §18.1 through the public Dead of Winter plugin', () => {
       label: 'old-divisions-public-trigger',
       patch: {
         playerCount: 4,
-        mainObjectiveId: 'mo-old-divisions-public',
+        mainObjectiveId: 'mo-winter-ward',
         includeBetrayalObjective: false,
       },
       check: (candidate) =>
@@ -563,7 +563,7 @@ describe('A14 §18.2 objective semantics through public actions', () => {
       label: 'hoarder-strict-most-public',
       patch: { playerCount: 4, mainObjectiveId: 'mo-stockpile' },
       preferredSurvivors: ['sv-arthur-thurston', 'sv-loretta-clay'],
-      p1SecretObjective: 'so-n1',
+      p1SecretObjective: 'so-hoarder',
       safeMoveCount: 1,
     });
     const searched = searchOnePublicCard(state, P1);
@@ -575,7 +575,7 @@ describe('A14 §18.2 objective semantics through public actions', () => {
     const p1Result = state.outcome!.results.find((result) => result.playerId === P1);
     expect(state.players[P1]!.hand).toHaveLength(6);
     expect(state.seating.filter((playerId) => state.players[playerId]!.hand.length >= 6)).toEqual([P1]);
-    expect(p1Result).toMatchObject({ secretObjectiveIds: ['so-n1'], objectiveComplete: true, won: true });
+    expect(p1Result).toMatchObject({ secretObjectiveIds: ['so-hoarder'], objectiveComplete: true, won: true });
   });
 
   it('Hoarder fails when a public end check leaves two players tied for most cards', () => {
@@ -583,9 +583,9 @@ describe('A14 §18.2 objective semantics through public actions', () => {
       label: 'hoarder-tie-fails',
       patch: {
         playerCount: 4,
-        mainObjectiveId: 'mo-old-divisions-public',
+        mainObjectiveId: 'mo-winter-ward',
       },
-      p1SecretObjective: 'so-n1',
+      p1SecretObjective: 'so-hoarder',
       safeMoveCount: 1,
       check: (candidate) => {
         const first = searchOnePublicCard(candidate, P1);
@@ -622,7 +622,7 @@ describe('A14 §18.2 objective semantics through public actions', () => {
     expect(state.players[p2]!.hand).toHaveLength(6);
     expect(tied).toEqual(expect.arrayContaining([P1, p2]));
     expect(tied).toHaveLength(2);
-    expect(p1Result).toMatchObject({ secretObjectiveIds: ['so-n1'], objectiveComplete: false, won: false });
+    expect(p1Result).toMatchObject({ secretObjectiveIds: ['so-hoarder'], objectiveComplete: false, won: false });
   });
 
   it('Hunger counts food cards rather than colony food tokens', () => {

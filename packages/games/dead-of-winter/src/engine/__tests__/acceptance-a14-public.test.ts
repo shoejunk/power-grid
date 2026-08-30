@@ -10,6 +10,7 @@ import type { CreateGameContext, SeatSeed } from '@tt/core';
 import { describe, expect, it } from 'vitest';
 
 import { COLONY } from '../../content/primitives.js';
+import { validateContentPack, validateManifest } from '../../content/validate.js';
 import { ACTIVE_PACK, deadOfWinter } from '../../plugin.js';
 import type { GameAction, GameSettings, GameState, PlayerId } from '../../types.js';
 
@@ -102,16 +103,27 @@ function logEvents(state: GameState, event: string) {
 }
 
 describe('A14 §18 through the active Dead of Winter GamePlugin boundary', () => {
-  it('exposes the incomplete fixture-backed catalog as non-shipping', () => {
+  it('exposes the complete authored catalog through the shipping boundary', () => {
     expect(deadOfWinter.contentStatus).toMatchObject({
-      shipping: false,
-      kind: 'non-shipping',
+      shipping: true,
+      kind: 'authored-development',
     });
-    expect(deadOfWinter.contentStatus.fixtureBackedFamilies).toEqual([
+    expect(deadOfWinter.contentStatus.fixtureBackedFamilies).toEqual([]);
+    expect(deadOfWinter.contentStatus.authoredFamilies).toEqual([
+      'items',
+      'survivors',
+      'crises',
+      'crossroads',
       'mainObjectives',
       'secretObjectives',
     ]);
-    expect(ACTIVE_PACK.pack.name).toMatch(/non-shipping/i);
+    expect(ACTIVE_PACK.pack.name).not.toMatch(/non-shipping|fixture/i);
+    expect(validateContentPack(ACTIVE_PACK.pack).filter((issue) => issue.severity === 'error')).toEqual([]);
+    expect(validateManifest(ACTIVE_PACK.pack)).toEqual([]);
+    expect(ACTIVE_PACK.pack.mainObjectives).toHaveLength(10);
+    expect(ACTIVE_PACK.pack.secretObjectives.filter((objective) => objective.kind === 'nonBetrayal')).toHaveLength(24);
+    expect(ACTIVE_PACK.pack.secretObjectives.filter((objective) => objective.kind === 'betrayal')).toHaveLength(10);
+    expect(ACTIVE_PACK.pack.secretObjectives.filter((objective) => objective.kind === 'exiled')).toHaveLength(10);
   });
 
   it('pins the exact active content pack through public setup and audit state', () => {
