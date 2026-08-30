@@ -28,7 +28,17 @@ accepted. The prior run's A15 runtime evidence remains in scope but is not being
 toolchain. The required global `npm`/`npx` shims still resolve a missing user-prefix CLI; the installed
 npm CLI was attempted for `npm install` but stalled without output and was stopped after a bounded wait.
 
-(in progress)
+**Checkpoint:** pushed `d016044` (`feat(dow): author objective catalogs`) after the main-objective
+critic PASSed, the first secret-objective critic FAILed with five concrete copy/condition-policy
+issues, the owning worker repaired them, and a fresh secret-objective critic PASSed. The parent wired
+both families into `BASE_PACK` at `dow-base@0.5.0-dev`, made the active status explicitly
+`authored-development` with an empty fixture-backed list, and updated public tests to use authored
+semantic ids. Focused objective/boundary tests are **14/14**; the full DoW suite is **308/308**;
+all five TypeScript checks, Power Grid **231/231**, and server **56/56** are green. The strict active-
+pack A14 audit is still running; visual, motion, UX, Wingspan, and full browser multiplayer evidence
+remain unassessed.
+
+(still in progress — strict A14 audit and final handoff)
 
 ---
 
