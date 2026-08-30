@@ -8,6 +8,30 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-30 — nightly run 18
+
+**Intent:** stay on the first non-PASS queue item, `engine-tests`, and take two bounded units to a
+reviewable standard on disjoint files:
+
+1. **A14 main-objective catalog:** replace the fixture-backed main-objective family with 10 authored,
+   original dual-sided objectives and focused catalog controls.
+2. **A14 secret-objective catalog:** replace the fixture-backed non-betrayal, betrayal, and exiled
+   objective families with 24 + 10 + 10 authored objectives and focused count/schema/legality controls.
+
+The parent will integrate both authored families into `BASE_PACK`, tighten the public shipping-boundary
+test, run the full baseline, and only then record whether the strict A14 gate can move. Workers own their
+listed files, run no Git commands, and must send their work through a separate harsh critic before it is
+accepted. The prior run's A15 runtime evidence remains in scope but is not being rewritten tonight.
+
+**Baseline:** master was synchronized at `414b5a8`. All five TypeScript checks passed; Power Grid
+**231/231**, Dead of Winter **297/297**, and server **56/56** passed using the installed local Node
+toolchain. The required global `npm`/`npx` shims still resolve a missing user-prefix CLI; the installed
+npm CLI was attempted for `npm install` but stalled without output and was stopped after a bounded wait.
+
+(in progress)
+
+---
+
 ## 2026-08-29 — nightly run 17
 
 **Intent:** remain on the first non-PASS queue item, `engine-tests`, and take three bounded units
