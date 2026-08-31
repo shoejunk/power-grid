@@ -21,17 +21,47 @@ units to an evidence-backed standard:
    explanations, hidden-data redaction, and random replay. Add a focused regression only if a
    concrete unproven behavior is found.
 
-Workers own disjoint files, run no Git commands, and each review unit must pass a separate harsh
-critic before integration. The parent will run the full baseline and record PASS/FAIL honestly;
-visual, motion, UX, Wingspan, and full-browser multiplayer proof remain out of scope unless both
-strict engine gates are independently passed.
+Workers owned disjoint files and ran no Git commands. The parent integrated only green evidence
+   units, then ran the full baseline and recorded PASS/FAIL honestly. Visual, motion, UX, Wingspan,
+   and full-browser multiplayer proof remain out of scope until the strict engine gates hold.
 
 **Baseline:** after syncing `master`, all five TypeScript checks passed; Power Grid **231/231**,
 Dead of Winter **308/308**, and server **56/56** passed with repository-local binaries. The global
 `npm`/`npx` shims still point to missing user-prefix CLIs, so the mandated commands fail before
 execution; no dependency files were changed.
 
-(in progress)
+**Landed and pushed:**
+
+- `3173608` (`feat(dow): add public samples ruling evidence`) adds a fixture-free public-plugin
+  regression for the introductory `We Need More Samples` setup and mandatory sample-before-exposure
+  ordering.
+- `3d112dd` (`feat(dow): add WebSocket random replay evidence`) adds a real server/WebSocket test
+  that persists a random move, replays it byte-for-byte, verifies RNG/checkpoint hashes and public
+  audit metadata, and rejects a tampered after-hash.
+
+**Verification:** all five TypeScript checks passed; Power Grid **231/231**, Dead of Winter
+**310/310**, server **57/57**, and `git diff --check` passed. The clean tree is synchronized with
+`origin/master`. The required global commands were attempted and failed at their missing user-prefix
+CLIs; local installed binaries supplied the green verification.
+
+**Critic verdicts:** Heisenberg's strict A14 audit **FAILed**: the authored development manifest is
+valid and fixture-free at the active boundary, but public evidence is still missing for Samples
+kill/remove semantics, Raiding Party, several Edward/John/orphan survivor rulings, Outbreak, This
+Taste Funny, movement-trigger timing, Bev Russell, and post-death/re-equip once-per-round state.
+The A15 worker's new test is green, but its separate harsh critic returned no verdict before shutdown;
+the strict A15/N4/U7 gate therefore remains **FAIL/PARTIAL** because current audit metadata is
+action-settled aggregate evidence, not independently demonstrated before/after records for every
+automatic transition. No visual, motion, UX, Wingspan, or full-browser multiplayer critic ran.
+
+**State changes:** DoW tests increased from 308 to 310 and server tests from 56 to 57. The content
+pack remains **PASS only for the authored development boundary**, not a claim of licensed retail
+publication. `engine-tests` remains the first queue item; no completion marker or routine disable was
+created.
+
+**Next run should do first:** add the missing fixture-free public A14 ruling proofs or repair the
+active behavior they expose, then independently close the A15 per-automatic-transition audit gap.
+Do not begin the queued client/visual pass or declare AAA completion until strict A14/A15 reviews
+return evidence-backed PASS verdicts.
 
 ---
 
