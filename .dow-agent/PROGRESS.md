@@ -8,6 +8,33 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-08-31 — nightly run 19
+
+**Intent:** remain on the first non-PASS queue item, `engine-tests`, and take two bounded review
+units to an evidence-backed standard:
+
+1. **Strict A14 active-pack audit:** independently inspect the live `deadOfWinter` plugin boundary,
+   authored `dow-base` manifest, all named §18 regression coverage, and the public running-game
+   controls. Add only the narrowest missing public regression evidence if a concrete gap is found.
+2. **Strict A15 persistence/replay audit:** independently inspect the real WebSocket + SQLite
+   restart/reconnection path, deferred-morale checkpoint, audit before/after snapshots, public
+   explanations, hidden-data redaction, and random replay. Add a focused regression only if a
+   concrete unproven behavior is found.
+
+Workers own disjoint files, run no Git commands, and each review unit must pass a separate harsh
+critic before integration. The parent will run the full baseline and record PASS/FAIL honestly;
+visual, motion, UX, Wingspan, and full-browser multiplayer proof remain out of scope unless both
+strict engine gates are independently passed.
+
+**Baseline:** after syncing `master`, all five TypeScript checks passed; Power Grid **231/231**,
+Dead of Winter **308/308**, and server **56/56** passed with repository-local binaries. The global
+`npm`/`npx` shims still point to missing user-prefix CLIs, so the mandated commands fail before
+execution; no dependency files were changed.
+
+(in progress)
+
+---
+
 ## 2026-08-30 — nightly run 18
 
 **Intent:** stay on the first non-PASS queue item, `engine-tests`, and take two bounded units to a
