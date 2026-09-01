@@ -32,7 +32,38 @@ verdicts.
 binaries. The global `npm`/`npx` shims still point to missing user-prefix CLIs, and the installed
 `npm install` equivalent stalled after 60 seconds; no dependency files were changed.
 
-(in progress)
+**Landed and pushed:**
+
+- `45e3a08` (`feat(dow): record granular automatic audit transitions`) adds the optional plugin audit
+  trace, per-automatic-transition private before/after checkpoints, public explanations, replay-chain
+  verification, and the strict server regression. The real WebSocket/SQLite critic PASSed the bounded
+  granularity slice with distinct `turnEnd`, `crossroadsDrawn`, `turnStart`, and `turn-ready` records.
+- `2ec71d4` (`feat(dow): add public survivor and item ruling proofs`) adds six fixture-free public-plugin
+  tests for Edward White, John Price, survivor timing, and once-per-round item persistence. The bounded
+  critic slice PASSed; orphan-standee reconciliation remains unproven because the public API cannot inject
+  malformed orphan state.
+- `0684ae2` (`feat(dow): add public samples and raiding party proofs`) adds two fixture-free public tests
+  for the Samples removal distinction and authored Raiding Party/Bev Russell option. It also fixes paused
+  effect-choice context propagation and fills the existing authored development-content slots without
+  changing the required manifest counts.
+
+**Verification:** all five TypeScript checks passed; Power Grid **231/231**, Dead of Winter **319/319**,
+server **58/58**, and `git diff --check` passed. `master` is clean and synchronized with `origin/master`.
+The required global npm/npx shims still fail before execution and the installed npm install equivalent
+stalled; repository-local binaries supplied the verification and no dependency files changed.
+
+**Critic verdicts:** Nash's strict A15 audit-granularity review **PASSed** the bounded per-transition
+slice, but full A15/N4/N8 sign-off remains open. Huygens's strict A14 survivor/item review **PASSed**
+its bounded slice, with orphan reconciliation still unproven. Plato's broad crossroads/objective probe
+**FAILed** and was discarded; the parent repaired the Samples/Raiding gaps as the narrower green unit above,
+so there is still no independent full strict A14 PASS. No visual, motion, UX, Wingspan, or full-browser
+multiplayer proof was attempted.
+
+**State changes:** public A14 evidence expanded, Dead of Winter tests rose from **310** to **319**, and
+server tests rose from **57** to **58**. Engine-tests remains **PARTIAL**; content remains authored
+development content rather than a licensed retail pack. The next run should start with the remaining
+strict public A14 movement/Outbreak/This Taste Funny/option-legality/orphan cases or an independent A14
+audit, then continue the full A15 sign-off. Keep visual work deferred until the strict gates hold.
 
 ---
 

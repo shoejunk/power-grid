@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-08-31** (nightly run 19: public Samples and WebSocket random-replay evidence)
+Last updated: **2026-09-01** (nightly run 20: granular audit and public A14 evidence)
 
 ---
 
@@ -33,12 +33,11 @@ When that holds, write `.dow-agent/.aaa-complete` and disable the routine.
 Run 18 pushed `d016044` with authored 10-card main and 44-card secret-objective families, active-pack
 wiring, exact manifest controls, and updated public A14 fixtures. Run 19 pushed `3173608` with a
 public-plugin Samples setup/sample-before-exposure regression and `3d112dd` with a real WebSocket
-random-action replay/hash-tamper regression. The targeted A15 runtime gaps still have green tests: a
-tied overrun pauses with `deferMoraleCheck`, survives restart and replay, restores the private seat,
-and resumes; action/automatic audit entries retain before/after snapshots and public explanations.
-Strict A14 still FAILs because several named §18 rulings are covered only by direct fixture tests;
-strict A15 still lacks an independent PASS for per-automatic-transition audit granularity. No UI,
-visual, or Wingspan comparison work was attempted.
+random-action replay/hash-tamper regression. Run 20 pushed `45e3a08` for per-automatic-transition audit
+granularity, `2ec71d4` for public survivor/item rulings, and `0684ae2` for public Samples removal and
+authored Raiding Party/Bev Russell proofs. The bounded A15 granularity and A14 survivor/item critics
+PASSed, but strict A14 still lacks several public crossroads/ruling proofs and orphan reconciliation;
+full A15/N4/N8 sign-off is also open. No UI, visual, or Wingspan comparison work was attempted.
 
 ## Scorecard
 
@@ -46,10 +45,10 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 
 | Discipline | State | Notes |
 | --- | --- | --- |
-| Platform / multiplayer plumbing | **PASS** | 57 server tests green; game-agnostic boundary audited |
+| Platform / multiplayer plumbing | **PASS** | 58 server tests green; game-agnostic boundary audited |
 | Power Grid (regression guard) | **PASS** | 231 engine tests green; must never go red |
 | DoW engine — code exists | **PASS** | ~5,400 lines under `engine/`; plugin implements the full `GamePlugin` contract |
-| DoW engine — tested | **PARTIAL** | 310 tests pass. Deferred-morale restart, audit checkpoints, random replay, redaction, and public A14 controls are green; strict A14 FAILs on missing public ruling proofs and strict A15 lacks an independent PASS |
+| DoW engine — tested | **PARTIAL** | 319 tests pass. Deferred-morale restart, audit checkpoints, granular automatic traces, random replay, redaction, and public A14 slices are green; strict A14 still lacks public ruling/orphan coverage and strict A15 lacks full independent sign-off |
 | DoW content pack | **PASS** | Live plugin uses authored `dow-base` v0.5.0-dev content at the §2.0 counts; objective-family critics PASSed and the active boundary reports no fixture-backed families. This remains original development content, not reproduced licensed retail text |
 | DoW client UI — exists | **PASS** | Run 4 landed the match screen (`packages/client/src/games/dead-of-winter/`) |
 | DoW client UI — judged | **PARTIAL** | Live 1280×720 screenshot verified named chips, setup previews and survivor detail modal; no Wingspan blind critic pass yet |
@@ -75,16 +74,16 @@ install-generated `package-lock.json` remains intentionally uncommitted.
 | Client | `npx tsc -p packages/client/tsconfig.json --noEmit` | OK |
 | Client production build | `npm run build -w @tt/client` | OK |
 | Power Grid tests | `npm test -w @game/power-grid` | 231 passed |
-| DoW tests | `npm test -w @game/dead-of-winter` | 310 passed |
-| Server tests | `npx vitest run --root packages/server` | 57 passed |
+| DoW tests | `npm test -w @game/dead-of-winter` | 319 passed |
+| Server tests | `npx vitest run --root packages/server` | 58 passed |
 
 ## Queue — next workstreams, in dependency order
 
 1. **`engine-tests`** — retain the deferred-morale checkpoint/restart, per-transition snapshot,
    public-explanation, and action-driven replay proofs while completing strict A14/A15 sign-off.
    Engine replay, whole-view redaction, session-token reconnection, the real pending-effect restart,
-   the public boundary, and the 310-test DoW suite are green; an independent strict product review is
-   not recorded.
+   the public boundary, and the 319-test DoW suite are green; an independent full strict product review
+   is not recorded.
 2. **`content-pack`** — **PASS for the authored development boundary** at the §2.0 counts: 30 survivors, 25 starter items,
    6×20 location items, 20 crisis, 80 crossroads, 10 dual-sided main objectives, 24 non-betrayal +
    10 betrayal + 10 exiled secret objectives. **Original names and text** — the retail card text is
@@ -123,6 +122,12 @@ install-generated `package-lock.json` remains intentionally uncommitted.
   named §18 rulings; A15 has no independent critic PASS and still lacks per-automatic-transition audit
   granularity evidence. Both fresh strict critics were shut down without returning a verdict, so no
   strict gate moved to PASS.
+- **Run 20 strict-review result:** granular automatic audit records now have an independent bounded PASS,
+  and public Edward White, John Price, survivor timing, once-per-round item, Samples removal, and authored
+  Raiding Party/Bev Russell slices are green. A14 remains partial because the broad crossroads/objective
+  probe failed and was discarded, remaining public movement/Outbreak/This Taste Funny/option-legality
+  evidence is incomplete, and orphan reconciliation cannot be driven through the public API. Full A15,
+  N4, and N8 sign-off remains open; visual/browser/Wingspan work was deferred.
 - **Windows package-manager environment:** the global `npm`/`npx` shims resolve a missing user-prefix
   CLI, and the user npm config forces `os=linux` on this Windows checkout. This run used the installed
   Node npm CLI directly and a one-run `--os=win32 --package-lock=false` optional-binary install; no
