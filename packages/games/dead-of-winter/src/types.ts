@@ -313,6 +313,7 @@ export type DeathCause = 'wounds' | 'bite' | 'overrun' | 'effect' | 'frostbite';
 export type InternalEffect =
   | { kind: 'i.beginRound' }
   | { kind: 'i.beginTurn'; playerId: PlayerId }
+  | { kind: 'i.beginTurnEffects'; playerId: PlayerId }
   | { kind: 'i.endTurn' }
   | { kind: 'i.colonyStep'; step: ColonyStep }
   /** One zombie, at one location, obeying §12's cycle/barricade/overrun rules. */

@@ -69,6 +69,35 @@ export function applyAction(
   return next;
 }
 
+/** A settled automatic step captured for the server's immutable audit log. */
+export interface AutomaticTransition {
+  trigger: string;
+  beforeState: GameState;
+  afterState: GameState;
+}
+
+/**
+ * The same reducer as `applyAction`, with the automatic portion exposed at the
+ * engine's existing one-effect-at-a-time boundary. The normal public reducer
+ * remains unchanged; this is an opt-in audit path for the platform server.
+ */
+export function applyActionWithTrace(
+  state: GameState,
+  playerId: PlayerId,
+  action: GameAction,
+  now: number = state.updatedAt,
+): { state: GameState; automaticTransitions: AutomaticTransition[] } {
+  const verdict = validateAction(state, playerId, action);
+  if (!verdict.ok) throw new Error(verdict.reason);
+
+  const next = deepClone(state);
+  next.updatedAt = now;
+  applyValidatedAction(next, now, playerId, action);
+  const automaticTransitions: AutomaticTransition[] = [];
+  advance(next, now, automaticTransitions);
+  return { state: next, automaticTransitions };
+}
+
 /* ------------------------------------------------------------------ *
  * The driver
  * ------------------------------------------------------------------ */
@@ -85,33 +114,60 @@ export function applyAction(
  *  - §10: a crossroads trigger is tested only once the stack is empty, which is
  *    the structural form of "first finish the entire triggering action".
  */
-export function advance(state: GameState, now: number): void {
+export function advance(
+  state: GameState,
+  now: number,
+  automaticTransitions?: AutomaticTransition[],
+): void {
+  let traceCursor = automaticTransitions ? deepClone(state) : null;
+
+  const flushAutomatic = (trigger: string): void => {
+    if (!automaticTransitions || traceCursor === null) return;
+    if (JSON.stringify(traceCursor) === JSON.stringify(state)) return;
+    automaticTransitions.push({
+      trigger,
+      beforeState: traceCursor,
+      afterState: deepClone(state),
+    });
+    traceCursor = deepClone(state);
+  };
+
+  const runAutomatic = (trigger: string, fn: () => boolean): boolean => {
+    if (!automaticTransitions) return fn();
+    const changed = fn();
+    if (changed) flushAutomatic(trigger);
+    return changed;
+  };
+
   for (let guard = 0; guard < 100_000; guard++) {
     if (state.phase === 'gameOver') {
       state.activePlayerId = null;
+      flushAutomatic('game-over');
       return;
     }
 
-    if (checkMoraleZero(state, now)) continue;
+    if (runAutomatic('morale-check', () => checkMoraleZero(state, now))) continue;
 
-    if (stepEffects(state, now)) continue;
+    if (runAutomatic('effect', () => stepEffects(state, now))) continue;
 
     if (state.pendingChoices.length > 0) {
       const head = state.pendingChoices[0]!;
       // A simultaneous decision (a vote) names nobody; the platform reads
       // `allowsOutOfTurn` for those, so the clock stays where it was.
       state.activePlayerId = head.playerId ?? state.activePlayerId;
+      flushAutomatic('awaiting-choice');
       return;
     }
 
     // Dynamic survivor abilities are recomputed only after the preceding
     // action/effect is fully settled, so John Price cannot borrow an ability
     // before arriving and a lethal three-wound move cannot be postponed.
-    if (reconcileSpecialSurvivors(state, now)) continue;
+    if (runAutomatic('survivor-reconciliation', () => reconcileSpecialSurvivors(state, now))) continue;
 
     switch (state.phase) {
       case 'setup':
-        if (advanceSetup(state, now)) continue;
+        if (runAutomatic('setup', () => advanceSetup(state, now))) continue;
+        flushAutomatic('setup-settled');
         return;
 
       case 'playerTurns': {
@@ -120,17 +176,20 @@ export function advance(state: GameState, now: number): void {
           continue;
         }
         // §10: the trigger test happens here and nowhere else.
-        if (checkCrossroadsTrigger(state, now)) continue;
+        if (runAutomatic('crossroads-trigger', () => checkCrossroadsTrigger(state, now))) continue;
         state.activePlayerId = state.turn.playerId;
+        flushAutomatic('turn-ready');
         return;
       }
 
       case 'colony':
         // Colony steps are queued as effects; an empty stack here means the
         // phase finished and `passFirstPlayer` already queued the next round.
+        flushAutomatic('colony-settled');
         return;
 
       default:
+        flushAutomatic('settled');
         return;
     }
   }

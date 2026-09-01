@@ -116,6 +116,14 @@ export function rollActionDice(state: GameState, now: number): void {
  * and the frostbite wound that follows is exactly such an event.
  */
 export function beginTurn(state: GameState, now: number, playerId: PlayerId): void {
+  // Draw is deliberately its own automatic step. The card must be held before
+  // any other beginning-of-turn effect can satisfy its trigger (§6/§10).
+  drawCrossroads(state, now, playerId);
+  unshiftIntoCurrentFrame(state, [{ kind: 'i.beginTurnEffects', playerId }]);
+}
+
+/** Applies the remaining beginning-of-turn effects after the private draw. */
+export function beginTurnEffects(state: GameState, now: number, playerId: PlayerId): void {
   state.activePlayerId = playerId;
   const player = getPlayer(state, playerId);
   player.nominatedThisTurn = false;
@@ -126,8 +134,6 @@ export function beginTurn(state: GameState, now: number, playerId: PlayerId): vo
     survivor.usedThisTurn = [];
   }
   for (const item of Object.values(state.items)) item.usedThisTurn = [];
-
-  drawCrossroads(state, now, playerId);
 
   pushLog(state, now, {
     category: 'turn',

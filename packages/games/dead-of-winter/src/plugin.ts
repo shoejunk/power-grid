@@ -30,6 +30,7 @@ import type { ContentIndex } from './content/schema.js';
 import {
   applyHostChange as engineHostChange,
   applyAction as engineApply,
+  applyActionWithTrace as engineApplyWithTrace,
   createGame as engineCreateGame,
   redactStateFor as engineRedact,
   registerContentPack,
@@ -480,6 +481,7 @@ export const deadOfWinter = Object.assign(
   parseAction,
   validateAction: engineValidate,
   applyAction: (state, playerId, action, now) => engineApply(state, playerId, action, now),
+  auditAction: (state, playerId, action, now) => engineApplyWithTrace(state, playerId, action, now),
 
   createGame,
   activePlayerOf,

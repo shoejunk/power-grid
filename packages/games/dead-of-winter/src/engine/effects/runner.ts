@@ -75,7 +75,7 @@ import {
   resolveOverrun,
   rollNoise,
 } from '../zombies.js';
-import { beginRound, beginTurn, endTurn, moraleCheckpoint, runColonyStep } from '../flow.js';
+import { beginRound, beginTurn, beginTurnEffects, endTurn, moraleCheckpoint, runColonyStep } from '../flow.js';
 import { colonyElectorate, exileElectorate, stepExileRelocation } from '../exile.js';
 import { checkAllEliminated, endGame } from '../endgame.js';
 
@@ -165,6 +165,9 @@ function executeInternal(state: GameState, now: number, effect: InternalEffect):
       return;
     case 'i.beginTurn':
       beginTurn(state, now, effect.playerId);
+      return;
+    case 'i.beginTurnEffects':
+      beginTurnEffects(state, now, effect.playerId);
       return;
     case 'i.endTurn':
       endTurn(state, now);

@@ -250,7 +250,7 @@ describe('Dead of Winter server audit and replay', () => {
     expect(
       transitionEvents.filter((event) => event.type === 'automatic').every((event) =>
         event.actor === 'system' &&
-        event.trigger === 'action-settled' &&
+        event.trigger.length > 0 &&
         event.beforeHash.length === 64 &&
         event.afterHash.length === 64 &&
         event.beforeState !== undefined &&

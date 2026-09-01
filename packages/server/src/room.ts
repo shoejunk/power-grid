@@ -634,16 +634,32 @@ export class GameRoom {
     let next: unknown;
     let auditBefore: unknown | null = null;
     let auditNext: unknown | null = null;
+    let automaticTransitions: ReadonlyArray<{
+      trigger: string;
+      beforeState: unknown;
+      afterState: unknown;
+    }> = [];
     try {
       next = this.plugin.applyAction(state, playerId, action, appliedAt);
       if (this.auditEnabled) {
         auditBefore = this.auditState ?? structuredClone(state);
-        auditNext = this.plugin.applyAction(
-          structuredClone(auditBefore) as never,
-          playerId,
-          action,
-          appliedAt,
-        );
+        if (this.plugin.auditAction) {
+          const traced = this.plugin.auditAction(
+            structuredClone(auditBefore) as never,
+            playerId,
+            action,
+            appliedAt,
+          );
+          auditNext = traced.state;
+          automaticTransitions = traced.automaticTransitions;
+        } else {
+          auditNext = this.plugin.applyAction(
+            structuredClone(auditBefore) as never,
+            playerId,
+            action,
+            appliedAt,
+          );
+        }
       }
     } catch (err) {
       this.deps.logger.error('Game threw while applying an action', {
@@ -677,7 +693,27 @@ export class GameRoom {
           'A player action was validated and resolved by the authoritative rules engine.',
         ),
       });
-      if (beforeHash !== afterHash) {
+      if (automaticTransitions.length > 0) {
+        for (const transition of automaticTransitions) {
+          const transitionBeforeHash = hashReplayState(transition.beforeState);
+          const transitionAfterHash = hashReplayState(transition.afterState);
+          this.pendingAudit.push({
+            type: 'automatic',
+            at: appliedAt,
+            actor: 'system',
+            trigger: transition.trigger,
+            beforeHash: transitionBeforeHash,
+            afterHash: transitionAfterHash,
+            beforeState: structuredClone(transition.beforeState),
+            afterState: structuredClone(transition.afterState),
+            publicExplanation: publicTransitionExplanation(
+              transition.beforeState,
+              transition.afterState,
+              `The rules engine resolved automatic step '${transition.trigger}'.`,
+            ),
+          });
+        }
+      } else if (beforeHash !== afterHash) {
         this.pendingAudit.push({
           type: 'automatic',
           at: appliedAt,

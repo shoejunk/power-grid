@@ -101,28 +101,30 @@ export function replayPersistedGame(
 
   verifyHash(record.gameId, start.sequence, start.afterHash, state, 'after');
   verifySnapshotHash(record.gameId, start.sequence, start.afterHash, start.afterState, 'after');
-  let lastTransition: { beforeHash: string; afterHash: string } | null = null;
+  let priorTransition = false;
+  let pendingAutomaticAfterHash: string | null = null;
 
   for (const event of events.slice(1)) {
     if (event.type === 'automatic') {
-      // applyAction is atomic at the plugin boundary: the returned state already
-      // includes its automatic consequences. This entry is an explicit replay
-      // annotation for that settled transition, not a second application of the
-      // same effects. It must point at the immediately preceding move so a
-      // deleted/reordered annotation cannot silently pass validation.
-      if (lastTransition === null) {
+      // The owning plugin applies a player action atomically, but an audit-aware
+      // plugin may expose the automatic portion as a sequence of checkpoints.
+      // These annotations are not applied a second time during replay; their
+      // private snapshots are verified as a contiguous chain whose final state
+      // must equal the already-settled plugin result.
+      if (!priorTransition) {
         throw new Error(`Automatic audit event has no preceding transition: ${record.gameId}:${event.sequence}`);
       }
-      if (
-        event.beforeHash !== lastTransition.beforeHash ||
-        event.afterHash !== lastTransition.afterHash
-      ) {
-        throw new Error(`Automatic audit transition mismatch for ${record.gameId}:${event.sequence}`);
+      if (pendingAutomaticAfterHash !== null && event.beforeHash !== pendingAutomaticAfterHash) {
+        throw new Error(`Automatic audit checkpoint chain mismatch for ${record.gameId}:${event.sequence}`);
       }
       verifySnapshotHash(record.gameId, event.sequence, event.beforeHash, event.beforeState, 'before');
       verifySnapshotHash(record.gameId, event.sequence, event.afterHash, event.afterState, 'after');
-      verifyHash(record.gameId, event.sequence, event.afterHash, state, 'after');
+      pendingAutomaticAfterHash = event.afterHash;
       continue;
+    }
+    if (pendingAutomaticAfterHash !== null) {
+      verifyHash(record.gameId, event.sequence - 1, pendingAutomaticAfterHash, state, 'after');
+      pendingAutomaticAfterHash = null;
     }
     if (event.type === 'hostChange') {
       if (!plugin.applyHostChange) {
@@ -133,11 +135,7 @@ export function replayPersistedGame(
       state = plugin.applyHostChange(state as never, event.hostId, event.at);
       verifyHash(record.gameId, event.sequence, event.afterHash, state, 'after');
       verifySnapshotHash(record.gameId, event.sequence, event.afterHash, event.afterState, 'after');
-      if (event.beforeHash !== undefined && event.afterHash !== undefined) {
-        lastTransition = { beforeHash: event.beforeHash, afterHash: event.afterHash };
-      } else {
-        lastTransition = null;
-      }
+      priorTransition = event.beforeHash !== undefined && event.afterHash !== undefined;
       continue;
     }
     if (event.type !== 'action') throw new Error(`Unexpected setup event: ${record.gameId}:${event.sequence}`);
@@ -155,11 +153,10 @@ export function replayPersistedGame(
     state = plugin.applyAction(state as never, event.playerId, action, event.at);
     verifyHash(record.gameId, event.sequence, event.afterHash, state, 'after');
     verifySnapshotHash(record.gameId, event.sequence, event.afterHash, event.afterState, 'after');
-    if (event.beforeHash !== undefined && event.afterHash !== undefined) {
-      lastTransition = { beforeHash: event.beforeHash, afterHash: event.afterHash };
-    } else {
-      lastTransition = null;
-    }
+    priorTransition = event.beforeHash !== undefined && event.afterHash !== undefined;
+  }
+  if (pendingAutomaticAfterHash !== null) {
+    verifyHash(record.gameId, events.at(-1)?.sequence ?? 0, pendingAutomaticAfterHash, state, 'after');
   }
   return state;
 }

@@ -269,7 +269,7 @@ describe('Dead of Winter deferred morale persistence', () => {
     expect(
       eventsBefore.filter((event) => event.type === 'automatic').some((event) =>
         event.actor === 'system' &&
-        event.trigger === 'action-settled' &&
+        event.trigger.length > 0 &&
         event.beforeState !== undefined &&
         event.afterState !== undefined &&
         event.publicExplanation.length > 0,

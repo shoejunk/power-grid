@@ -132,6 +132,21 @@ export interface GamePlugin<
    */
   applyAction(state: TState, playerId: PlayerId, action: TAction, now: number): TState;
 
+  /**
+   * Optional audit-aware reducer. The returned transitions are the individual
+   * automatic steps that happened after the player action, each with its own
+   * private checkpoint. The server may persist these without knowing the
+   * owning game's rules or state shape.
+   */
+  auditAction?(state: TState, playerId: PlayerId, action: TAction, now: number): {
+    state: TState;
+    automaticTransitions: ReadonlyArray<{
+      trigger: string;
+      beforeState: TState;
+      afterState: TState;
+    }>;
+  };
+
   /* -- lifecycle --------------------------------------------------- */
 
   /** Builds a fully set-up state from finalised settings and seats. */
