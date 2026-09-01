@@ -146,6 +146,19 @@ describe('dow-base crossroads catalog', () => {
     }
   });
 
+  it('retains the Bev Russell option used by the authored Raiding Party objective', () => {
+    expect(BASE_CROSSROADS.find((card) => card.name === 'Bev Russell')).toMatchObject({
+      id: 'xr-f73',
+      trigger: { event: 'moveCompleted', destination: 'any' },
+      options: [
+        expect.objectContaining({
+          id: 'raiding-party',
+          outcome: { kind: 'adjustCounter', counter: 'bevRussellOptions', amount: 1 },
+        }),
+      ],
+    });
+  });
+
   it('has varied executable triggers, public choices, and non-placeholder copy', () => {
     const triggerEvents = new Set([
       'turnStart',

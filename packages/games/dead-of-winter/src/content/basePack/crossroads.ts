@@ -1082,12 +1082,15 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
   },
   {
     id: 'xr-f73',
-    name: 'First Light Inventory',
-    story: 'The round closes with first light on the inventory board and one final line waiting for a number.',
-    trigger: { event: 'roundEnd' },
+    name: 'Bev Russell',
+    story: 'Bev Russell returns from the edge of the colony with one more decision for the raiding party.',
+    trigger: { event: 'moveCompleted', destination: 'any' },
     options: [
-      { id: 'write-number', text: 'Write the number and add one food to the stores.', outcome: { kind: 'adjustFood', amount: 1 } },
-      { id: 'leave-line', text: 'Leave the line blank and place one colony barricade.', outcome: { kind: 'addBarricade', count: 1, location: { kind: 'colony' } } },
+      {
+        id: 'raiding-party',
+        text: 'Join the raiding party and mark Bev Russell’s applicable option.',
+        outcome: { kind: 'adjustCounter', counter: 'bevRussellOptions', amount: 1 },
+      },
     ],
     matureContent: false,
     nonCooperative: false,

@@ -189,7 +189,7 @@ describe('dow-base main-objective catalog', () => {
       'mo-last-lantern',
       'mo-embers-of-knowledge',
       'mo-watch-the-walls',
-      'mo-buried-ledger',
+      'mo-raiding-party',
       'mo-winter-ward',
     ]);
     expect(new Set(BASE_MAIN_OBJECTIVES.map((objective) => objective.id)).size).toBe(10);

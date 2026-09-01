@@ -281,33 +281,23 @@ export const BASE_MAIN_OBJECTIVES: MainObjectiveDefinition[] = [
     },
   },
   {
-    id: 'mo-buried-ledger',
-    name: 'Buried Ledger',
+    id: 'mo-raiding-party',
+    name: 'Raiding Party',
     standard: {
-      text: 'At the colony-phase check, keep at least four food in the stores and at least eight cards in the waste pile.',
-      startingMorale: 9,
+      text: 'Resolve the applicable Bev Russell option.',
+      startingMorale: 8,
       startingRounds: 8,
       setup: [],
-      completion: {
-        kind: 'all',
-        of: [
-          { kind: 'food', atLeast: 4 },
-          { kind: 'wasteCount', atLeast: 8 },
-        ],
-      },
+      counters: [{ id: 'bevRussellOptions', label: 'Bev Russell options', start: 0 }],
+      completion: { kind: 'counter', counter: 'bevRussellOptions', atLeast: 1 },
     },
     hardcore: {
-      text: 'At the colony-phase check, keep at least six food in the stores and at least twelve cards in the waste pile.',
-      startingMorale: 7,
+      text: 'Resolve the applicable Bev Russell option.',
+      startingMorale: 6,
       startingRounds: 7,
       setup: [],
-      completion: {
-        kind: 'all',
-        of: [
-          { kind: 'food', atLeast: 6 },
-          { kind: 'wasteCount', atLeast: 12 },
-        ],
-      },
+      counters: [{ id: 'bevRussellOptions', label: 'Bev Russell options', start: 0 }],
+      completion: { kind: 'counter', counter: 'bevRussellOptions', atLeast: 1 },
     },
   },
   {

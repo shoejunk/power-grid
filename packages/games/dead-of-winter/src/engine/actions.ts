@@ -1240,8 +1240,17 @@ function resolveChoice(
       if (outcome) {
         const source = choice.data?.['cardId'] as string | undefined;
         const controllerId = (choice.data?.['controllerId'] as string | undefined) ?? playerId;
+        // A choice pauses its originating frame, so preserve that frame's
+        // source survivor/instance context when the selected outcome resumes.
+        // Without this, `sourceLocation` outcomes silently resolve against an
+        // empty location and card effects such as Toolbox's public removal do
+        // nothing (§17, §18.2).
+        const sourceFrame = choice.frameId === undefined
+          ? undefined
+          : state.effectStack.find((frame) => frame.id === choice.frameId);
         unshiftIntoCurrentFrame(state, []);
         pushFrame(state, [outcome], {
+          ...(sourceFrame?.ctx ?? {}),
           controllerId,
           ...(source ? { sourceCardId: source } : {}),
         });
