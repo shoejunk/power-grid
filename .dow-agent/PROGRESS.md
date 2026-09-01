@@ -8,6 +8,34 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-09-01 — nightly run 20
+
+**Intent:** remain on the first non-PASS queue item, `engine-tests`, and land three bounded,
+disjoint evidence units before any visual work:
+
+1. **Public A14 survivor/item rulings:** add fixture-free, shipping-plugin regressions for the
+   missing Edward White, John Price, orphan-standee, and once-per-round item semantics.
+2. **Public A14 crossroads/objective rulings:** add fixture-free regressions for the remaining
+   Samples kill/remove distinction, Raiding Party, Bev Russell, Outbreak, This Taste Funny, and
+   movement-before-trigger/public option legality gaps.
+3. **Strict A15 audit granularity:** prove that a real automatic transition records its own
+   before/after checkpoint and public explanation rather than relying only on an action-settled
+   aggregate record.
+
+Sub-agents will own separate new test files and run no Git commands; I will integrate only green
+units, run the full baseline, and keep the strict gates honest. Visual, motion, UX, Wingspan, and
+full-browser multiplayer proof are deferred until A14/A15 have independent evidence-backed PASS
+verdicts.
+
+**Baseline before work:** after syncing `master`, all five TypeScript checks passed; Power Grid
+**231/231**, Dead of Winter **310/310**, and server **57/57** passed with repository-local
+binaries. The global `npm`/`npx` shims still point to missing user-prefix CLIs, and the installed
+`npm install` equivalent stalled after 60 seconds; no dependency files were changed.
+
+(in progress)
+
+---
+
 ## 2026-08-31 — nightly run 19
 
 **Intent:** remain on the first non-PASS queue item, `engine-tests`, and take two bounded review
