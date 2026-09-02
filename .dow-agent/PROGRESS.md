@@ -8,6 +8,37 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-09-02 — nightly run 21
+
+**Intent:** remain on the first non-PASS queue item, `engine-tests`, and take bounded strict A14
+public-boundary evidence toward an independent verdict:
+
+1. **Crossroads timing and public legality:** cover movement-before-trigger, right-hand draw,
+   active-player-only trigger timing, Outbreak electorate, This Taste Funny, and read-all-options
+   behavior through the shipping `BASE_PACK` plugin.
+2. **Orphan and option-legality boundary:** cover the remaining public controls for malformed
+   survivor state and illegal crossroads/objective choices, recording an honest boundary if the
+   public action algebra cannot construct an orphan.
+3. **Independent strict review:** inspect the fresh active-pack evidence and A14 rubric, and
+   record PASS only with concrete test and running-boundary evidence.
+
+Sub-agents own separate new test or review files, run no Git commands, and must loop each coding
+slice against a harsh critic. I will integrate only green, disjoint units and push each one before
+the next. Full A15/N4/N8, visual, motion, UX, Wingspan, and full-browser multiplayer gates remain
+deferred until the engine-tests gate has evidence.
+
+**Baseline before work:** after syncing `master`, the required global `npm install` failed because
+the Windows npm shim points to a missing user-prefix CLI; the installed npm equivalent stalled for
+60 seconds and was stopped. Repository-local binaries passed all five TypeScript checks, Power Grid
+**231/231**, Dead of Winter **319/319**, and server **58/58**. No dependency files changed.
+
+**Status at kickoff:** no source or test changes have landed this run. The tree is clean and
+`master` is synchronized with `origin/master`.
+
+(in progress)
+
+---
+
 ## 2026-09-01 — nightly run 20
 
 **Intent:** remain on the first non-PASS queue item, `engine-tests`, and land three bounded,
