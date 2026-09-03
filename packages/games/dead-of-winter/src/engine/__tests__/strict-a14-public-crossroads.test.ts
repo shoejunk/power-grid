@@ -516,8 +516,10 @@ describe('strict A14 §18.4 This Taste Funny is never triggered by its holder', 
     const order = state.seating;
     expect(holder).toBe(order[(order.indexOf(active) - 1 + order.length) % order.length]);
 
-    // The holder cannot take the very action the card triggers on, because it
-    // is not their turn — which is why the holder can never trigger it.
+    // The holder cannot take the very action the card triggers on, because a
+    // crossroads card is only ever held during somebody else's turn. That is
+    // the whole mechanism behind the ruling: there is no legal action sequence
+    // in which the holder's own `search` reaches the trigger.
     const holderSurvivor = Object.values(state.survivors).find(
       (candidate) => candidate.controllerId === holder,
     );
@@ -629,10 +631,12 @@ describe('strict A14 §18.4 every crossroads option is read out, and illegal one
     // every option, and the chooser's own client view carries every outcome.
     const triggered = logEvents(state, 'crossroadsTriggered').at(-1)!;
     expect(triggered.data).toMatchObject({ cardId: 'xr-f3' });
-    expect(triggered.data!.options).toEqual([
-      { id: 'check-hinge', text: expect.any(String) },
-      { id: 'bar-door', text: expect.any(String) },
-    ]);
+    const readOut = triggered.data!.options as { id: string; text: string }[];
+    expect(readOut.map((option) => option.id)).toEqual(['check-hinge', 'bar-door']);
+    // The read-out is the whole card: the same text the chooser is offered, for
+    // the unmet option as much as for the legal one.
+    expect(readOut.map((option) => option.text)).toEqual(choice.options.map((option) => option.label));
+    expect(readOut.every((option) => option.text.length > 0)).toBe(true);
 
     const chooserView = deadOfWinter.redactStateFor(state, chooser);
     const shownToChooser = chooserView.pendingChoices.find((candidate) => candidate.id === choice.id)!;
