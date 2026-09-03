@@ -8,6 +8,49 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-09-03 — nightly run 22
+
+**Correction to run 21's record:** run 21 was killed after `c49644b` *"wip(dow): record run 21 intent"*
+and landed **no** test or source work. Its entry above stops at "(in progress)" and should be read as
+intent only. Coverage on `master` is unchanged from run 20.
+
+**Baseline verified before any work, on Linux, and it is fully green.** `npm install` clean in 12s (the
+`node_modules` tree starts empty in a fresh sandbox; the Windows npm-shim problems recorded in `STATE.md`
+are a *Windows-only* debt and do not apply here). All five `tsc` checks clean. Power Grid **231/231**,
+Dead of Winter **319/319**, server **58/58**. Tree clean at `c49644b`.
+
+**Intent — and a deliberate change of course, stated plainly:**
+
+`engine-tests` has been the declared workstream for **seventeen consecutive runs** and is still PARTIAL.
+Meanwhile the Visual (V1–V15), Motion (M1–M9) and UX (U1–U13) sections of the quality bar — which are
+the *stated headline goal* of this project and the majority of `docs/QUALITY-BAR-DOW.md` — have never
+been assessed even once, and the blind Wingspan comparison has never been attempted. The queue's
+dependency argument was "judging the look of a UI built on an unverified engine wastes a night". With
+319 engine tests covering A1–A15, and the residual A14 items narrowed to a handful of public-boundary
+rulings plus one item documented as *unconstructible through the public action algebra*, that argument
+no longer holds. Continuing to grind it alone is how a project spends twenty more nights without ever
+looking at the thing it is trying to build.
+
+So tonight runs three bounded units, not one:
+
+1. **`engine-tests` — close the remaining provable public A14 gaps.** One new test file covering
+   §18.4 movement-before-trigger, `Outbreak` electorate, `This Taste Funny`, and read-all-options /
+   option-legality through the shipping `BASE_PACK` plugin. This is the last tranche of A14 that the
+   public API can actually express.
+2. **`client-ui` — the first visual critic pass in the project's history.** Stand up live headless
+   screenshots of a real running match at 1280×720, 1366×768, 1920×1080, 2560×1440 and 3840×2160,
+   have a harsh critic fetch real Wingspan-on-Steam reference shots, place them side by side, and
+   score V1–V15 and U1–U13 with cited evidence. A criterion without evidence is recorded FAIL.
+3. **Act on what unit 2 finds**, looping the UI work against that same critic until it stops losing
+   the comparison, as far as the night's budget allows.
+
+Sub-agents own disjoint file sets, run **no** Git commands, and never edit the engine. I integrate,
+typecheck, test and push each green unit on its own before starting the next.
+
+(in progress)
+
+---
+
 ## 2026-09-02 — nightly run 21
 
 **Intent:** remain on the first non-PASS queue item, `engine-tests`, and take bounded strict A14
