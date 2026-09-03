@@ -22,6 +22,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "puppeteer-core": "^25.9.0",
     "sharp": "^0.35.3"
   },
   "//optionalDependencies": "Windows dev machines need these prebuilt binaries pinned. They must stay optional: as hard dependencies they fail EBADPLATFORM and abort the whole install on Linux and macOS.",
