@@ -75,29 +75,43 @@ export function instrument(page) {
   return log;
 }
 
-/** Clicks the first enabled control whose visible text contains `text`. */
-export async function clickText(page, text, { tags = 'button,a,[role=button]', nth = 0 } = {}) {
-  const ok = await page.evaluate(
-    (tags, text, nth) => {
-      const matches = [...document.querySelectorAll(tags)].filter(
-        (e) =>
-          (e.innerText || e.textContent || '').trim().toLowerCase().includes(text.toLowerCase()) &&
-          !e.disabled &&
-          e.offsetParent !== null,
-      );
-      const el = matches[nth];
-      if (!el) return false;
-      el.scrollIntoView({ block: 'center' });
-      el.click();
+/**
+ * Clicks the first enabled control whose visible text contains `text`.
+ *
+ * Polls rather than failing on the first miss: every screen here mounts after
+ * a server round trip, so "not there yet" and "not there at all" look
+ * identical at any single instant.
+ */
+export async function clickText(page, text, { tags = 'button,a,[role=button]', nth = 0, timeout = 6000 } = {}) {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    const ok = await page.evaluate(
+      (tags, text, nth) => {
+        const matches = [...document.querySelectorAll(tags)].filter(
+          (e) =>
+            (e.innerText || e.textContent || '').trim().toLowerCase().includes(text.toLowerCase()) &&
+            !e.disabled &&
+            e.offsetParent !== null,
+        );
+        const el = matches[nth];
+        if (!el) return false;
+        el.scrollIntoView({ block: 'center' });
+        el.click();
+        return true;
+      },
+      tags,
+      text,
+      nth,
+    );
+    if (ok) {
+      await sleep(450);
       return true;
-    },
-    tags,
-    text,
-    nth,
-  );
-  if (!ok) throw new Error(`clickText: no enabled, visible control matching ${JSON.stringify(text)}`);
-  await sleep(450);
-  return true;
+    }
+    if (Date.now() > deadline) {
+      throw new Error(`clickText: no enabled, visible control matching ${JSON.stringify(text)} after ${timeout}ms`);
+    }
+    await sleep(250);
+  }
 }
 
 /** Clicks it if it is there; says so if it is not. Used for optional steps. */
@@ -110,25 +124,39 @@ export async function clickTextIfPresent(page, text, opts) {
   }
 }
 
-/** Sets a controlled React input by its placeholder, firing a real input event. */
-export async function fillByPlaceholder(page, placeholderFragment, value) {
-  const ok = await page.evaluate(
-    (frag, value) => {
-      const el = [...document.querySelectorAll('input,textarea')].find((e) =>
-        (e.placeholder || '').toLowerCase().includes(frag.toLowerCase()),
-      );
-      if (!el) return false;
-      const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement : HTMLInputElement;
-      Object.getOwnPropertyDescriptor(proto.prototype, 'value').set.call(el, value);
-      el.dispatchEvent(new Event('input', { bubbles: true }));
+/**
+ * Sets a controlled React input by its placeholder, firing a real input event
+ * so React's onChange sees it. Polls for the field for the same reason
+ * `clickText` does.
+ */
+export async function fillByPlaceholder(page, placeholderFragment, value, { timeout = 6000 } = {}) {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    const ok = await page.evaluate(
+      (frag, value) => {
+        const el = [...document.querySelectorAll('input,textarea')].find((e) =>
+          (e.placeholder || '').toLowerCase().includes(frag.toLowerCase()),
+        );
+        if (!el) return false;
+        const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement : HTMLInputElement;
+        Object.getOwnPropertyDescriptor(proto.prototype, 'value').set.call(el, value);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+      },
+      placeholderFragment,
+      value,
+    );
+    if (ok) {
+      await sleep(250);
       return true;
-    },
-    placeholderFragment,
-    value,
-  );
-  if (!ok) throw new Error(`fillByPlaceholder: no field matching ${JSON.stringify(placeholderFragment)}`);
-  await sleep(250);
-  return true;
+    }
+    if (Date.now() > deadline) {
+      throw new Error(
+        `fillByPlaceholder: no field matching ${JSON.stringify(placeholderFragment)} after ${timeout}ms`,
+      );
+    }
+    await sleep(250);
+  }
 }
 
 /** A terse inventory of what is on screen — used to steer and to debug. */
@@ -210,7 +238,10 @@ export async function hostMatch(page, { players = 4, seed = 'dow-shot-1', hostNa
     await sleep(500);
   }
   await sleep(600);
-  await clickTextIfPresent(page, 'NOT READY');
+  /* The control reads "I'm ready" while you are not, and "Not ready" once you
+     are — so the ready action is the former. Matching on "m ready" hits it
+     without also matching "Not ready". */
+  await clickTextIfPresent(page, "m ready");
   await sleep(700);
 
   const code = await readJoinCode(page);

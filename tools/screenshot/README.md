@@ -43,3 +43,22 @@ the game looked good.
 - `hostMatch()` navigates straight to `/g/dead-of-winter`. Do not click the
   game's name on the portal home: once the server holds games, resumable-table
   tiles carry the same name and clicking by text resumes an old table.
+
+## Proving multiplayer
+
+```sh
+node tools/screenshot/multiplayer.mjs
+```
+
+Drives **two real browsers** through the criteria in §5 of the quality bar that
+only a browser can demonstrate: a host mints a code (N1), a second client joins
+with nothing but that code (N1), each seat sees its own secret objective and
+neither appears in the other's DOM (N6), and a client that closes its tab and
+returns comes back to the same seat with the same hidden state (N3, N6).
+
+It exits non-zero if any criterion fails, and writes screenshots plus
+`multiplayer-report.json` to `.shots/multiplayer/`.
+
+Not covered by this script, and still owed: N4 (a full server restart mid-game),
+N5 (an indefinite pause), N7 (simultaneous vote commit-before-reveal) and N8
+(three or more clients playing a full game to a winner).
