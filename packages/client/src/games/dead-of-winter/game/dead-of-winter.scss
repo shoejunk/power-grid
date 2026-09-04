@@ -15,7 +15,7 @@
 .dow-match {
   --dow-snow: #dce8f2;
   --dow-blood: #b5453b;
-  --dow-rail-w: 380px;
+  --dow-rail-w: clamp(340px, 25vw, 460px);
   --dow-gap: var(--tt-space-3);
 
   display: grid;
@@ -23,6 +23,7 @@
   gap: var(--dow-gap);
   padding: var(--tt-space-3) var(--tt-space-4);
   height: 100vh;
+  min-width: 0;
   overflow: hidden;
   background:
     radial-gradient(120% 80% at 50% -10%, rgba(95, 179, 217, 0.12), transparent 60%),
@@ -146,14 +147,16 @@
 
 .dow-match__main {
   display: grid;
-  grid-template-columns: 1fr var(--dow-rail-w);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, var(--dow-rail-w));
   gap: var(--dow-gap);
   min-height: 0;
+  min-width: 0;
 }
 
 .dow-match__board,
 .dow-match__rail {
   min-height: 0;
+  min-width: 0;
   overflow-y: auto;
   scrollbar-width: thin;
 }
@@ -170,9 +173,10 @@
 
 .dow-board {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--dow-gap);
   align-content: start;
+  min-width: 0;
 }
 
 .dow-place--colony {
@@ -183,6 +187,10 @@
 .dow-place--target {
   outline: 2px solid var(--tt-cyan);
   outline-offset: 2px;
+}
+
+.dow-place {
+  min-width: 0;
 }
 
 .dow-place__title {
@@ -640,26 +648,39 @@
  * ------------------------------------------------------------------ */
 
 .dow-hand {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
   gap: var(--tt-space-2);
-  max-height: 260px;
-  overflow-y: auto;
-  scrollbar-width: thin;
+  min-width: 0;
+  max-height: none;
+  overflow: visible;
 }
 
 .dow-card {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  width: 148px;
+  width: auto;
+  min-width: 0;
+  min-height: 104px;
   padding: var(--tt-space-2);
   text-align: left;
   font: inherit;
   color: var(--tt-text-primary);
-  background: var(--tt-surface-raised);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.09), transparent 34%),
+    linear-gradient(180deg, var(--tt-surface-raised), var(--tt-surface-sunken));
   border: 1px solid var(--tt-line-subtle);
   border-radius: var(--tt-radius-md);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 7px 16px rgba(0, 0, 0, 0.2);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
 .dow-card--live {
@@ -668,11 +689,30 @@
 
 .dow-card--live:hover {
   border-color: var(--tt-line-accent);
+  background:
+    linear-gradient(145deg, rgba(95, 179, 217, 0.16), transparent 38%),
+    linear-gradient(180deg, var(--tt-surface-elevated), var(--tt-surface-sunken));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 10px 22px rgba(0, 0, 0, 0.26);
+}
+
+.dow-card--live:active {
+  transform: translateY(1px);
 }
 
 .dow-card--selected {
   border-color: var(--tt-cyan);
-  box-shadow: 0 0 0 1px var(--tt-cyan);
+  background:
+    linear-gradient(145deg, rgba(95, 179, 217, 0.2), transparent 40%),
+    linear-gradient(180deg, var(--tt-surface-elevated), var(--tt-surface-sunken));
+  box-shadow: var(--tt-focus-ring-tight), 0 9px 22px rgba(0, 0, 0, 0.24);
+}
+
+.dow-card--live:focus-visible {
+  outline: 2px solid var(--tt-cyan);
+  outline-offset: 3px;
+  border-color: var(--tt-cyan);
 }
 
 .dow-card--facedown {
@@ -681,24 +721,49 @@
 }
 
 .dow-card__name {
-  font-size: 12px;
+  font-family: var(--tt-font-display);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.035em;
   color: var(--tt-text-bright);
 }
 
 .dow-card__symbols {
-  font-size: 12px;
+  display: flex;
+  gap: 3px;
+  min-height: 18px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--tt-cyan);
 }
 
 .dow-card__text {
-  font-size: 10.5px;
-  color: var(--tt-text-muted);
+  font-size: 11px;
+  line-height: 1.32;
+  color: var(--tt-text-secondary);
 }
 
 .dow-card__kind {
+  margin-top: auto;
   font-size: 9px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--tt-text-faint);
+}
+
+.dow-panel--private {
+  border-color: rgba(95, 179, 217, 0.5);
+  background:
+    linear-gradient(135deg, rgba(95, 179, 217, 0.1), transparent 42%),
+    var(--tt-surface-raised);
+  box-shadow:
+    inset 3px 0 0 rgba(95, 179, 217, 0.8),
+    0 10px 22px rgba(0, 0, 0, 0.2);
+}
+
+.dow-panel--public {
+  border-color: var(--tt-line-subtle);
 }
 
 /* ------------------------------------------------------------------ *
@@ -906,6 +971,326 @@
 
 .dow-log__line--note .dow-log__text {
   color: var(--tt-text-primary);
+}
+
+/* ------------------------------------------------------------------ *
+ * Short desktop viewports
+ * ------------------------------------------------------------------ */
+
+@media (min-width: 1181px) and (max-height: 1200px) {
+  .dow-match {
+    --dow-gap: 8px;
+    --dow-rail-w: 420px;
+    padding: 8px 12px;
+  }
+
+  .dow-match .tt-panel {
+    padding: 8px;
+  }
+
+  .dow-match .tt-panel__header {
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+
+  .dow-top {
+    gap: 8px;
+  }
+
+  .dow-top__stats {
+    gap: 8px 12px;
+  }
+
+  .dow-top__phase {
+    gap: 4px;
+  }
+
+  .dow-stat__value {
+    font-size: 19px;
+  }
+
+  .dow-stat__label,
+  .dow-dice__label {
+    font-size: 9px;
+  }
+
+  .dow-match__main {
+    gap: 8px;
+  }
+
+  .dow-match__board,
+  .dow-match__rail {
+    overflow-y: auto;
+  }
+
+  .dow-match .dow-board.dow-winter-board {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    row-gap: 5px;
+    column-gap: 5px;
+    padding: 6px;
+  }
+
+  .dow-match .dow-winter-board .dow-place {
+    min-height: 0;
+  }
+
+  .dow-place__entrances {
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .dow-match .dow-place__title-block {
+    min-width: 0;
+  }
+
+  .dow-match .dow-place__title {
+    min-width: 0;
+    font-size: 11px;
+  }
+
+  .dow-match .dow-place__subtitle {
+    overflow: hidden;
+    font-size: 8px;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dow-match .dow-place__marks {
+    gap: 3px;
+    font-size: 9px;
+  }
+
+  .dow-match .dow-place__mark {
+    white-space: nowrap;
+  }
+
+  .dow-match .dow-winter-board .dow-hub__scene {
+    height: 56px;
+    margin-top: 1px;
+    margin-bottom: 5px;
+  }
+
+  .dow-match .dow-winter-board .dow-landmark {
+    height: 48px;
+    margin-top: 1px;
+    margin-bottom: 5px;
+  }
+
+  .dow-place__survivors {
+    min-height: 22px;
+  }
+
+  .dow-survivor {
+    max-width: 100%;
+    gap: 3px;
+    padding: 2px 4px;
+    font-size: 10px;
+  }
+
+  .dow-survivor__portrait {
+    width: 20px;
+    height: 24px;
+  }
+
+  .dow-survivor__stats {
+    gap: 2px;
+    font-size: 9px;
+  }
+
+  .dow-survivor__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dow-entrance {
+    padding: 2px 4px;
+  }
+
+  .dow-rail {
+    gap: 8px;
+  }
+
+  .dow-mine {
+    margin-top: 8px;
+  }
+
+  .dow-actions {
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  .dow-actions--free {
+    padding-top: 6px;
+  }
+
+  .dow-actions__food {
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .dow-aim {
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px;
+  }
+
+  /* Turn, hand and table share the rail's short row. The hand and table sit
+     beside one another so the hand never needs a second viewport to exist. */
+  .dow-match__rail {
+    display: grid;
+    grid-template-columns: minmax(150px, 1fr) minmax(0, 1.55fr);
+    grid-auto-rows: max-content;
+    align-content: start;
+    row-gap: 4px;
+    column-gap: 5px;
+    overflow-x: hidden;
+  }
+
+  .dow-match__rail > *,
+  .dow-match__rail .tt-panel,
+  .dow-match__rail .dow-rail,
+  .dow-match__rail .dow-actions {
+    min-width: 0;
+  }
+
+  .dow-match__rail > .dow-rail {
+    display: contents;
+  }
+
+  .dow-match__rail > .dow-vote {
+    grid-column: 1 / -1;
+  }
+
+  .dow-match__rail > .dow-rail > .tt-panel:first-child {
+    grid-column: 1;
+  }
+
+  .dow-match__rail > .dow-rail > .tt-panel:nth-child(2) {
+    grid-column: 2;
+  }
+
+  .dow-match__rail > .dow-rail > .tt-panel:nth-child(3) {
+    grid-column: 2;
+  }
+
+  .dow-match__rail > .dow-rail > .tt-panel.dow-panel--public {
+    grid-column: 1 / -1;
+  }
+
+  .dow-match__rail > .dow-rail > .tt-panel.dow-panel--public .tt-panel__header {
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .dow-match__rail > .dow-rail > .tt-panel.dow-panel--public .tt-panel__header > div {
+    display: none;
+  }
+
+  .dow-match__rail > .dow-rail > .tt-panel.dow-panel--public {
+    padding: 2px;
+  }
+
+  .dow-hand {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .dow-card {
+    min-height: 88px;
+    padding: 6px;
+  }
+
+  .dow-card__name {
+    font-size: 10.5px;
+  }
+
+  .dow-card__symbols {
+    min-height: 15px;
+    font-size: 11px;
+  }
+
+  .dow-card__text {
+    font-size: 9.5px;
+    line-height: 1.2;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .dow-card--live:hover .dow-card__text,
+  .dow-card--live:focus-visible .dow-card__text,
+  .dow-card--selected .dow-card__text {
+    -webkit-line-clamp: 5;
+  }
+
+  .dow-panel--hand .tt-btn {
+    min-height: 26px;
+    padding-inline: 6px;
+    font-size: 10px;
+  }
+
+  .dow-card__kind {
+    font-size: 8px;
+  }
+
+  .dow-table__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 4px;
+    min-height: 22px;
+    padding-block: 0;
+  }
+
+  .dow-table__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dow-panel--public .tt-btn {
+    min-height: 22px;
+    padding-block: 2px;
+    font-size: 9px;
+  }
+
+  .dow-match__foot {
+    grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+    max-height: 128px;
+    gap: 8px;
+  }
+
+  .dow-seats__row {
+    gap: 5px;
+  }
+
+  .dow-seat {
+    flex-basis: 140px;
+    padding: 5px;
+  }
+
+  .dow-seat__secret {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dow-log__list {
+    max-height: 88px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dow-card {
+    transition: none;
+  }
+
+  .dow-card--live:active {
+    transform: none;
+  }
 }
 
 /* ------------------------------------------------------------------ *

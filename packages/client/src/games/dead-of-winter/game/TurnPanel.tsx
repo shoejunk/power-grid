@@ -417,7 +417,7 @@ export function TurnPanel({
                 return (
                   <ActionButton
                     key={entrance.index}
-                    label={`#${entrance.index} · ${entrance.zombies}● ${entrance.barricades}▮ ${entranceFree(entrance)}○`}
+                    label={`Entrance ${entrance.index} · ${entrance.zombies} zombies · ${entrance.barricades} barricades · ${entranceFree(entrance)} open`}
                     legality={die === null ? { ok: false, reason: 'Pick a die first.' } : ask(action)}
                     onClick={() => send(action)}
                   />
@@ -626,6 +626,7 @@ export function TurnPanel({
       <Panel
         padding="tight"
         title="Your hand"
+        className="dow-panel--private dow-panel--hand"
         actions={<Badge tone="info">{player.hand.length}</Badge>}
       >
         <div className="dow-hand">
@@ -689,7 +690,7 @@ export function TurnPanel({
         </div>
       </Panel>
 
-      <Panel padding="tight" title="The table">
+      <Panel padding="tight" title="The table" className="dow-panel--public">
         <div className="dow-actions dow-actions--free">
           {state.seating
             .filter((id) => id !== me)
