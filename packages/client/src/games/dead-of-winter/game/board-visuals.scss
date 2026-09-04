@@ -1,0 +1,721 @@
+/*
+ * A winter map layer for the board only. The markup stays intentionally small:
+ * geometry and atmosphere are authored here so the board remains asset-free,
+ * fast to load, and readable when the location cards are compact.
+ */
+
+.dow-board.dow-winter-board {
+  --dow-board-ink: #eef5f8;
+  --dow-board-copy: #d5e2e8;
+  --dow-board-muted: #a8bdc8;
+  --dow-board-night: #071521;
+  --dow-board-panel: #102431;
+  --dow-board-panel-deep: #0b1c29;
+  --dow-board-line: rgba(193, 220, 231, 0.24);
+  --dow-board-ice: #9dd9e5;
+  --dow-board-blood: #ff7563;
+  --dow-board-wood: #d29a63;
+
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(190px, 1fr));
+  gap: clamp(8px, 1vw, 14px);
+  align-content: start;
+  padding: clamp(10px, 1.35vw, 20px);
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(180, 218, 231, 0.26);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 50% -20%, rgba(157, 217, 229, 0.2), transparent 42%),
+    radial-gradient(circle at 10% 90%, rgba(88, 119, 143, 0.2), transparent 35%),
+    linear-gradient(155deg, #132c3b 0%, #0b1d2a 53%, #07141e 100%);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.24),
+    inset 0 1px rgba(236, 250, 255, 0.12),
+    inset 0 -18px 40px rgba(0, 0, 0, 0.18);
+}
+
+.dow-board.dow-winter-board::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: '';
+  pointer-events: none;
+  opacity: 0.46;
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(242, 250, 255, 0.58) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 72% 16%, rgba(242, 250, 255, 0.42) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 42% 78%, rgba(242, 250, 255, 0.32) 0 1px, transparent 1.5px);
+  background-size: 92px 74px, 128px 106px, 160px 126px;
+}
+
+.dow-winter-board .dow-place {
+  position: relative;
+  min-width: 0;
+  min-height: 188px;
+  overflow: hidden;
+  color: var(--dow-board-copy);
+  border: 1px solid var(--dow-board-line);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(28, 57, 70, 0.86), rgba(8, 24, 35, 0.96)),
+    var(--dow-board-panel);
+  box-shadow:
+    0 10px 18px rgba(0, 0, 0, 0.2),
+    inset 0 1px rgba(234, 249, 255, 0.1),
+    inset 0 -10px 20px rgba(0, 0, 0, 0.16);
+}
+
+.dow-winter-board .dow-place::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  content: '';
+  opacity: 0.7;
+  background: linear-gradient(90deg, transparent, var(--dow-board-ice), transparent);
+}
+
+.dow-winter-board .dow-place--colony {
+  grid-column: 1 / -1;
+  min-height: 250px;
+  border-color: rgba(207, 235, 242, 0.48);
+  background:
+    radial-gradient(circle at 50% 55%, rgba(157, 217, 229, 0.14), transparent 35%),
+    linear-gradient(180deg, rgba(23, 54, 67, 0.98), rgba(7, 21, 31, 0.98));
+  box-shadow:
+    0 16px 28px rgba(0, 0, 0, 0.26),
+    inset 0 1px rgba(244, 252, 255, 0.2),
+    inset 0 -24px 34px rgba(0, 0, 0, 0.2);
+}
+
+.dow-winter-board .tt-panel__header {
+  position: relative;
+  z-index: 2;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.dow-winter-board .tt-panel__title,
+.dow-winter-board .tt-panel__header > div:first-child {
+  min-width: 0;
+}
+
+.dow-winter-board .dow-place__title-block {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dow-winter-board .dow-place__title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--dow-board-ink);
+  font-family: var(--tt-font-display, Georgia, serif);
+  font-size: clamp(17px, 1.35vw, 22px);
+  line-height: 1;
+  letter-spacing: 0.015em;
+}
+
+.dow-winter-board .dow-place__count {
+  color: var(--dow-board-ice);
+  font-family: var(--tt-font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.dow-winter-board .dow-place__subtitle {
+  color: var(--dow-board-muted);
+  font-size: 9px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.dow-winter-board .dow-place__marks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 8px;
+  max-width: 58%;
+  color: var(--dow-board-copy);
+  font-family: var(--tt-font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  text-align: right;
+}
+
+.dow-winter-board .dow-place__mark {
+  white-space: nowrap;
+}
+
+.dow-winter-board .dow-place__mark--zombie {
+  color: var(--dow-board-blood);
+}
+
+.dow-winter-board .dow-place__mark--noise {
+  color: #dce8a7;
+}
+
+.dow-winter-board .dow-place__mark--deck {
+  color: #c3d1db;
+}
+
+.dow-winter-board .dow-place__mark--helpless {
+  color: #f0c77f;
+}
+
+.dow-winter-board .dow-place__mark--waste {
+  color: #c6b9d9;
+}
+
+/* ------------------------------------------------------------------ *
+ * Authored landmark silhouettes
+ * ------------------------------------------------------------------ */
+
+.dow-winter-board .dow-landmark,
+.dow-winter-board .dow-hub__scene {
+  position: relative;
+  height: 66px;
+  margin: 3px -2px 8px;
+  overflow: hidden;
+  border: 1px solid rgba(208, 237, 242, 0.18);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #426579 0%, #1b3747 66%, #10232f 100%);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.16),
+    inset 0 -15px 22px rgba(0, 0, 0, 0.28);
+}
+
+.dow-winter-board .dow-landmark__horizon,
+.dow-winter-board .dow-landmark__snow,
+.dow-winter-board .dow-landmark__structure,
+.dow-winter-board .dow-landmark__roof,
+.dow-winter-board .dow-landmark__detail,
+.dow-winter-board .dow-landmark__door,
+.dow-winter-board .dow-hub__moon,
+.dow-winter-board .dow-hub__snowline,
+.dow-winter-board .dow-hub__building,
+.dow-winter-board .dow-hub__roof,
+.dow-winter-board .dow-hub__window,
+.dow-winter-board .dow-hub__door,
+.dow-winter-board .dow-hub__lamp {
+  position: absolute;
+  display: block;
+}
+
+.dow-winter-board .dow-landmark__horizon {
+  right: -5%;
+  bottom: 14px;
+  left: -5%;
+  height: 24px;
+  background: linear-gradient(160deg, transparent 0 30%, rgba(202, 227, 234, 0.18) 31% 37%, transparent 38%);
+}
+
+.dow-winter-board .dow-landmark__snow {
+  right: -4%;
+  bottom: -9px;
+  left: -4%;
+  height: 26px;
+  border-radius: 50% 50% 0 0;
+  background: #dbeaf0;
+  box-shadow: 0 -5px 13px rgba(228, 247, 250, 0.23);
+}
+
+.dow-winter-board .dow-landmark__structure {
+  right: 24%;
+  bottom: 13px;
+  left: 24%;
+  height: 32px;
+  border: 1px solid rgba(18, 34, 44, 0.7);
+  background: linear-gradient(90deg, #8aa6ae 0 10%, #526f7a 10% 90%, #8aa6ae 90%);
+  box-shadow: inset 0 6px rgba(236, 249, 248, 0.13);
+}
+
+.dow-winter-board .dow-landmark__roof {
+  right: 20%;
+  bottom: 42px;
+  left: 20%;
+  height: 12px;
+  background: #1b303b;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  filter: drop-shadow(0 2px 0 rgba(218, 239, 242, 0.36));
+}
+
+.dow-winter-board .dow-landmark__detail {
+  right: 42%;
+  bottom: 24px;
+  left: 42%;
+  height: 8px;
+  background: #d8e9e9;
+  box-shadow: 0 0 10px rgba(221, 249, 244, 0.38);
+}
+
+.dow-winter-board .dow-landmark__door {
+  bottom: 13px;
+  left: 47%;
+  width: 7%;
+  height: 17px;
+  background: #213a45;
+  border: 1px solid rgba(219, 239, 240, 0.3);
+}
+
+.dow-winter-board .dow-landmark--police-station {
+  background: linear-gradient(180deg, #415c76, #1b3043 70%, #13232f);
+}
+
+.dow-winter-board .dow-landmark--police-station .dow-landmark__structure {
+  right: 29%;
+  left: 29%;
+  height: 37px;
+  background: linear-gradient(90deg, #718ca2, #415c72 72%, #718ca2);
+}
+
+.dow-winter-board .dow-landmark--police-station .dow-landmark__roof {
+  right: 25%;
+  left: 25%;
+  height: 16px;
+}
+
+.dow-winter-board .dow-landmark--police-station .dow-landmark__detail {
+  right: 39%;
+  left: 39%;
+  background: #e8f3e8;
+}
+
+.dow-winter-board .dow-landmark--grocery-store {
+  background: linear-gradient(180deg, #536d77, #263f4b 70%, #152832);
+}
+
+.dow-winter-board .dow-landmark--grocery-store .dow-landmark__structure {
+  right: 16%;
+  left: 16%;
+  height: 29px;
+  background: linear-gradient(90deg, #a8aaa1, #6f817f 50%, #a8aaa1);
+}
+
+.dow-winter-board .dow-landmark--grocery-store .dow-landmark__roof {
+  right: 12%;
+  bottom: 38px;
+  left: 12%;
+  height: 10px;
+  background: repeating-linear-gradient(90deg, #e4e2cd 0 12px, #7899a0 12px 22px);
+  clip-path: none;
+}
+
+.dow-winter-board .dow-landmark--grocery-store .dow-landmark__detail {
+  right: 29%;
+  left: 29%;
+  height: 7px;
+  background: #e7e0bb;
+}
+
+.dow-winter-board .dow-landmark--school {
+  background: linear-gradient(180deg, #59647b, #2e384e 70%, #192332);
+}
+
+.dow-winter-board .dow-landmark--school .dow-landmark__structure {
+  right: 25%;
+  left: 25%;
+  height: 35px;
+  background: linear-gradient(90deg, #a1a8ad, #6d7884 18% 82%, #a1a8ad);
+}
+
+.dow-winter-board .dow-landmark--school .dow-landmark__roof {
+  right: 19%;
+  bottom: 43px;
+  left: 19%;
+  height: 15px;
+}
+
+.dow-winter-board .dow-landmark--school .dow-landmark__detail {
+  right: 50%;
+  bottom: 48px;
+  left: auto;
+  width: 2px;
+  height: 13px;
+  background: #d9e8e9;
+  box-shadow: 0 -2px 0 3px #c56a5b;
+}
+
+.dow-winter-board .dow-landmark--gas-station {
+  background: linear-gradient(180deg, #4c7182, #203f4d 70%, #122832);
+}
+
+.dow-winter-board .dow-landmark--gas-station .dow-landmark__structure {
+  right: 33%;
+  left: 33%;
+  height: 29px;
+}
+
+.dow-winter-board .dow-landmark--gas-station .dow-landmark__roof {
+  right: 13%;
+  bottom: 41px;
+  left: 13%;
+  height: 7px;
+  clip-path: none;
+  background: #d4a05f;
+  box-shadow: 0 3px 0 #41515a;
+}
+
+.dow-winter-board .dow-landmark--gas-station .dow-landmark__detail {
+  right: auto;
+  bottom: 17px;
+  left: 24%;
+  width: 4px;
+  height: 18px;
+  background: #d9e8e9;
+  box-shadow: 12px 0 #d9e8e9;
+}
+
+.dow-winter-board .dow-landmark--library {
+  background: linear-gradient(180deg, #466d78, #203f4a 70%, #132832);
+}
+
+.dow-winter-board .dow-landmark--library .dow-landmark__structure {
+  right: 27%;
+  left: 27%;
+  height: 40px;
+  background: linear-gradient(90deg, #9da8a0, #657d7d 50%, #9da8a0);
+}
+
+.dow-winter-board .dow-landmark--library .dow-landmark__roof {
+  right: 22%;
+  bottom: 48px;
+  left: 22%;
+  height: 8px;
+  clip-path: none;
+  background: #263d47;
+}
+
+.dow-winter-board .dow-landmark--library .dow-landmark__detail {
+  right: 34%;
+  bottom: 34px;
+  left: 34%;
+  height: 7px;
+  background: #d4e9e3;
+  box-shadow: 0 11px 0 #d4e9e3, 0 22px 0 #d4e9e3;
+}
+
+.dow-winter-board .dow-landmark--hospital {
+  background: linear-gradient(180deg, #75929a, #3c5962 70%, #213640);
+}
+
+.dow-winter-board .dow-landmark--hospital .dow-landmark__structure {
+  right: 30%;
+  left: 30%;
+  height: 37px;
+  background: linear-gradient(90deg, #c1ccca, #879d9f 50%, #c1ccca);
+}
+
+.dow-winter-board .dow-landmark--hospital .dow-landmark__roof {
+  right: 27%;
+  bottom: 43px;
+  left: 27%;
+  height: 8px;
+  clip-path: none;
+  background: #e5efeb;
+}
+
+.dow-winter-board .dow-landmark--hospital .dow-landmark__detail {
+  right: 45%;
+  bottom: 28px;
+  left: 45%;
+  width: 10%;
+  height: 17px;
+  background: linear-gradient(#b9494e 0 35%, transparent 35% 65%, #b9494e 65%);
+  box-shadow: 7px 7px 0 -3px #b9494e;
+}
+
+/* ------------------------------------------------------------------ *
+ * Hub, gates, standees, and target affordance
+ * ------------------------------------------------------------------ */
+
+.dow-winter-board .dow-hub__scene {
+  height: 80px;
+  margin-top: 1px;
+  background:
+    radial-gradient(circle at 76% 24%, rgba(244, 253, 255, 0.9) 0 5px, rgba(244, 253, 255, 0.16) 6px 15px, transparent 16px),
+    linear-gradient(180deg, #294c61, #183444 70%, #10232f);
+}
+
+.dow-winter-board .dow-hub__moon {
+  top: 13px;
+  right: 22%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f2fbf8;
+  box-shadow: 0 0 14px rgba(230, 250, 248, 0.55);
+}
+
+.dow-winter-board .dow-hub__snowline {
+  right: -3%;
+  bottom: -10px;
+  left: -3%;
+  height: 35px;
+  border-radius: 50% 50% 0 0;
+  background: #e5f1f3;
+  box-shadow: 0 -7px 15px rgba(230, 248, 250, 0.22);
+}
+
+.dow-winter-board .dow-hub__building {
+  right: 37%;
+  bottom: 15px;
+  left: 37%;
+  height: 39px;
+  border: 1px solid rgba(11, 25, 32, 0.85);
+  background: linear-gradient(90deg, #8e9b98, #536d70 50%, #8e9b98);
+  box-shadow: inset 0 7px rgba(237, 250, 246, 0.14);
+}
+
+.dow-winter-board .dow-hub__roof {
+  right: 31%;
+  bottom: 48px;
+  left: 31%;
+  height: 18px;
+  background: #1b303b;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  filter: drop-shadow(0 2px 0 rgba(218, 239, 242, 0.5));
+}
+
+.dow-winter-board .dow-hub__window {
+  bottom: 31px;
+  width: 9px;
+  height: 10px;
+  border: 2px solid #d7f0e7;
+  background: #e8f6e7;
+  box-shadow: 0 0 10px rgba(214, 247, 229, 0.48);
+}
+
+.dow-winter-board .dow-hub__window--left {
+  left: 41%;
+}
+
+.dow-winter-board .dow-hub__window--right {
+  right: 41%;
+}
+
+.dow-winter-board .dow-hub__door {
+  bottom: 15px;
+  left: 48.3%;
+  width: 3.4%;
+  height: 20px;
+  background: #293f45;
+  border: 1px solid rgba(232, 247, 243, 0.46);
+}
+
+.dow-winter-board .dow-hub__lamp {
+  bottom: 37px;
+  left: 35%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #eac979;
+  box-shadow: 0 0 13px 4px rgba(234, 201, 121, 0.33);
+}
+
+.dow-winter-board .dow-place__entrances {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0 0 8px;
+}
+
+.dow-winter-board .dow-place__entrances::before {
+  position: absolute;
+  top: -5px;
+  right: 0;
+  left: 0;
+  height: 1px;
+  content: '';
+  background: linear-gradient(90deg, transparent, rgba(190, 218, 225, 0.3), transparent);
+}
+
+.dow-winter-board .dow-entrance {
+  flex: 1 1 72px;
+  min-height: 25px;
+  padding: 4px 6px;
+  border: 1px solid rgba(215, 231, 231, 0.28);
+  border-radius: 5px;
+  background: linear-gradient(180deg, rgba(5, 16, 23, 0.54), rgba(22, 42, 50, 0.88));
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.dow-winter-board .dow-entrance__index {
+  min-width: 12px;
+  color: var(--dow-board-ice);
+  font-family: var(--tt-font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dow-winter-board .dow-entrance__slots {
+  gap: 2px;
+  font-size: 13px;
+}
+
+.dow-winter-board .dow-entrance__zombie {
+  color: var(--dow-board-blood);
+  text-shadow: 0 0 7px rgba(255, 117, 99, 0.34);
+}
+
+.dow-winter-board .dow-entrance__barricade {
+  color: var(--dow-board-wood);
+  text-shadow: 0 1px #382416;
+}
+
+.dow-winter-board .dow-entrance__free {
+  color: rgba(221, 239, 241, 0.55);
+}
+
+.dow-winter-board .dow-place__survivors {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 5px;
+  min-height: 31px;
+}
+
+.dow-winter-board .dow-place__empty {
+  padding: 4px 0;
+  color: var(--dow-board-muted);
+  font-size: 11px;
+  font-style: italic;
+}
+
+.dow-winter-board .dow-survivor {
+  min-width: 0;
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid rgba(221, 235, 235, 0.22);
+  border-radius: 7px;
+  color: var(--dow-board-copy);
+  background: linear-gradient(135deg, rgba(34, 64, 73, 0.96), rgba(12, 29, 39, 0.96));
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.dow-winter-board .dow-survivor__portrait {
+  width: 25px;
+  height: 31px;
+  border-color: rgba(230, 245, 244, 0.35);
+  border-radius: 4px;
+}
+
+.dow-winter-board .dow-survivor__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--dow-board-ink);
+  font-weight: 650;
+}
+
+.dow-winter-board .dow-survivor__stats {
+  color: #c5d6dc;
+  font-family: var(--tt-font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+.dow-winter-board .dow-place__pick {
+  position: relative;
+  z-index: 2;
+  margin-top: 7px;
+  padding: 6px 8px;
+  color: #08212b;
+  font-weight: 700;
+  background: var(--dow-board-ice);
+  border: 1px solid rgba(238, 253, 255, 0.8);
+  border-radius: 5px;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.22), inset 0 1px rgba(255, 255, 255, 0.56);
+}
+
+.dow-winter-board .dow-place__pick:hover {
+  background: #d3f3f4;
+  box-shadow: 0 6px 16px rgba(157, 217, 229, 0.24), inset 0 1px rgba(255, 255, 255, 0.75);
+}
+
+.dow-winter-board .dow-place--target {
+  outline: 2px solid var(--dow-board-ice);
+  outline-offset: 3px;
+  box-shadow:
+    0 0 0 4px rgba(157, 217, 229, 0.12),
+    0 16px 28px rgba(0, 0, 0, 0.26),
+    0 0 24px rgba(157, 217, 229, 0.22),
+    inset 0 1px rgba(244, 252, 255, 0.2);
+}
+
+.dow-winter-board .dow-survivor--live:focus-visible,
+.dow-winter-board .dow-place__pick:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
+@media (min-width: 1600px) {
+  .dow-board.dow-winter-board {
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .dow-winter-board .dow-place {
+    min-height: 202px;
+  }
+
+  .dow-winter-board .dow-place--colony {
+    min-height: 272px;
+  }
+
+  .dow-winter-board .dow-landmark {
+    height: 74px;
+  }
+
+  .dow-winter-board .dow-hub__scene {
+    height: 92px;
+  }
+}
+
+@media (max-width: 980px) {
+  .dow-board.dow-winter-board {
+    grid-template-columns: repeat(2, minmax(190px, 1fr));
+  }
+
+  .dow-winter-board .dow-place--colony {
+    min-height: 238px;
+  }
+}
+
+@media (max-width: 560px) {
+  .dow-board.dow-winter-board {
+    grid-template-columns: minmax(0, 1fr);
+    border-radius: 12px;
+  }
+
+  .dow-winter-board .dow-place--colony {
+    min-height: 232px;
+  }
+
+  .dow-winter-board .dow-place__marks {
+    max-width: 52%;
+    font-size: 9px;
+  }
+
+  .dow-winter-board .dow-place__title {
+    font-size: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dow-winter-board .dow-place--target,
+  .dow-winter-board .dow-survivor,
+  .dow-winter-board .dow-place__pick {
+    transition: none;
+  }
+}

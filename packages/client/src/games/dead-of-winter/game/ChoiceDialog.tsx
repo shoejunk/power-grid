@@ -20,6 +20,7 @@ import { useEffect, useState } from 'react';
 import { net } from '@/net';
 
 import { survivorArtPath, survivorCard } from '../content';
+import { DowIcon } from './iconography';
 
 export interface ChoiceDialogProps {
   state: GameState;
@@ -126,8 +127,8 @@ export function ChoiceDialog({ state, choice, open, onClose }: ChoiceDialogProps
                   <span className="dow-choice__survivor-copy">
                     <span className="dow-choice__label">{setupSurvivor.name}</span>
                     <span className="dow-choice__survivor-meta">
-                      {setupSurvivor.occupation} · ⚔{setupSurvivor.attackThreshold}+ · 🔍
-                      {setupSurvivor.searchThreshold}+ · ✦{setupSurvivor.influence}
+                      {setupSurvivor.occupation} · <DowIcon name="attack" size={12} />{setupSurvivor.attackThreshold}+ · <DowIcon name="search" size={12} />
+                      {setupSurvivor.searchThreshold}+ · <DowIcon name="influence" size={12} />{setupSurvivor.influence}
                     </span>
                   </span>
                 </>

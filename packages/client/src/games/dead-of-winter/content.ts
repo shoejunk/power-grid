@@ -61,17 +61,6 @@ export function itemSymbols(state: GameState, iid: CardInstanceId): ItemSymbol[]
   return itemDef(state, iid)?.symbols ?? [];
 }
 
-/** The one glyph per item symbol used everywhere a card is drawn. */
-export const SYMBOL_GLYPH: Record<ItemSymbol, string> = {
-  weapon: '⚔',
-  fuel: '⛽',
-  education: '🎓',
-  food: '🥫',
-  medicine: '✚',
-  tool: '🔧',
-  survivor: '🧍',
-};
-
 export const SYMBOL_LABEL: Record<ItemSymbol, string> = {
   weapon: 'Weapon',
   fuel: 'Fuel',

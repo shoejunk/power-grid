@@ -12,6 +12,7 @@ import type { PlayerId } from '@tt/core';
 import { Badge, Panel } from '@tt/ui';
 
 import { secretObjective } from '../content';
+import { DowIcon } from './iconography';
 import { Die } from './parts';
 
 export function Seats({ state, me }: { state: GameState; me: PlayerId | null }): JSX.Element {
@@ -65,10 +66,10 @@ export function Seats({ state, me }: { state: GameState; me: PlayerId | null }):
 
               <div className="dow-seat__body">
                 <span title="Cards in hand — the count is public, the cards are not. §3">
-                  🂠 {player.hand.length}
+                  <DowIcon name="card" size={12} decorative /> {player.hand.length}
                 </span>
                 <span title="Cards pushed face down onto the crisis. §8.2">
-                  ⬓ {contributionsBy(id)}
+                  <DowIcon name="card" size={12} decorative /> {contributionsBy(id)}
                 </span>
                 <span className="dow-seat__dice">
                   {player.unusedDice.map((value, i) => (

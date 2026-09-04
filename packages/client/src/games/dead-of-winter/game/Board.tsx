@@ -20,6 +20,8 @@ import {
   zombiesAt,
 } from './model';
 import { EntranceRow, SurvivorChip } from './parts';
+import './board-visuals.scss';
+import { DowIcon } from './iconography';
 
 export interface BoardProps {
   state: GameState;
@@ -46,7 +48,7 @@ export function Board({
   actableSurvivorIds,
 }: BoardProps): JSX.Element {
   return (
-    <div className="dow-board">
+    <div className="dow-board dow-winter-board" aria-label="Dead of Winter board">
       {allLocations.map((id) => (
         <LocationCard
           key={id}
@@ -103,50 +105,98 @@ function LocationCard({
       className={[
         'dow-place',
         isColony ? 'dow-place--colony' : '',
+        !isColony ? `dow-place--${location}` : '',
         isTarget ? 'dow-place--target' : '',
       ]
         .filter(Boolean)
         .join(' ')}
+      role="region"
+      aria-label={`${locationName(location)}. ${
+        isColony ? 'Colony hub with six entrances.' : 'Non-colony search location.'
+      }`}
       title={
-        <span className="dow-place__title">
-          {locationName(location)}
-          <span className="dow-place__count">
-            {occupied}/{capacity}
+        <span className="dow-place__title-block">
+          <span className="dow-place__title">
+            {locationName(location)}
+            <span className="dow-place__count" aria-label={`${occupied} of ${capacity} survivor spaces occupied`}>
+              {occupied}/{capacity}
+            </span>
+          </span>
+          <span className="dow-place__subtitle">
+            {isColony ? 'Central safehouse · six entrances' : 'Search site · one entrance'}
           </span>
         </span>
       }
       actions={
         <span className="dow-place__marks">
           {zombies > 0 ? (
-            <span className="dow-place__mark dow-place__mark--zombie" title="Zombies here">
-              ● {zombies}
+            <span
+              className="dow-place__mark dow-place__mark--zombie"
+              title="Zombies here"
+              aria-label={`${zombies} zombies here`}
+            >
+              <DowIcon name="zombie" size={12} decorative /> {zombies} zombies
             </span>
           ) : null}
           {!isColony && site ? (
             <>
-              <span className="dow-place__mark" title="Noise tokens — each is rolled in the Colony Phase">
-                ♪ {site.noise}/{site.noiseSpaces}
+              <span
+                className="dow-place__mark dow-place__mark--noise"
+                title="Noise tokens — each is rolled in the Colony Phase"
+                aria-label={`${site.noise} of ${site.noiseSpaces} noise spaces used`}
+              >
+                <DowIcon name="noise" size={12} decorative /> noise {site.noise}/{site.noiseSpaces}
               </span>
-              <span className="dow-place__mark" title="Cards left in this location's deck">
-                🂠 {site.deck.length}
+              <span
+                className="dow-place__mark dow-place__mark--deck"
+                title="Cards left in this location's deck"
+                aria-label={`${site.deck.length} cards left in the location deck`}
+              >
+                <DowIcon name="card" size={12} decorative /> deck {site.deck.length}
               </span>
             </>
           ) : null}
           {isColony ? (
             <>
               {state.colony.helpless > 0 ? (
-                <span className="dow-place__mark" title="Helpless survivors">
-                  ✋ {state.colony.helpless}
+                <span className="dow-place__mark dow-place__mark--helpless" title="Helpless survivors">
+                  <DowIcon name="survivor" size={12} decorative /> helpless {state.colony.helpless}
                 </span>
               ) : null}
-              <span className="dow-place__mark" title="Cards in the waste pile">
-                🗑 {state.colony.waste.length}
+              <span
+                className="dow-place__mark dow-place__mark--waste"
+                title="Cards in the waste pile"
+                aria-label={`${state.colony.waste.length} cards in the waste pile`}
+              >
+                <DowIcon name="card" size={12} decorative /> waste {state.colony.waste.length}
               </span>
             </>
           ) : null}
         </span>
       }
     >
+      {isColony ? (
+        <div className="dow-hub__scene" aria-hidden="true">
+          <span className="dow-hub__moon" />
+          <span className="dow-hub__snowline" />
+          <span className="dow-hub__building" />
+          <span className="dow-hub__roof" />
+          <span className="dow-hub__window dow-hub__window--left" />
+          <span className="dow-hub__window dow-hub__window--right" />
+          <span className="dow-hub__door" />
+          <span className="dow-hub__lamp" />
+        </div>
+      ) : (
+        <div className={`dow-landmark dow-landmark--${location}`} aria-hidden="true">
+          <span className="dow-landmark__horizon" />
+          <span className="dow-landmark__snow" />
+          <span className="dow-landmark__structure" />
+          <span className="dow-landmark__roof" />
+          <span className="dow-landmark__detail" />
+          <span className="dow-landmark__door" />
+        </div>
+      )}
+
       <div className="dow-place__entrances">
         {entrances.map((entrance) => (
           <EntranceRow
@@ -185,7 +235,12 @@ function LocationCard({
       </div>
 
       {isTarget ? (
-        <button type="button" className="dow-place__pick" onClick={() => onPickLocation(location)}>
+        <button
+          type="button"
+          className="dow-place__pick"
+          onClick={() => onPickLocation(location)}
+          aria-label={`${targetLabel}: ${locationName(location)}`}
+        >
           {targetLabel}
         </button>
       ) : null}

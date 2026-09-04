@@ -15,13 +15,12 @@ import {
 import { Badge, Tooltip } from '@tt/ui';
 import type { ReactNode } from 'react';
 
-import { itemDef, itemName, survivorArtPath, survivorDef, SYMBOL_GLYPH, SYMBOL_LABEL } from '../content';
+import { itemDef, itemName, survivorArtPath, survivorDef, SYMBOL_LABEL } from '../content';
+import { DieFace, DowIcon } from './iconography';
 
 /* ------------------------------------------------------------------ *
  * Dice
  * ------------------------------------------------------------------ */
-
-const DIE_FACE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
 export interface DieProps {
   value: number;
@@ -43,7 +42,7 @@ export function Die({ value, spent = false, selected = false, onClick, title }: 
 
   const face = (
     <span className="dow-die__face" aria-hidden="true">
-      {DIE_FACE[value] ?? value}
+      <DieFace value={value} />
     </span>
   );
   const label = `${spent ? 'Spent action die' : 'Action die'}, value ${value}`;
@@ -119,26 +118,38 @@ export function SurvivorChip({
       />
       <span className="dow-survivor__pip" style={tint ? { background: tint } : undefined} />
       <span className="dow-survivor__name">
-        {survivor.isLeader ? <span aria-label="Group leader">★ </span> : null}
+        {survivor.isLeader ? <DowIcon name="leader" size={12} /> : null}
         {def?.name ?? 'Survivor'}
       </span>
-      <span className="dow-survivor__stats" aria-hidden="true">
-        <span title="Attack threshold">⚔{def?.attackThreshold ?? '?'}</span>
-        <span title="Search threshold">🔍{def?.searchThreshold ?? '?'}</span>
-        {def?.influence ? <span title="Influence">✦{def.influence}</span> : null}
+      <span className="dow-survivor__stats">
+        <span title="Attack threshold"><DowIcon name="attack" size={12} />{def?.attackThreshold ?? '?'}</span>
+        <span title="Search threshold"><DowIcon name="search" size={12} />{def?.searchThreshold ?? '?'}</span>
+        {def?.influence ? <span title="Influence"><DowIcon name="influence" size={12} />{def.influence}</span> : null}
       </span>
       {wounds > 0 ? (
-        <span className="dow-survivor__wounds" title={`${survivor.wounds} wounds, ${survivor.frostbite} frostbite`}>
-          {'✖'.repeat(Math.min(wounds, 3))}
-          {survivor.frostbite > 0 ? <span className="dow-survivor__frost">❄</span> : null}
+        <span
+          className="dow-survivor__wounds"
+          title={`${survivor.wounds} wounds, ${survivor.frostbite} frostbite`}
+          role="img"
+          aria-label={`${survivor.wounds} wounds, ${survivor.frostbite} frostbite`}
+        >
+          {Array.from({ length: Math.min(wounds, 3) }, (_, i) => (
+            <DowIcon key={i} name="wound" size={11} decorative />
+          ))}
+          {survivor.frostbite > 0 ? <span className="dow-survivor__frost"><DowIcon name="frostbite" size={12} decorative /></span> : null}
         </span>
       ) : null}
       {survivor.equipped.length > 0 ? (
-        <span className="dow-survivor__kit" title="Equipped">
+        <span
+          className="dow-survivor__kit"
+          title="Equipped"
+          role="img"
+          aria-label={`Equipped: ${survivor.equipped.map((iid) => itemName(state, iid)).join(', ')}`}
+        >
           {survivor.equipped
             .map((iid) => itemDef(state, iid)?.symbols[0])
             .map((symbol, i) => (
-              <span key={i}>{symbol ? SYMBOL_GLYPH[symbol] : '▫'}</span>
+              <span key={i}>{symbol ? <DowIcon name={symbol} size={11} decorative /> : <DowIcon name="card" size={11} decorative />}</span>
             ))}
         </span>
       ) : null}
@@ -195,10 +206,14 @@ export function ItemCard({ state, iid, selected = false, onClick, disabled }: It
   const inner = (
     <>
       <span className="dow-card__name">{def?.name ?? 'Face down'}</span>
-      <span className="dow-card__symbols" aria-hidden="true">
+      <span
+        className="dow-card__symbols"
+        role={def?.symbols.length ? 'img' : undefined}
+        aria-label={def?.symbols.length ? `Symbols: ${def.symbols.map((symbol) => SYMBOL_LABEL[symbol]).join(', ')}` : undefined}
+      >
         {(def?.symbols ?? []).map((symbol) => (
           <span key={symbol} title={SYMBOL_LABEL[symbol]}>
-            {SYMBOL_GLYPH[symbol]}
+            <DowIcon name={symbol} size={13} decorative />
           </span>
         ))}
       </span>
@@ -266,17 +281,17 @@ export function EntranceRow({
       <span className="dow-entrance__slots" aria-hidden="true">
         {Array.from({ length: zombies }, (_, i) => (
           <span key={`z${i}`} className="dow-entrance__zombie">
-            ●
+            <DowIcon name="zombie" size={11} decorative />
           </span>
         ))}
         {Array.from({ length: barricades }, (_, i) => (
           <span key={`b${i}`} className="dow-entrance__barricade">
-            ▮
+            <DowIcon name="barricade" size={11} decorative />
           </span>
         ))}
         {Array.from({ length: free }, (_, i) => (
           <span key={`f${i}`} className="dow-entrance__free">
-            ○
+            <DowIcon name="free" size={11} decorative />
           </span>
         ))}
       </span>
