@@ -8,6 +8,30 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-09-04 — nightly run 23
+
+**Startup note:** this run began with `master` six commits behind `origin/master`. Two untracked
+local A14 test files blocked the required fast-forward, so they were preserved under
+`.codex-nightly-preserve-20260904-a14` before the sync. No preserved file was deleted or overwritten.
+
+**Intent:** the first unmet queue item is now `visual-core`. After the required green baseline, take
+three bounded, disjoint units toward the measured visual failures:
+
+1. **Board composition (V3):** replace the labelled rounded-rectangle board with authored location
+   art/layout while preserving the existing action and state contract.
+2. **Iconography (V11):** replace literal Unicode emoji in the DoW match UI/content with a coherent,
+   platform-stable icon treatment.
+3. **Cards and density (V2/V14/V15):** improve card presentation and eliminate the measured hand,
+   rail, and board overflow at the five required viewport sizes.
+
+Workers own disjoint files, run no Git commands, and must return concrete screenshot/test evidence or
+record FAIL. I will integrate, run the full baseline, and push each green unit separately. The blind
+Wingspan comparison, motion, UX, and N4/N5/N7/N8 multiplayer gates remain open.
+
+(in progress)
+
+---
+
 ## 2026-09-03 — nightly run 22
 
 **Correction to run 21's record:** run 21 was killed after `c49644b` *"wip(dow): record run 21 intent"*
