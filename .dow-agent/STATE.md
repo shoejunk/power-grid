@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-09-03** (nightly run 22: screenshot harness, first visual evidence, multiplayer proof)
+Last updated: **2026-09-04** (nightly run 23: authored board, stable iconography, desktop density pass)
 
 ---
 
@@ -58,24 +58,26 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 | Multiplayer N4/N5/N7/N8 | — | Not attempted. N4 server restart is the most valuable next one |
 | Blind comparison vs Wingspan | **FAIL** | Final gate; first attempt run 22 |
 
-### Visual failures measured on 2026-09-03, not guessed
+### Visual failures measured on 2026-09-03 and rechecked on 2026-09-04, not guessed
 
 Captured from a real running 4-player match by `node tools/screenshot/capture.mjs`:
 
-- **V15 FAIL, the headline bug.** `.dow-hand` — the player's own hand — hides **213px behind an
-  inner scroll at every resolution, including 3840×2160.** This is precisely the Wingspan weakness
-  §0 of the quality bar says we must beat: the player's most important state is not visible at a
-  glance. A 4K desktop cannot see its own hand.
-- **V15/V14 FAIL at small resolutions.** At 1280×720 `.dow-match__rail` hides 632px and
-  `.dow-match__board` hides 185px; at 1366×768, 584px and 137px.
-- **V11 FAIL.** Iconography is literal Unicode emoji (`⚔ 🔍 ✦ 🎓 🥫 🔧`) in `content.ts` and
-  `game/parts.tsx`, not a designed set. Emoji render differently per platform and carry colours
-  that fight the desaturated winter palette.
-- **V3 FAIL.** The board is rounded rectangles with a location name and "Nobody here." — exactly
-  what V3 forbids ("not coloured boxes labelled with location names").
-- **V2 partial.** Survivor portraits are real illustration. Item, crisis, crossroads and objective
-  cards are text boxes.
-- **Composition.** A large empty dead region sits mid-left at 1920×1080, below the Hospital panel.
+- **V15/V14 run-22 baseline failure was materially reduced.** The run-23 live CUA audit measured a
+  real 4-player setup at 1280×720, 1366×768, 1920×1080, 2560×1440, and 3840×2160. At each size,
+  document, board, rail, and hand `scrollWidth` equalled `clientWidth`; document dimensions equalled
+  the viewport. This is strong evidence for the normal setup state, but not a worst-case full-match
+  PASS, and the compact layout still needs a harsh visual review.
+- **V11 improved but is not independently closed.** Literal Unicode pictograms were removed from the
+  DoW match sources and replaced with an inline SVG vocabulary plus pip dice. A full 200% scale and
+  contrast audit was not completed.
+- **V3 remains FAIL.** The board now has authored winter CSS geometry and a six-location composition,
+  but it is still stylized geometry rather than a painted winter environment, which is what V3 asks
+  for.
+- **V2 remains partial.** Survivor portraits are real illustration; item, crisis, crossroads,
+  objective, and location presentation still lack convincing card-scale illustration, texture, depth,
+  and lighting.
+- **Composition remains below the benchmark.** The compact six-location strip leaves a large dark
+  dead region around 1920×1080, and the full worst-case state has not been captured.
 
 Passing, with evidence: the document itself never scrolls at any of the five resolutions, and the
 console is **clean** — zero page errors and zero failed requests at all five. The production build
@@ -98,6 +100,12 @@ Verify the baseline yourself every run; do not trust this table. Measured on **L
 | DoW tests | `npm test -w @game/dead-of-winter` | 324 passed |
 | Server tests | `npx vitest run --root packages/server` | 58 passed |
 
+Run 23 reverified this baseline on Windows after installing dependencies with the required optional
+Windows Rollup binary. All five TypeScript checks, the production build, Power Grid **231/231**, DoW
+**324/324**, and server **58/58** passed. The Windows `npx` shim still cannot resolve the server Vitest
+binary, so the equivalent repository-local Vitest entrypoint was used for that one check. No tracked
+dependency files changed.
+
 ## Tooling you now have — use it, do not rebuild it
 
 `tools/screenshot/` (added run 22, with its own README):
@@ -115,7 +123,8 @@ Start both dev servers first (`npm run dev:server &`, `npm run dev:client &`).
 
 1. **`visual-core`** — the board (V3), card art (V2), and the icon set (V11). This is the largest
    remaining gap between us and the benchmark and it is where the comparison is won or lost.
-2. **`layout-density`** — V14/V15. The measured overflow above. Partially addressed run 22.
+2. **`layout-density`** — V14/V15. Normal-state overflow is now measured clean at five sizes, but
+   the full worst-case state and visual composition still need proof.
 3. **`motion`** — M1–M9, all currently FAIL with zero animation code. `@tt/ui` already ships motion
    tokens and `prefers-reduced-motion` handling, and `framer-motion` is already bundled, so the
    foundation is there and unused.

@@ -28,7 +28,34 @@ Workers own disjoint files, run no Git commands, and must return concrete screen
 record FAIL. I will integrate, run the full baseline, and push each green unit separately. The blind
 Wingspan comparison, motion, UX, and N4/N5/N7/N8 multiplayer gates remain open.
 
-(in progress)
+**Landed and pushed:**
+
+- `bee0f9c` (`feat(dow): add winter board and stable iconography`) adds authored winter board geometry,
+  a platform-stable inline SVG icon vocabulary with pip dice, and removes the remaining literal
+  Unicode pictograms from the DoW match sources. The bounded board worker passed typecheck/SCSS
+  compilation but could not claim V3/V6/V13 without browser evidence. The icon worker passed its
+  static stability/accessibility checks, while the parent completed the remaining Board/Seats/TurnPanel
+  call sites and verified no legacy pictograms remain in the DoW source tree.
+- `8d5bfc1` (`feat(dow): fit match state at desktop breakpoints`) compacts the hand, rail, public table,
+  and board geometry at short desktop heights while preserving the readable state labels and controls.
+
+**Verification:** all five TypeScript checks passed; Power Grid **231/231**, Dead of Winter **324/324**,
+server **58/58**, and `npm run build` passed. The required Windows `npx` server command still fails to
+resolve its binary, so the repository-local Vitest entrypoint supplied the equivalent **58/58** result.
+The two local A14 files that blocked the initial fast-forward remain preserved, recoverably, under
+`.codex-nightly-preserve-20260904-a14`; they were not deleted or committed.
+
+**Browser evidence:** a fresh online local match was inspected with CUA. At all five required desktop
+sizes, the document, board, rail, and hand had equal `scrollWidth`/`clientWidth`, and the document fit
+the viewport. That materially addresses the run-22 overflow defect in the normal setup state, but it
+is not a full worst-case V14/V15 PASS. No card raster art was generated, no painted-board treatment
+was added, no independent Wingspan side-by-side was completed, and no full 200% contrast audit was run.
+
+**Critic verdicts and state changes:** visual-core is still **FAIL** overall: V2 and V3 remain below
+the bar, V6/V14/V15 lack strict independent evidence, and V11 is improved but not fully audited.
+Motion remains **FAIL** with no match-screen animation system; UX and N4/N5/N7/N8 remain unassessed.
+The next run should stay on `visual-core`: add real card/board illustration and run a harsh independent
+visual pass against the five-size and worst-case requirements before moving to motion.
 
 ---
 
