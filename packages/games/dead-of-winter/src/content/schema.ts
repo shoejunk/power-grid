@@ -214,10 +214,22 @@ export interface CrossroadsCardDefinition {
    */
   options: EffectOption[];
   /**
-   * Who chooses. §10 defaults to the active player; a card may hand the choice
-   * to a vote (`Outbreak`) or another player.
+   * Who chooses between this card's `options`. §10 defaults to the active
+   * player; `firstPlayer` hands it to the holder of the first-player token.
+   *
+   * There is deliberately **no `'vote'` member**. §10's "unless the card
+   * specifies a vote" is served by the `vote` *effect*, which is the only place
+   * an electorate can be expressed (§15, §18.4: `Outbreak` is voted on only by
+   * players with a colony survivor). A card that wants a vote makes its option's
+   * `outcome` a `vote` effect, exactly as `xr-outbreak` does.
+   *
+   * The member used to exist and was never honoured: `triggerCrossroads` mapped
+   * everything that was not `firstPlayer` to the active player, so a card
+   * declaring `chooser: 'vote'` with two or more options would have silently let
+   * the active player decide alone. Narrowing the union turns that trap from a
+   * silent wrong-player bug into a compile error.
    */
-  chooser?: 'activePlayer' | 'vote' | 'firstPlayer';
+  chooser?: 'activePlayer' | 'firstPlayer';
   /** §4.7 filter — the reason this flag exists at all. */
   matureContent: boolean;
   nonCooperative: boolean;

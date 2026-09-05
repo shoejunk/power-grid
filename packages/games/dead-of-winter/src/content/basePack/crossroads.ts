@@ -66,8 +66,8 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
     story: 'Something is wrong inside the walls.',
     trigger: { event: 'turnStart' },
     // §15/§18.4: voted on only by players with at least one survivor at the
-    // colony. The electorate is expressed on the vote effect, not on the card.
-    chooser: 'vote',
+    // colony. The electorate is expressed on the vote effect, not on the card —
+    // the card carries no `chooser`, because a vote is not a chooser.
     options: [
       {
         id: 'quarantine',

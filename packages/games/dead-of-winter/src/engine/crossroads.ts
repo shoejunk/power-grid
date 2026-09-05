@@ -189,10 +189,26 @@ function triggerCrossroads(state: GameState, now: number, card: CrossroadsCardDe
     },
   });
 
-  // §10: the active player chooses "unless the card specifies a vote or another
-  // chooser".
-  const chooser: PlayerId =
-    card.chooser === 'firstPlayer' ? state.firstPlayerId : turn.playerId;
+  /*
+   * §10: the active player chooses "unless the card specifies a vote or another
+   * chooser". `chooser` is exhaustive over the narrowed union — see the note on
+   * `CrossroadsCardDefinition.chooser`. A vote is *not* a chooser: it is a `vote`
+   * effect on an option's outcome, because only the effect can carry the
+   * electorate §15/§18.4 requires.
+   */
+  const chooser: PlayerId = ((): PlayerId => {
+    switch (card.chooser) {
+      case 'firstPlayer':
+        return state.firstPlayerId;
+      case 'activePlayer':
+      case undefined:
+        return turn.playerId;
+      default: {
+        const never: never = card.chooser;
+        throw new Error(`unhandled crossroads chooser: ${String(never)}`);
+      }
+    }
+  })();
 
   const choice: Omit<PendingChoice, 'id'> = {
     kind: 'effectOption',
