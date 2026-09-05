@@ -39,7 +39,91 @@ Wingspan-on-Steam reference and scores the side-by-side.
 Workers own disjoint file sets, run **no** Git commands, and never edit the engine. I integrate,
 typecheck, test and push each green unit on its own before starting the next.
 
-(in progress)
+**What actually happened: all three visual workers were killed simultaneously by a session rate
+limit** (`resets 4:30am UTC`) partway through their first edit pass. None reported, so **no critic
+loop ran and no visual criterion was scored this run.** The engine work I did myself while they ran
+landed complete; the visual work did not.
+
+**Landed and pushed:**
+
+- `4c7e7b9` (`feat(dow): close the silent crossroads vote-chooser trap`) — the latent engine gap
+  recorded by run 22 and carried unfixed since. `CrossroadsCardDefinition.chooser` admitted
+  `'vote'`, but `triggerCrossroads` mapped everything except `'firstPlayer'` to the active player,
+  so a two-option card declaring a vote would have silently let the active player decide alone.
+  Resolved by **narrowing the union**, not by growing a second N-ary voting path beside the binary
+  one: §10's "unless the card specifies a vote" is served by the `vote` *effect*, the only place an
+  electorate can be expressed at all (§15/§18.4 `Outbreak`). `triggerCrossroads` is now exhaustive,
+  so a future member is a compile error. `crossroads-chooser.test.ts` (8 tests) guards the data path
+  the compiler cannot see and **was verified to fail when the old declaration is reinstated**.
+- `4e4c726` (`test(dow): prove N7 vote secrecy and commitment finality`) — N7 had no regression test
+  at all. Six tests through the plugin boundary the server actually uses, so a leak is measured on
+  the wire rather than in authoritative state. **Verified to fail when the redaction guard is
+  disabled — 3 of the 6 caught the injected leak.**
+- `34cd824` — scorecard corrections, described below.
+- `3f899f5` (`wip(dow): in-flight TurnPanel layout rework`) — the layout worker's TurnPanel edit,
+  committed green before it died. Purely additive: it adds an opt-in `section` prop defaulting to
+  `'all'`, so with `Match.tsx` reverted nothing passes it and rendering is unchanged. It also adds a
+  visible "Only you can see these cards" privacy label, a small U5 gain.
+- `8df9f1a` (`wip(dow): salvage unwired board and card art modules`) — see the salvage note below.
+
+**Two scorecard claims audited rather than inherited, and both were wrong:**
+
+- **N4 was recorded as "not attempted". It is fully proven.**
+  `packages/server/src/__tests__/dead-of-winter-deferred-morale.test.ts` drives a real round to a
+  position holding a pending `overrunCasualty` choice, a non-empty effect stack and
+  `deferMoraleCheck`, restarts the server, asserts all three survive along with the audit chain,
+  then rejoins the seat with its hand and secret objectives intact and plays on. That is exactly
+  what N4 asks for. `persistence.test.ts` covers the in-progress and lobby cases. **N4 → PASS.**
+- **The `portal.scss` rename debt does not exist.** The file has zero `pg-setup` or `--pg-`
+  occurrences; the surviving `--pg-*` tokens live under `games/power-grid/` where they are correctly
+  game-scoped. Debt struck.
+
+**The salvage decision, stated plainly.** The three workers left: two new art modules
+(`board-art.tsx` 1,378 lines; `card-art.tsx`/`card-art.scss` 1,427 lines) that **nothing imports**,
+and a **701-line stylesheet restructure that did not compile.** The layout worker died mid
+find/replace and left an `@@RESPONSIVE@@` placeholder where the entire responsive block used to be —
+the client would not render at all and the screenshot harness could not reach START GAME.
+
+- I **reverted** `dead-of-winter.scss` and `Match.tsx`. Deleting the marker alone would have left a
+  restructured layout with *no breakpoint handling whatsoever*, unverified against the five required
+  sizes and un-critiqued. Pushing that would have been worse than pushing nothing.
+- I **kept** the two art modules, repairing two fragments of dying-agent output to make them compile
+  (a corrupted `stopColor` literal, a dead redundant height chain). They are inert — imported
+  nowhere, so they change no pixel — and they typecheck, compile and build clean. **Their quality is
+  entirely unverified: no critic, no screenshot, no review.** They are a head start for the next run
+  to judge, not an asset to trust.
+
+**Verified after the revert:** all five TypeScript checks clean, `npm run build` clean, Power Grid
+**231/231**, Dead of Winter **338/338** (was 324), server **58/58**, and a real 4-player match
+captures again at 1920×1080 (`.shots/run24-verify/`).
+
+**Critic verdicts: none. Zero critic passes ran this run** — the workers died before reporting, so
+there was nothing to critique. Every visual criterion keeps the state run 23 left it in. Claiming
+otherwise would be the single most damaging thing this file could do.
+
+**A hard constraint discovered this run, and it is not going away.** The blind Wingspan comparison
+**cannot be performed from inside this sandbox.** `store.steampowered.com`, the review sites, and
+every image CDN tried (`shared.fastly.steamstatic.com`, `cdn.akamai.steamstatic.com`,
+`upload.wikimedia.org`) are all refused by the egress proxy with `403` on CONNECT. `WebSearch`
+returns text only. So a critic **cannot** fetch reference screenshots and place them side by side,
+and any future run claiming it did so is either mistaken or lying. The honest options are: score
+against the benchmark description encoded in §0 of the quality bar, or have a human supply reference
+images into the repo. Until one of those happens the blind-comparison gate is **BLOCKED, not
+passed** — and per the rubric's own rule, a criterion without evidence is FAIL.
+
+**What the next run should do first:** the visual work, again, and it is unchanged from run 23 —
+`visual-core` is still the first non-PASS queue item. Start by deciding the fate of the two salvaged
+art modules: wire `board-art.tsx` into `Board.tsx` and `card-art.tsx` into `parts.tsx`, screenshot,
+and judge them harshly. If they are not good, delete them rather than carrying them. The measured
+defects are unchanged and visible in `.shots/run24-verify/match-1920x1080.png`: **~35% of a 1920×1080
+screen is empty** below the board, the hand renders as **five ~45px slivers with names clipped
+mid-word**, and survivor names ellipsize in the colony. Fixing composition and hand size is worth
+more than any other single change available.
+
+**A method note for whoever runs next.** Three concurrent workers all died to one shared rate limit,
+so the fan-out bought nothing and cost the night's visual budget. Prefer **one or two** workers at a
+time, and have each one commit-ready its own smallest useful unit early, exactly the way the parent
+is required to.
 
 ---
 

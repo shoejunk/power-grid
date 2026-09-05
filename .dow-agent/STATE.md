@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-09-05** (nightly run 24: crossroads chooser trap closed, N7 proven, visual-core in flight)
+Last updated: **2026-09-05** (nightly run 24: crossroads chooser trap closed, N7 and N4 proven; visual workers killed by a rate limit)
 
 ---
 
@@ -29,6 +29,18 @@ When that holds, write `.dow-agent/.aaa-complete` and disable the routine.
 
 ## Read this before picking a workstream
 
+**Run 24's visual attempt produced nothing, for a reason worth knowing.** Three visual workers were
+fanned out concurrently and **all three were killed by the same session rate limit** partway through
+their first edit pass. The fan-out bought no parallelism and cost the whole visual budget. Prefer
+**one or two** workers, and make each commit-ready its smallest useful unit early.
+
+**The blind Wingspan comparison cannot be run from this sandbox.** Confirmed run 24 by direct test:
+Steam, the review sites and every image CDN tried are refused by the egress proxy with `403` on
+CONNECT; `WebSearch` returns text only. A critic **cannot** fetch reference screenshots. Do not
+accept — or write — a claim that a side-by-side was performed here. Either score against the §0
+benchmark description, or get a human to commit reference images into the repo. Until then that gate
+is **BLOCKED**, which by the rubric's own rule counts as FAIL, not as passed.
+
 Runs 5 through 21 all declared `engine-tests` and nothing else. Seventeen nights. In that time the
 Visual, Motion and UX sections — which are the **majority of the quality bar and the actual stated
 goal of the project** — were never assessed even once, and the Wingspan comparison was never
@@ -48,17 +60,17 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 | Platform / multiplayer plumbing | **PASS** | 58 server tests green; game-agnostic boundary audited |
 | Power Grid (regression guard) | **PASS** | 231 engine tests green; must never go red |
 | DoW engine — code exists | **PASS** | ~5,400 lines under `engine/`; plugin implements the full `GamePlugin` contract |
-| DoW engine — tested | **PASS for A1–A15 coverage** | 338 tests. Every §23 criterion has a named suite; run 22 closed the last public §18.4 crossroads tranche. Two honest boundaries remain, recorded under Known debts |
+| DoW engine — tested | **PASS for A1–A15 coverage** | 338 tests (run 24: +8 chooser, +6 vote secrecy). Every §23 criterion has a named suite; run 22 closed the last public §18.4 crossroads tranche. Two honest boundaries remain, recorded under Known debts |
 | DoW content pack | **PASS** | Authored `dow-base` v0.5.0-dev at the §2.0 counts. Original development content, not reproduced licensed retail text |
 | DoW client UI — exists | **PASS** | Match screen at `packages/client/src/games/dead-of-winter/` |
 | Visual (V1–V15) | **FAIL** | First real evidence captured run 22. See below — this is now measured, not unknown |
 | Motion (M1–M9) | **FAIL** | **Zero animation code in the entire match screen.** No `motion.` element, no `AnimatePresence`, in any of the 11 match components. Not a judgement call |
-| UX (U1–U13) | — | Critic pass in flight at end of run 22; treat as unassessed |
+| UX (U1–U13) | — | Still unassessed. No critic pass has ever completed. Run 24 added one visible U5 gain (a "Only you can see these cards" label on the hand) as a side effect, unscored |
 | Multiplayer N1/N3/N6 | **PASS** | Proven run 22 against two real browsers, 8/8 checks — see `tools/screenshot/multiplayer.mjs` |
 | Multiplayer N4 | **PASS** | Run 24 audited the existing coverage rather than assuming it absent: `packages/server/src/__tests__/dead-of-winter-deferred-morale.test.ts` drives a real round to a position holding a pending `overrunCasualty` choice, a non-empty effect stack and `deferMoraleCheck`, restarts the server, and asserts all three survive — then rejoins the seat with its hand and secret objectives and plays on. `persistence.test.ts` covers the in-progress and lobby cases. Previous runs recorded this as "not attempted"; that was wrong |
 | Multiplayer N7 | **PASS** | Proven run 24 by `src/engine/__tests__/vote-secrecy.test.ts` — 6 tests through the plugin boundary, verified to fail when the redaction guard is disabled |
 | Multiplayer N5/N8 | — | Still not attempted. N8 (three clients, full game to a winner) is the valuable one |
-| Blind comparison vs Wingspan | **FAIL** | Final gate; first attempt run 22 |
+| Blind comparison vs Wingspan | **BLOCKED → FAIL** | Reference images are unreachable from the sandbox (egress `403`). Run 24 proved this rather than assuming it. Needs human-supplied reference material or §0-based scoring |
 
 ### Visual failures measured on 2026-09-03 and rechecked on 2026-09-04, not guessed
 
@@ -123,22 +135,42 @@ Start both dev servers first (`npm run dev:server &`, `npm run dev:client &`).
 
 ## Queue — next workstreams, in dependency order
 
+0. **Decide the fate of run 24's two salvaged art modules, before anything else.**
+   `game/board-art.tsx` (1,378 lines, winter location scenes) and `game/card-art.tsx` +
+   `card-art.scss` (1,427 lines, printed card treatment) are on `master` and **imported by nothing**.
+   They compile and build clean but have had **no critic pass and no screenshot** — their quality is
+   completely unverified. Wire `board-art` into `Board.tsx` and `card-art` into `parts.tsx`,
+   screenshot, and judge them harshly. **If they are not good, delete them** rather than carrying
+   dead code forward.
+
 1. **`visual-core`** — the board (V3), card art (V2), and the icon set (V11). This is the largest
    remaining gap between us and the benchmark and it is where the comparison is won or lost.
+   The measured defects are unchanged and visible in `.shots/run24-verify/match-1920x1080.png`:
+   **~35% of a 1920×1080 screen is empty** below the board; the hand is **five ~45px slivers with
+   names clipped mid-word**; survivor names ellipsize in the colony. Composition and hand size are
+   the highest-value single change available.
 2. **`layout-density`** — V14/V15. Normal-state overflow is now measured clean at five sizes, but
    the full worst-case state and visual composition still need proof.
 3. **`motion`** — M1–M9, all currently FAIL with zero animation code. `@tt/ui` already ships motion
    tokens and `prefers-reduced-motion` handling, and `framer-motion` is already bundled, so the
    foundation is there and unused.
 4. **`ux-pass`** — U1–U13 against the critic's findings.
-5. **`multiplayer-proof`** — N4 server restart mid-game, then N7 vote secrecy, then N8 a full
-   three-client game to a winner.
+5. **`multiplayer-proof`** — N4 and N7 are now PASS. What remains is **N5** (indefinite pause) and
+   **N8** (three real clients, a full game to a winner including an exile, a bite chain, an overrun
+   and winner evaluation). N8 is the valuable one.
 6. **`engine-tests`** — now a maintenance item, not a blocker.
 
 ## Known debts
 
 - **Runs keep dying mid-night with unpushed work.** Push each unit the moment its tests are green.
-  Do not batch. Run 22 pushed five times.
+  Do not batch. Run 22 pushed five times; run 24 pushed six.
+- **Sub-agents die too, and they die mid-edit.** Run 24's layout worker left an `@@RESPONSIVE@@`
+  placeholder in `dead-of-winter.scss` that broke the stylesheet outright — the client would not
+  render and the harness could not reach START GAME. Its work was reverted. **Always compile the
+  SCSS (`npx sass ... /dev/null`) and capture a screenshot before believing a worker's output**;
+  `tsc` alone does not catch a broken stylesheet.
+- **Two unwired, unreviewed art modules are on `master`** (`board-art.tsx`, `card-art.tsx/.scss`).
+  See queue item 0. They are inert, but they are not free — either validate them or delete them.
 - **Do not use `git add -A` while sub-agents are running.** Run 22 did once and swept an agent's
   in-flight test file into an unrelated commit. It happened to be green; it might not be next time.
   Stage the specific paths you verified.
