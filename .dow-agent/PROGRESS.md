@@ -8,6 +8,41 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-09-05 — nightly run 24
+
+**Baseline verified before any work, on Linux, and it is fully green.** `npm install` clean. All five
+TypeScript checks clean (core, power-grid, dead-of-winter, server, client). Power Grid **231/231**,
+Dead of Winter **324/324**, server **58/58**. Tree clean at `b674cba`.
+
+**Intent:** stay on queue item 1, `visual-core`, which run 23 advanced but left FAIL. The measured
+gaps are V2 (item / crisis / crossroads / objective cards are still flat rectangles — only the 30
+survivor portraits are real illustration) and V3 (the board is authored CSS geometry, not a painted
+winter environment). Motion (M1-M9) is still literally zero animation code, which is a whole
+discipline of the bar at FAIL with nothing written against it.
+
+Three bounded, disjoint units tonight, each looped against its own harsh critic:
+
+1. **Board environment (V3, V8, V13).** Turn the six-location board into a painted winter
+   environment — layered SVG scenes with atmosphere, snow, cold light, grain and depth — while
+   preserving every existing action and state contract on the board.
+2. **Card art system (V2, V8, V11).** An illustrated card-face treatment for items, crisis,
+   crossroads and objectives with texture, grain, depth and lighting, so cards stop reading as
+   icon-on-a-rectangle.
+3. **Motion primitives (M2, M5, M7).** A self-contained motion module over the already-bundled
+   `framer-motion` and the `@tt/ui` motion tokens: spring curves, weighted dice/token physics and
+   `prefers-reduced-motion` handling. Wiring it into the shared match components stays with me so
+   no two workers touch one file.
+
+Then a headless five-resolution capture, and an independent visual critic that fetches real
+Wingspan-on-Steam reference and scores the side-by-side.
+
+Workers own disjoint file sets, run **no** Git commands, and never edit the engine. I integrate,
+typecheck, test and push each green unit on its own before starting the next.
+
+(in progress)
+
+---
+
 ## 2026-09-04 — nightly run 23
 
 **Startup note:** this run began with `master` six commits behind `origin/master`. Two untracked
