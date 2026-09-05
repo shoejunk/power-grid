@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-09-05** (nightly run 24: crossroads chooser trap closed, N7 and N4 proven; visual workers killed by a rate limit)
+Last updated: **2026-09-05** (nightly run 25: baseline reverified, visual-core unchanged; prior run-24 N4/N7 proof retained)
 
 ---
 
@@ -47,7 +47,7 @@ goal of the project** — were never assessed even once, and the Wingspan compar
 attempted. The queue's dependency argument ("don't judge a UI built on an unverified engine") was
 sound in run 2 and stopped being sound a long time ago.
 
-Run 22 broke that pattern and the next run should not restore it. The engine now has 324 tests
+Run 22 broke that pattern and the next run should not restore it. The engine now has 338 tests
 covering A1–A15. **The bottleneck is no longer the engine. It is that the game does not look
 finished.** Spend the night on the visual queue unless the baseline is red.
 
@@ -111,14 +111,15 @@ Verify the baseline yourself every run; do not trust this table. Measured on **L
 | Client | `npx tsc -p packages/client/tsconfig.json --noEmit` | OK |
 | Client production build | `npm run build` | OK |
 | Power Grid tests | `npm test -w @game/power-grid` | 231 passed |
-| DoW tests | `npm test -w @game/dead-of-winter` | 324 passed |
+| DoW tests | `npm test -w @game/dead-of-winter` | 338 passed |
 | Server tests | `npx vitest run --root packages/server` | 58 passed |
 
-Run 23 reverified this baseline on Windows after installing dependencies with the required optional
-Windows Rollup binary. All five TypeScript checks, the production build, Power Grid **231/231**, DoW
-**324/324**, and server **58/58** passed. The Windows `npx` shim still cannot resolve the server Vitest
-binary, so the equivalent repository-local Vitest entrypoint was used for that one check. No tracked
-dependency files changed.
+Run 25 reverified the runtime suites on Windows after restoring the required optional Windows Rollup
+binary: Power Grid **231/231**, DoW **338/338**, and server **58/58** passed. Client, DoW and server
+no-emit TypeScript checks passed. The emitted DoW/server builds still hit EPERM writing existing
+`dist` artifacts, even on the elevated retry; no source diagnostics were reported. The Windows `npx`
+shim still cannot resolve the server Vitest binary, so the equivalent repository-local Vitest
+entrypoint was used. No tracked dependency files changed.
 
 ## Tooling you now have — use it, do not rebuild it
 

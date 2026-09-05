@@ -8,6 +8,34 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-09-05 — nightly run 25
+
+**Startup:** `master` was synchronized with `origin/master` at `3f899f5` after the initial
+sandboxed pull hit the configured local proxy and the elevated retry succeeded. The untracked
+`.codex-nightly-preserve-20260904-a14/` directory is preserved and out of scope.
+
+**Intent:** continue the first unmet queue item, `visual-core`, after re-establishing the required
+green baseline. Work is bounded to the remaining visual gap: introduce authored card-face and/or
+board-environment treatment without changing game rules or interaction contracts, then capture
+the running client at the required resolutions and obtain an independent harsh visual verdict.
+Motion and multiplayer N5/N8 remain explicitly out of scope unless the baseline is red.
+
+**What actually happened:** the required baseline suites are green at Power Grid **231/231**, DoW
+**338/338**, and server **58/58**. Client, DoW and server no-emit TypeScript checks are green. The
+emitted DoW/server builds remain blocked by EPERM on existing `dist` files, and the first sandboxed
+`npm install`/Vitest attempts hit Windows runner restrictions; elevated retries restored the optional
+Rollup binary and ran the suites successfully. No client code, engine code, art, screenshots, or
+critic verdict changed this run. The required early commit/push was blocked by the safety reviewer,
+which requires explicit action-time approval for a push to shared `master`; the intent and truthful
+handoff edits remain uncommitted. The preserved `.codex-nightly-preserve-20260904-a14/` directory
+was not touched.
+
+**Next run:** obtain explicit approval for the shared-`master` push before mutating code, then resume
+`visual-core` with a bounded authored card/board treatment and fresh five-resolution capture. Do not
+claim visual or Wingspan PASS without the running screenshot and independent harsh comparison.
+
+---
+
 ## 2026-09-05 — nightly run 24
 
 **Baseline verified before any work, on Linux, and it is fully green.** `npm install` clean. All five
