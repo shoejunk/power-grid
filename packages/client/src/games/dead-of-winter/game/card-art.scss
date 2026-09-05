@@ -1,0 +1,505 @@
+@charset "UTF-8";
+
+/* =====================================================================
+ * PRINTED CARD FACES — Dead of Winter
+ * ---------------------------------------------------------------------
+ * The frame half of the card-art system; `card-art.tsx` draws the
+ * illustration that sits in it.
+ *
+ * V8 asks for elevation expressed as layered physicality rather than a
+ * border, so a card here is built the way a real one is: a die-cut edge,
+ * a lit lip along the bottom where the stock's thickness catches the
+ * room light, a dark board core under that, a tight contact shadow and
+ * two wide ambient ones. Nothing in the elevation is a 1px outline.
+ *
+ * The stock is deliberately pale. Everything else on this screen is
+ * dark, and the benchmark's whole trick is that the cards are the
+ * brightest, most detailed thing in frame — a hand you can read at a
+ * glance beats a hand you have to squint at. It stays cold and
+ * desaturated (ash grey-blue, never cream) so it belongs to this game's
+ * winter palette rather than to Wingspan's summer one.
+ *
+ * Sizing is container-relative (`cqw`), so one definition is correct at
+ * the 150px hand card, inside a dialog at 220px and in a cramped 60px
+ * rail — the type ramp and the frame scale together instead of clipping.
+ *
+ * Specificity: `dead-of-winter.scss` is another worker's file and loads
+ * after this one, so every rule here is written as `.dow-card.dow-cardart`
+ * or tighter to win on specificity rather than on source order.
+ * ===================================================================== */
+
+.dow-card.dow-cardart {
+  /* One decoded image, shared by every card that paints grain. */
+  --dow-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)'/%3E%3C/svg%3E");
+  --dow-stock-top: #cbd5dd;
+  --dow-stock-mid: #b3bfca;
+  --dow-stock-bot: #a5b2bd;
+  --dow-ink: #16212c;
+  --dow-ink-soft: #26323f;
+  --dow-plate-top: #1d2a38;
+  --dow-plate-bot: #101a24;
+  --dow-plate-edge: rgba(206, 230, 248, 0.22);
+  --dow-lip: rgba(214, 232, 246, 0.26);
+
+  container-type: inline-size;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--dow-ink);
+  background: linear-gradient(180deg, var(--dow-stock-top), var(--dow-stock-bot));
+  border: 0;
+  border-radius: clamp(4px, 3.4cqw, 10px);
+  box-shadow:
+    /* die-cut edge, lit from above */
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 0 0 1px rgba(10, 17, 24, 0.35),
+    /* the card's own thickness, then the table under it */
+    0 1px 0 0 var(--dow-lip),
+    0 3px 0 -1px #070d14,
+    0 4px 3px -3px rgba(0, 0, 0, 0.8),
+    0 10px 18px -6px rgba(0, 0, 0, 0.58),
+    0 22px 36px -14px rgba(0, 0, 0, 0.5);
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 160ms ease;
+}
+
+/* Corner wear and an overall burnish. Kept on ::after so the card body
+   can stay a plain flex column. */
+.dow-card.dow-cardart::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 14%),
+    radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 12%),
+    radial-gradient(circle at 0% 100%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 12%),
+    radial-gradient(circle at 100% 100%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 12%),
+    radial-gradient(125% 90% at 34% 8%, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0) 46%, rgba(2, 6, 10, 0.26) 100%);
+  mix-blend-mode: soft-light;
+}
+
+/* ------------------------------------------------------------------ *
+ * The art window
+ * ------------------------------------------------------------------ */
+
+.dow-card.dow-cardart .dow-cardart__art {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  width: 100%;
+  aspect-ratio: 8 / 5;
+  min-height: 0;
+  overflow: hidden;
+  background: #070c12;
+  /* The window is recessed into the stock: dark inner edge, lit sill. */
+  box-shadow:
+    inset 0 0 0 1px rgba(4, 8, 13, 0.9),
+    inset 0 2px 6px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+.dow-card.dow-cardart .dow-cardart__svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  shape-rendering: geometricPrecision;
+}
+
+/* Film grain over the illustration — the single biggest thing separating
+   "painted" from "vector shapes" at this size (V2). */
+.dow-card.dow-cardart .dow-cardart__grain {
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  background-image: var(--dow-grain);
+  background-size: 140px 140px;
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+}
+
+/* A glass sheen across the window plus a lens vignette. */
+.dow-card.dow-cardart .dow-cardart__glaze {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(118deg, rgba(214, 238, 255, 0.16) 0%, rgba(214, 238, 255, 0.03) 26%, rgba(0, 0, 0, 0) 46%),
+    linear-gradient(180deg, rgba(3, 7, 12, 0.34) 0%, rgba(0, 0, 0, 0) 22%);
+}
+
+/* ------------------------------------------------------------------ *
+ * Symbol pips (V11) — over the art, each on its own inked chip so the
+ * contrast never depends on what the illustration happens to be doing.
+ * ------------------------------------------------------------------ */
+
+.dow-card.dow-cardart .dow-cardart__pipsback {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 54%;
+  pointer-events: none;
+  background: linear-gradient(0deg, rgba(4, 9, 14, 0.78) 0%, rgba(4, 9, 14, 0.22) 46%, rgba(4, 9, 14, 0) 100%);
+}
+
+.dow-card.dow-cardart .dow-card__symbols.dow-cardart__pips {
+  position: absolute;
+  right: clamp(3px, 2.6cqw, 7px);
+  bottom: clamp(3px, 2.4cqw, 7px);
+  display: flex;
+  gap: clamp(2px, 1.6cqw, 4px);
+  min-height: 0;
+  align-items: center;
+  font-size: inherit;
+  color: #e2eefa;
+}
+
+.dow-card.dow-cardart .dow-cardart__pip {
+  display: grid;
+  place-items: center;
+  width: clamp(13px, 11.4cqw, 21px);
+  height: clamp(13px, 11.4cqw, 21px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 26%, #33465a, #0b131b 78%);
+  box-shadow:
+    inset 0 1px 0 rgba(214, 238, 255, 0.34),
+    inset 0 0 0 1px rgba(6, 11, 17, 0.9),
+    0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.dow-card.dow-cardart .dow-cardart__pip svg {
+  width: 72%;
+  height: 72%;
+}
+
+/* ------------------------------------------------------------------ *
+ * Nameplate
+ * ------------------------------------------------------------------ */
+
+.dow-card.dow-cardart .dow-cardart__plate {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  gap: clamp(3px, 2.4cqw, 6px);
+  padding: clamp(3px, 2.8cqw, 7px) clamp(4px, 3.6cqw, 10px) clamp(3px, 2.4cqw, 6px);
+  background: linear-gradient(180deg, var(--dow-plate-top), var(--dow-plate-bot));
+  box-shadow:
+    inset 0 1px 0 var(--dow-plate-edge),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.65),
+    0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.dow-card.dow-cardart .dow-card__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--tt-font-display, Georgia, 'Times New Roman', serif);
+  font-size: clamp(9px, 8.4cqw, 15px);
+  font-weight: 600;
+  line-height: 1.14;
+  letter-spacing: 0.012em;
+  color: #f1f7fc;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+  /* Wraps on word boundaries, then ellipsises — never a clipped glyph. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.dow-card.dow-cardart .dow-cardart__meta {
+  flex: 0 0 auto;
+  font-size: clamp(7px, 6cqw, 11px);
+  font-variant-numeric: tabular-nums;
+  color: #9db6cc;
+}
+
+/* ------------------------------------------------------------------ *
+ * Body — printed stock
+ * ------------------------------------------------------------------ */
+
+.dow-card.dow-cardart .dow-cardart__body {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: clamp(3px, 3cqw, 8px) clamp(4px, 3.6cqw, 10px) clamp(3px, 2.6cqw, 7px);
+  background:
+    linear-gradient(180deg, var(--dow-stock-top) 0%, var(--dow-stock-mid) 58%, var(--dow-stock-bot) 100%);
+}
+
+/* Paper: a linen weave under a fine grain. Two cheap layers, no filter. */
+.dow-card.dow-cardart .dow-cardart__body::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    var(--dow-grain),
+    repeating-linear-gradient(90deg, rgba(20, 33, 45, 0.05) 0 1px, rgba(0, 0, 0, 0) 1px 3px),
+    repeating-linear-gradient(0deg, rgba(20, 33, 45, 0.045) 0 1px, rgba(0, 0, 0, 0) 1px 3px);
+  background-size: 140px 140px, auto, auto;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+}
+
+.dow-card.dow-cardart .dow-card__text {
+  position: relative;
+  font-size: clamp(8px, 6.6cqw, 12px);
+  line-height: 1.3;
+  letter-spacing: 0.002em;
+  color: #1b2733;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.dow-card.dow-cardart .dow-card__kind {
+  position: relative;
+  margin-top: auto;
+  padding-top: clamp(2px, 2cqw, 5px);
+  font-family: var(--tt-font-display, Georgia, serif);
+  font-size: clamp(6.5px, 5.2cqw, 9.5px);
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--dow-ink-soft);
+}
+
+/* A printer's rule above the footer tag: two hairlines, light over dark. */
+.dow-card.dow-cardart .dow-cardart__rule {
+  display: block;
+  height: 2px;
+  margin-bottom: clamp(2px, 1.8cqw, 4px);
+  background:
+    linear-gradient(180deg, rgba(20, 33, 45, 0.42) 0 1px, rgba(255, 255, 255, 0.5) 1px 2px);
+}
+
+/* ------------------------------------------------------------------ *
+ * States
+ * ------------------------------------------------------------------ */
+
+.dow-card.dow-cardart.dow-card--live {
+  cursor: pointer;
+}
+
+.dow-card.dow-cardart.dow-card--live:hover,
+.dow-card.dow-cardart.dow-card--live:focus-visible {
+  transform: translateY(-5px);
+  background: linear-gradient(180deg, var(--dow-stock-top), var(--dow-stock-bot));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 0 0 1px rgba(10, 17, 24, 0.35),
+    0 1px 0 0 var(--dow-lip),
+    0 3px 0 -1px #070d14,
+    0 8px 6px -5px rgba(0, 0, 0, 0.8),
+    0 18px 26px -8px rgba(0, 0, 0, 0.62),
+    0 34px 52px -18px rgba(0, 0, 0, 0.55);
+}
+
+.dow-card.dow-cardart.dow-card--live:focus-visible {
+  outline: 2px solid var(--tt-cyan);
+  outline-offset: 3px;
+}
+
+.dow-card.dow-cardart.dow-card--live:active {
+  transform: translateY(-1px);
+}
+
+.dow-card.dow-cardart.dow-card--selected {
+  transform: translateY(-7px);
+  background: linear-gradient(180deg, #d6e6f2, #a9bccb);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 0 0 1px rgba(10, 17, 24, 0.35),
+    0 0 0 2px var(--tt-cyan),
+    0 0 18px var(--tt-cyan-glow),
+    0 4px 0 -1px #070d14,
+    0 12px 12px -7px rgba(0, 0, 0, 0.75),
+    0 26px 40px -12px rgba(0, 0, 0, 0.6);
+}
+
+.dow-card.dow-cardart.dow-card--selected .dow-cardart__plate {
+  background: linear-gradient(180deg, #204457, #0e2733);
+}
+
+.dow-card.dow-cardart .dow-card__text,
+.dow-card.dow-cardart .dow-card__name {
+  transition: none;
+}
+
+.dow-card.dow-cardart:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.35) brightness(0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 0 0 1px rgba(10, 17, 24, 0.4),
+    0 2px 0 -1px #070d14,
+    0 5px 10px -6px rgba(0, 0, 0, 0.5);
+  transform: none;
+}
+
+/* Hovering or selecting a card shows more of its rules text; the full
+   string is always in the tooltip, so this is a convenience not a fix. */
+.dow-card.dow-cardart.dow-card--live:hover .dow-card__text,
+.dow-card.dow-cardart.dow-card--live:focus-visible .dow-card__text,
+.dow-card.dow-cardart.dow-card--selected .dow-card__text {
+  -webkit-line-clamp: 7;
+}
+
+/* ------------------------------------------------------------------ *
+ * Per-class treatments
+ * ------------------------------------------------------------------ */
+
+/* Crisis — a rust-stained notice. The plate runs hot because a crisis is
+   the one card on the table that is actively working against you. */
+.dow-card.dow-cardart--crisis {
+  --dow-stock-top: #cdd0cb;
+  --dow-stock-mid: #b6b7ae;
+  --dow-stock-bot: #a4a49a;
+  --dow-plate-top: #4e2018;
+  --dow-plate-bot: #29100c;
+  --dow-plate-edge: rgba(255, 190, 160, 0.24);
+}
+
+.dow-card.dow-cardart--crisis .dow-card__kind {
+  color: #5d2117;
+}
+
+/* Objective — brass plate, the colony's own paperwork. */
+.dow-card.dow-cardart--objective {
+  --dow-plate-top: #4a3a1c;
+  --dow-plate-bot: #241b0d;
+  --dow-plate-edge: rgba(255, 220, 160, 0.26);
+}
+
+.dow-card.dow-cardart--objective .dow-card__name {
+  color: #fbeed4;
+}
+
+/* Crossroads — held face-down until it fires, so it keeps the dark
+   stock of a card nobody else may read. */
+.dow-card.dow-cardart--crossroads {
+  --dow-stock-top: #26313d;
+  --dow-stock-mid: #1a232e;
+  --dow-stock-bot: #121a23;
+  --dow-plate-top: #47301c;
+  --dow-plate-bot: #1e140c;
+  --dow-plate-edge: rgba(247, 168, 95, 0.3);
+  --dow-lip: rgba(247, 168, 95, 0.24);
+  color: #dfe8f2;
+}
+
+.dow-card.dow-cardart--crossroads .dow-card__text {
+  color: #ccd9e6;
+}
+
+.dow-card.dow-cardart--crossroads .dow-card__kind {
+  color: #f7a85f;
+}
+
+.dow-card.dow-cardart--crossroads .dow-cardart__body::before {
+  mix-blend-mode: overlay;
+  opacity: 0.35;
+}
+
+.dow-card.dow-cardart--crossroads .dow-cardart__rule {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0 1px, rgba(247, 168, 95, 0.35) 1px 2px);
+}
+
+/* Face down — a real card back, edge to edge, with a deck banner so the
+   element still carries a visible name. Nothing here is derived from a
+   card definition (§3). */
+.dow-card.dow-cardart--facedown {
+  --dow-plate-top: #16222e;
+  --dow-plate-bot: #0b141d;
+  background: #0b141d;
+}
+
+.dow-card.dow-cardart--facedown .dow-cardart__art {
+  flex: 1 1 auto;
+  aspect-ratio: auto;
+  min-height: clamp(56px, 74cqw, 150px);
+  box-shadow:
+    inset 0 0 0 1px rgba(4, 8, 13, 0.9),
+    inset 0 2px 10px rgba(0, 0, 0, 0.55);
+}
+
+.dow-card.dow-cardart--facedown .dow-cardart__plate {
+  box-shadow:
+    inset 0 1px 0 rgba(180, 214, 240, 0.16),
+    0 -1px 0 rgba(0, 0, 0, 0.6);
+}
+
+.dow-card.dow-cardart--facedown .dow-card__name {
+  font-size: clamp(7.5px, 6.2cqw, 11px);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #b8cddf;
+}
+
+.dow-card.dow-cardart--facedown .dow-cardart__body {
+  display: none;
+}
+
+.dow-card.dow-cardart--facedown::after {
+  mix-blend-mode: overlay;
+  opacity: 0.6;
+}
+
+/* ------------------------------------------------------------------ *
+ * Reduced motion — the card still lifts, it just stops travelling.
+ * ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .dow-card.dow-cardart {
+    transition: box-shadow 1ms linear;
+  }
+
+  .dow-card.dow-cardart.dow-card--live:hover,
+  .dow-card.dow-cardart.dow-card--live:focus-visible,
+  .dow-card.dow-cardart.dow-card--live:active,
+  .dow-card.dow-cardart.dow-card--selected {
+    transform: none;
+  }
+}
+
+/* High-contrast opt-in: drop the paper texture, harden the ink. */
+:root[data-contrast='high'] .dow-card.dow-cardart {
+  --dow-stock-top: #e2eaf0;
+  --dow-stock-mid: #d2dbe3;
+  --dow-stock-bot: #c6d0d9;
+  --dow-ink: #060b11;
+  --dow-ink-soft: #16202b;
+}
+
+:root[data-contrast='high'] .dow-card.dow-cardart .dow-cardart__body::before,
+:root[data-contrast='high'] .dow-card.dow-cardart .dow-cardart__grain {
+  display: none;
+}
+
+:root[data-contrast='high'] .dow-card.dow-cardart .dow-card__text {
+  color: #0b131b;
+}
