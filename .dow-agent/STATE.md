@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-09-04** (nightly run 23: authored board, stable iconography, desktop density pass)
+Last updated: **2026-09-05** (nightly run 24: crossroads chooser trap closed, N7 proven, visual-core in flight)
 
 ---
 
@@ -48,14 +48,16 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 | Platform / multiplayer plumbing | **PASS** | 58 server tests green; game-agnostic boundary audited |
 | Power Grid (regression guard) | **PASS** | 231 engine tests green; must never go red |
 | DoW engine — code exists | **PASS** | ~5,400 lines under `engine/`; plugin implements the full `GamePlugin` contract |
-| DoW engine — tested | **PASS for A1–A15 coverage** | 324 tests. Every §23 criterion has a named suite; run 22 closed the last public §18.4 crossroads tranche. Two honest boundaries remain, recorded under Known debts |
+| DoW engine — tested | **PASS for A1–A15 coverage** | 338 tests. Every §23 criterion has a named suite; run 22 closed the last public §18.4 crossroads tranche. Two honest boundaries remain, recorded under Known debts |
 | DoW content pack | **PASS** | Authored `dow-base` v0.5.0-dev at the §2.0 counts. Original development content, not reproduced licensed retail text |
 | DoW client UI — exists | **PASS** | Match screen at `packages/client/src/games/dead-of-winter/` |
 | Visual (V1–V15) | **FAIL** | First real evidence captured run 22. See below — this is now measured, not unknown |
 | Motion (M1–M9) | **FAIL** | **Zero animation code in the entire match screen.** No `motion.` element, no `AnimatePresence`, in any of the 11 match components. Not a judgement call |
 | UX (U1–U13) | — | Critic pass in flight at end of run 22; treat as unassessed |
 | Multiplayer N1/N3/N6 | **PASS** | Proven run 22 against two real browsers, 8/8 checks — see `tools/screenshot/multiplayer.mjs` |
-| Multiplayer N4/N5/N7/N8 | — | Not attempted. N4 server restart is the most valuable next one |
+| Multiplayer N4 | **PASS** | Run 24 audited the existing coverage rather than assuming it absent: `packages/server/src/__tests__/dead-of-winter-deferred-morale.test.ts` drives a real round to a position holding a pending `overrunCasualty` choice, a non-empty effect stack and `deferMoraleCheck`, restarts the server, and asserts all three survive — then rejoins the seat with its hand and secret objectives and plays on. `persistence.test.ts` covers the in-progress and lobby cases. Previous runs recorded this as "not attempted"; that was wrong |
+| Multiplayer N7 | **PASS** | Proven run 24 by `src/engine/__tests__/vote-secrecy.test.ts` — 6 tests through the plugin boundary, verified to fail when the redaction guard is disabled |
+| Multiplayer N5/N8 | — | Still not attempted. N8 (three clients, full game to a winner) is the valuable one |
 | Blind comparison vs Wingspan | **FAIL** | Final gate; first attempt run 22 |
 
 ### Visual failures measured on 2026-09-03 and rechecked on 2026-09-04, not guessed
@@ -140,13 +142,13 @@ Start both dev servers first (`npm run dev:server &`, `npm run dev:client &`).
 - **Do not use `git add -A` while sub-agents are running.** Run 22 did once and swept an agent's
   in-flight test file into an unrelated commit. It happened to be green; it might not be next time.
   Stage the specific paths you verified.
-- **Latent engine gap found run 22, untested and unfixed.** `CrossroadsCardDefinition.chooser`
-  admits `'activePlayer' | 'vote' | 'firstPlayer'` (`src/content/schema.ts:220`), but
-  `triggerCrossroads` (`src/engine/crossroads.ts:194`) only special-cases `'firstPlayer'` and maps
-  everything else to the active player. `xr-outbreak` declares `chooser: 'vote'` and is unaffected
-  because its single option's outcome *is* the vote. A future `chooser: 'vote'` card with two or
-  more options would silently let the active player decide alone. Decide whether to fix or to
-  narrow the schema.
+- ~~Latent engine gap found run 22~~ — **RESOLVED run 24** (`4c7e7b9`). The schema was narrowed to
+  `'activePlayer' | 'firstPlayer'` rather than growing a second N-ary voting path beside the binary
+  one: §10's "unless the card specifies a vote" is served by the `vote` *effect*, which is the only
+  place an electorate can be expressed at all (§15/§18.4 `Outbreak`). `triggerCrossroads` is now
+  exhaustive, so a future member is a compile error. `src/engine/__tests__/crossroads-chooser.test.ts`
+  guards the data path the compiler cannot see, and was verified to fail when the old declaration is
+  reinstated.
 - **Two honest A14 boundaries, recorded rather than faked.** `This Taste Funny` has no
   counterfactual — no legal action sequence lets the holder act while holding the card, so the test
   proves the structure instead. Orphan-standee reconciliation cannot be constructed through the
@@ -165,8 +167,10 @@ Start both dev servers first (`npm run dev:server &`, `npm run dev:client &`).
   agent typechecking its own file also compiles every other agent's in-progress file. Brief agents
   that only errors in their own path are theirs, and run the clean full typecheck yourself before
   committing.
-- `packages/client/src/portal/portal.scss` still uses `.pg-setup__*` class names; the
-  `--pg-*` → `--tt-*` rename did not reach it.
+- ~~`portal.scss` still uses `.pg-setup__*`~~ — **STALE, corrected run 24.** `portal.scss` contains
+  zero `pg-setup` or `--pg-` occurrences. The only surviving `--pg-*` tokens live under
+  `packages/client/src/games/power-grid/`, where they are correctly game-scoped, not platform
+  tokens. There is nothing to rename.
 - ~~Whether headless screenshots are possible in the sandbox~~ — **RESOLVED and now automated.**
   Chromium is at `/opt/pw-browsers/chromium`, `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers` is set,
   and **`playwright install` must never be run**. `puppeteer-core` is a root devDependency and
