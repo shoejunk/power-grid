@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-09-05** (nightly run 25: baseline reverified, visual-core unchanged; prior run-24 N4/N7 proof retained)
+Last updated: **2026-09-06** (nightly run 26: board/card art integrated and live; visual gates remain FAIL)
 
 ---
 
@@ -41,6 +41,10 @@ accept — or write — a claim that a side-by-side was performed here. Either s
 benchmark description, or get a human to commit reference images into the repo. Until then that gate
 is **BLOCKED**, which by the rubric's own rule counts as FAIL, not as passed.
 
+Run 26 partially reopened that path: independent critics reached official Steam Wingspan material,
+but it was a marketing-page/gameplay image rather than a clean game-only blind side-by-side. Record
+the formal comparison as **FAIL**, not PASS, until a clean reference comparison is available.
+
 Runs 5 through 21 all declared `engine-tests` and nothing else. Seventeen nights. In that time the
 Visual, Motion and UX sections — which are the **majority of the quality bar and the actual stated
 goal of the project** — were never assessed even once, and the Wingspan comparison was never
@@ -63,7 +67,7 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 | DoW engine — tested | **PASS for A1–A15 coverage** | 338 tests (run 24: +8 chooser, +6 vote secrecy). Every §23 criterion has a named suite; run 22 closed the last public §18.4 crossroads tranche. Two honest boundaries remain, recorded under Known debts |
 | DoW content pack | **PASS** | Authored `dow-base` v0.5.0-dev at the §2.0 counts. Original development content, not reproduced licensed retail text |
 | DoW client UI — exists | **PASS** | Match screen at `packages/client/src/games/dead-of-winter/` |
-| Visual (V1–V15) | **FAIL** | First real evidence captured run 22. See below — this is now measured, not unknown |
+| Visual (V1–V15) | **FAIL** | Run 26 wired authored board scenes and item-card faces into the live match; independent critics still fail V2/V3/V8/V11/V13/V14/V15. |
 | Motion (M1–M9) | **FAIL** | **Zero animation code in the entire match screen.** No `motion.` element, no `AnimatePresence`, in any of the 11 match components. Not a judgement call |
 | UX (U1–U13) | — | Still unassessed. No critic pass has ever completed. Run 24 added one visible U5 gain (a "Only you can see these cards" label on the hand) as a side effect, unscored |
 | Multiplayer N1/N3/N6 | **PASS** | Proven run 22 against two real browsers, 8/8 checks — see `tools/screenshot/multiplayer.mjs` |
@@ -84,14 +88,18 @@ Captured from a real running 4-player match by `node tools/screenshot/capture.mj
 - **V11 improved but is not independently closed.** Literal Unicode pictograms were removed from the
   DoW match sources and replaced with an inline SVG vocabulary plus pip dice. A full 200% scale and
   contrast audit was not completed.
-- **V3 remains FAIL.** The board now has authored winter CSS geometry and a six-location composition,
-  but it is still stylized geometry rather than a painted winter environment, which is what V3 asks
-  for.
-- **V2 remains partial.** Survivor portraits are real illustration; item, crisis, crossroads,
-  objective, and location presentation still lack convincing card-scale illustration, texture, depth,
-  and lighting.
-- **Composition remains below the benchmark.** The compact six-location strip leaves a large dark
-  dead region around 1920×1080, and the full worst-case state has not been captured.
+- **V3 remains FAIL.** Run 26 wired authored winter location scenes into the board and removed the
+  former dead region at 1920×1080, but independent review found the scenes render as shallow ribbons
+  with insufficient foreground depth, lighting, and material texture.
+- **V2 remains FAIL/partial.** Run 26 made five item cards illustrated and readable in the wide hand
+  dock, but survivor, crisis, crossroads, and objective card families still lack card-scale treatment;
+  the 1366 compact hand is too small for a visual pass.
+- **V8/V11 remain FAIL.** Card shadows and SVG treatment add some depth, but board elevation and
+  icon readability are not at the bar, especially at compact size.
+- **Composition improved but is not closed.** The 1920×1080 normal state now shows the board and a
+  readable five-card hand without document overflow. The 1366×768 fallback keeps the board and hand
+  in view, but is cramped. Only these two resolutions were captured in run 26; the five-resolution
+  matrix and a true five-player/full-hand worst-case remain unproven.
 
 Passing, with evidence: the document itself never scrolls at any of the five resolutions, and the
 console is **clean** — zero page errors and zero failed requests at all five. The production build
@@ -121,6 +129,12 @@ no-emit TypeScript checks passed. The emitted DoW/server builds still hit EPERM 
 shim still cannot resolve the server Vitest binary, so the equivalent repository-local Vitest
 entrypoint was used. No tracked dependency files changed.
 
+Run 26 reverified the same suites on Windows: Power Grid **231/231**, DoW **338/338**, and server
+**58/58** passed. The client, DoW, and server no-emit TypeScript checks passed; both DoW SCSS
+entrypoints compiled; `git diff --check` passed; and `npm run build` completed successfully,
+including the Vite production bundle. The repository-local Vitest entrypoint was used for the server
+suite. No dependency files changed.
+
 ## Tooling you now have — use it, do not rebuild it
 
 `tools/screenshot/` (added run 22, with its own README):
@@ -136,13 +150,11 @@ Start both dev servers first (`npm run dev:server &`, `npm run dev:client &`).
 
 ## Queue — next workstreams, in dependency order
 
-0. **Decide the fate of run 24's two salvaged art modules, before anything else.**
-   `game/board-art.tsx` (1,378 lines, winter location scenes) and `game/card-art.tsx` +
-   `card-art.scss` (1,427 lines, printed card treatment) are on `master` and **imported by nothing**.
-   They compile and build clean but have had **no critic pass and no screenshot** — their quality is
-   completely unverified. Wire `board-art` into `Board.tsx` and `card-art` into `parts.tsx`,
-   screenshot, and judge them harshly. **If they are not good, delete them** rather than carrying
-   dead code forward.
+0. **`visual-core` art modules — validated for retention, not quality closure.**
+   Run 26 wired `game/board-art.tsx` into `Board.tsx` and `game/card-art.tsx` into `parts.tsx`,
+   namespaced their SVG definitions, and captured the live result. They are no longer dead code, but
+   both independent critics found the current board/card treatment below the AAA bar. Keep them for
+   the next visual pass; do not call this item or the visual section PASS.
 
 1. **`visual-core`** — the board (V3), card art (V2), and the icon set (V11). This is the largest
    remaining gap between us and the benchmark and it is where the comparison is won or lost.
@@ -170,8 +182,9 @@ Start both dev servers first (`npm run dev:server &`, `npm run dev:client &`).
   render and the harness could not reach START GAME. Its work was reverted. **Always compile the
   SCSS (`npx sass ... /dev/null`) and capture a screenshot before believing a worker's output**;
   `tsc` alone does not catch a broken stylesheet.
-- **Two unwired, unreviewed art modules are on `master`** (`board-art.tsx`, `card-art.tsx/.scss`).
-  See queue item 0. They are inert, but they are not free — either validate them or delete them.
+- **The salvaged art modules are now wired but still below the bar** (`board-art.tsx`,
+  `card-art.tsx/.scss`). See queue item 0 and the run-26 critic verdicts; improve their scale/depth
+  and card-family coverage before considering deletion or visual PASS.
 - **Do not use `git add -A` while sub-agents are running.** Run 22 did once and swept an agent's
   in-flight test file into an unrelated commit. It happened to be green; it might not be next time.
   Stage the specific paths you verified.

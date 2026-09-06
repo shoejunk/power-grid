@@ -16,6 +16,7 @@ import { Badge, Tooltip } from '@tt/ui';
 import type { ReactNode } from 'react';
 
 import { itemDef, itemName, survivorArtPath, survivorDef, SYMBOL_LABEL } from '../content';
+import { CardFace, cardArtClasses } from './card-art';
 import { DieFace, DowIcon } from './iconography';
 
 /* ------------------------------------------------------------------ *
@@ -196,6 +197,7 @@ export function ItemCard({ state, iid, selected = false, onClick, disabled }: It
   const def = itemDef(state, iid);
   const classes = [
     'dow-card',
+    cardArtClasses(def ? 'item' : 'facedown'),
     selected ? 'dow-card--selected' : '',
     def ? '' : 'dow-card--facedown',
     onClick && !disabled ? 'dow-card--live' : '',
@@ -204,24 +206,20 @@ export function ItemCard({ state, iid, selected = false, onClick, disabled }: It
     .join(' ');
 
   const inner = (
-    <>
-      <span className="dow-card__name">{def?.name ?? 'Face down'}</span>
-      <span
-        className="dow-card__symbols"
-        role={def?.symbols.length ? 'img' : undefined}
-        aria-label={def?.symbols.length ? `Symbols: ${def.symbols.map((symbol) => SYMBOL_LABEL[symbol]).join(', ')}` : undefined}
-      >
-        {(def?.symbols ?? []).map((symbol) => (
-          <span key={symbol} title={SYMBOL_LABEL[symbol]}>
-            <DowIcon name={symbol} size={13} decorative />
-          </span>
-        ))}
-      </span>
-      {def ? <span className="dow-card__text">{def.text}</span> : null}
-      {def ? (
-        <span className="dow-card__kind">{def.kind === 'equip' ? 'Equip' : 'One shot'}</span>
-      ) : null}
-    </>
+    def ? (
+      <CardFace
+        kind="item"
+        name={def.name}
+        text={def.text}
+        symbols={def.symbols}
+        symbolsLabel={`Symbols: ${def.symbols.map((symbol) => SYMBOL_LABEL[symbol]).join(', ')}`}
+        tag={def.kind === 'equip' ? 'Equip' : 'One shot'}
+        seedKey={def.id}
+        artSymbol={def.symbols[0]}
+      />
+    ) : (
+      <CardFace kind="facedown" name="Face down" />
+    )
   );
 
   return onClick ? (

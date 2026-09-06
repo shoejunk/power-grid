@@ -49,7 +49,7 @@ const DEFS_ID = 'dow-card-art-defs';
 const CARD_ART_DEFS = `
 <defs>
   <!-- Cold overcast light falling into a dark interior. -->
-  <linearGradient id="dowSky" x1="0" y1="0" x2="0" y2="1">
+  <linearGradient id="dowCardSky" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0" stop-color="#050a0f"/>
     <stop offset="0.38" stop-color="#0c1723"/>
     <stop offset="0.60" stop-color="#22394d"/>
@@ -83,7 +83,7 @@ const CARD_ART_DEFS = `
   </radialGradient>
 
   <!-- Materials. Each is lit from the upper left and rolls to a core shadow. -->
-  <linearGradient id="dowSteel" x1="0" y1="0" x2="0.9" y2="1">
+  <linearGradient id="dowCardSteel" x1="0" y1="0" x2="0.9" y2="1">
     <stop offset="0" stop-color="#f0f7fb"/>
     <stop offset="0.22" stop-color="#b9c9d6"/>
     <stop offset="0.52" stop-color="#738799"/>
@@ -273,7 +273,7 @@ function Stage({ backdrop, horizon = 63, lightX = 54 }: {
 }): JSX.Element {
   return (
     <g>
-      <rect width={W} height={H} fill="url(#dowSky)" />
+      <rect width={W} height={H} fill="url(#dowCardSky)" />
       {backdrop !== 'open' ? (
         <rect
           width={W}
@@ -352,8 +352,8 @@ function WeaponScene({ seed, variant }: { seed: number; variant: number }): JSX.
           <path d="M-3.4 0 3.4 0 2.3-64-2.3-64Z" fill="url(#dowWood)" />
           <path d="M-2.5-2-1.6-62" stroke="#e5c799" strokeWidth="1.1" opacity="0.34" fill="none" />
           <path d="M2.6-14 1.9-46" stroke="#1c1208" strokeWidth="1.2" opacity="0.5" fill="none" />
-          <path d="M-5-72 4-74 4-46-5-48Z" fill="url(#dowSteel)" />
-          <path d="M2-73 14-77c10 1 17 8 17 15s-7 14-17 15L2-49Z" fill="url(#dowSteel)" />
+          <path d="M-5-72 4-74 4-46-5-48Z" fill="url(#dowCardSteel)" />
+          <path d="M2-73 14-77c10 1 17 8 17 15s-7 14-17 15L2-49Z" fill="url(#dowCardSteel)" />
           <path d="M14.5-76.4C24-75.6 30.4-69 30.4-62s-6.4 13.6-15.9 14.5" stroke="#f4fbff" strokeWidth="1.5" fill="none" opacity="0.85" />
           <path d="M6-70 24-66" stroke="#0d141b" strokeWidth="1" opacity="0.45" fill="none" />
           <path d="M9-58c5-1 9 0 12 2" stroke="#8a4527" strokeWidth="2.4" opacity="0.5" fill="none" strokeLinecap="round" />
@@ -373,7 +373,7 @@ function WeaponScene({ seed, variant }: { seed: number; variant: number }): JSX.
           <ellipse cx="0" cy="-1.5" rx="5.6" ry="2.4" fill="#4c3823" />
           <path d="M-5.6-64 6.6-64" stroke="#2a1d10" strokeWidth="1.6" fill="none" />
           <g transform="translate(3 -54) rotate(24)">
-            <rect x="0" y="-0.9" width="15" height="1.8" fill="url(#dowSteel)" />
+            <rect x="0" y="-0.9" width="15" height="1.8" fill="url(#dowCardSteel)" />
             <circle cx="0" cy="0" r="2" fill="#b9c9d6" />
             <path d="M15-0.9 17.4 0 15 0.9Z" fill="#eaf3f9" />
           </g>
@@ -381,7 +381,7 @@ function WeaponScene({ seed, variant }: { seed: number; variant: number }): JSX.
       ) : (
         /* Cleaver on the bench, seen from above-ish. */
         <g transform="translate(48 82)">
-          <path d="M0-3 46-9 52-26 8-21Z" fill="url(#dowSteel)" />
+            <path d="M0-3 46-9 52-26 8-21Z" fill="url(#dowCardSteel)" />
           <path d="M8-21 52-26 51.4-28.6 7.6-23.6Z" fill="#f2f9fd" opacity="0.75" />
           <path d="M12-14 44-18" stroke="#ffffff" strokeWidth="1.2" opacity="0.28" fill="none" />
           <path d="M22-11c6-1 12-2 16-1" stroke="#8a4527" strokeWidth="2.2" opacity="0.42" fill="none" strokeLinecap="round" />
@@ -418,7 +418,7 @@ function FuelScene({ seed, variant }: { seed: number; variant: number }): JSX.El
         <path d="M-13-52h12v4h-12z" fill="#39412c" />
         <path d="M-13-52h12v1.4h-12z" fill="#aab694" opacity="0.6" />
         <circle cx="9" cy="-50" r="4" fill="#2a3020" />
-        <circle cx="9" cy="-50.8" r="4" fill="url(#dowSteel)" />
+        <circle cx="9" cy="-50.8" r="4" fill="url(#dowCardSteel)" />
         <circle cx="9" cy="-50.8" r="1.6" fill="#0d1218" opacity="0.5" />
         <rect x="-18" y="-26" width="17" height="7" rx="1" fill="#7c3f1a" opacity="0.85" />
         <rect x="-18" y="-26" width="17" height="1.2" fill="#f0b36a" opacity="0.5" />
@@ -656,14 +656,14 @@ function ToolScene({ seed, variant }: { seed: number; variant: number }): JSX.El
       <Cast x={78} y={88} rx={54} ry={8} />
       {/* Combination wrench across the bench. */}
       <g transform="translate(76 82) rotate(-9)">
-        <rect x="-40" y="-3.4" width="80" height="6.8" rx="3" fill="url(#dowSteel)" />
+        <rect x="-40" y="-3.4" width="80" height="6.8" rx="3" fill="url(#dowCardSteel)" />
         <rect x="-40" y="-3.4" width="80" height="2" rx="1" fill="#f2f9fd" opacity="0.45" />
         <rect x="-24" y="-1.4" width="48" height="2" rx="1" fill="#1c242e" opacity="0.5" />
-        <circle cx="-44" cy="0" r="11" fill="url(#dowSteel)" />
+        <circle cx="-44" cy="0" r="11" fill="url(#dowCardSteel)" />
         <circle cx="-44" cy="0" r="5.6" fill="#0a1016" />
         <circle cx="-44" cy="-0.6" r="5.6" fill="#38454f" />
         <circle cx="-44" cy="0" r="10.4" fill="none" stroke="#eef6fb" strokeOpacity="0.4" strokeWidth="1" />
-        <path d="M40-10c8 0 12 3 12 6l-6 2 6 2c0 3-4 6-12 6Z" fill="url(#dowSteel)" />
+        <path d="M40-10c8 0 12 3 12 6l-6 2 6 2c0 3-4 6-12 6Z" fill="url(#dowCardSteel)" />
         <path d="M40-10c8 0 12 3 12 6" stroke="#f2f9fd" strokeWidth="1.1" fill="none" opacity="0.6" />
         <path d="M-20 3.2 20 3.2" stroke="#05090d" strokeWidth="1.2" fill="none" opacity="0.6" />
       </g>
@@ -684,7 +684,7 @@ function ToolScene({ seed, variant }: { seed: number; variant: number }): JSX.El
         <g transform="translate(122 88)">
           {[0, 1, 2].map((i) => (
             <g key={i} transform={`translate(${i * 9 - 8} ${(i % 2) * 4}) rotate(${i * 37})`}>
-              <rect x="-1.4" y="-5" width="2.8" height="10" rx="0.6" fill="url(#dowSteel)" />
+              <rect x="-1.4" y="-5" width="2.8" height="10" rx="0.6" fill="url(#dowCardSteel)" />
               <circle cx="0" cy="-5" r="2.6" fill="#9fb2c1" />
               <circle cx="0" cy="-5.6" r="2.6" fill="#d8e3ec" />
             </g>

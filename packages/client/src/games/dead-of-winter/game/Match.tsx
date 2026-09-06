@@ -160,6 +160,37 @@ export function DeadOfWinterMatch(): JSX.Element {
         <aside className="dow-match__rail">
           <VotePanel state={state} me={me} />
           <TurnPanel
+            section="actions"
+            state={state}
+            me={me}
+            survivorId={survivorId}
+            die={die}
+            aim={aim}
+            picked={picked}
+            onSelectSurvivor={setSurvivorId}
+            onInspectSurvivor={setInspectSurvivorId}
+            onSelectDie={setDie}
+            onAim={setAim}
+            onPick={setPicked}
+          />
+          <div className="dow-match__rail-hand">
+            <TurnPanel
+              section="hand"
+              state={state}
+              me={me}
+              survivorId={survivorId}
+              die={die}
+              aim={aim}
+              picked={picked}
+              onSelectSurvivor={setSurvivorId}
+              onInspectSurvivor={setInspectSurvivorId}
+              onSelectDie={setDie}
+              onAim={setAim}
+              onPick={setPicked}
+            />
+          </div>
+          <TurnPanel
+            section="table"
             state={state}
             me={me}
             survivorId={survivorId}
@@ -174,6 +205,23 @@ export function DeadOfWinterMatch(): JSX.Element {
           />
         </aside>
       </main>
+
+      <section className="dow-match__hand-dock">
+        <TurnPanel
+          section="hand"
+          state={state}
+          me={me}
+          survivorId={survivorId}
+          die={die}
+          aim={aim}
+          picked={picked}
+          onSelectSurvivor={setSurvivorId}
+          onInspectSurvivor={setInspectSurvivorId}
+          onSelectDie={setDie}
+          onAim={setAim}
+          onPick={setPicked}
+        />
+      </section>
 
       <footer className="dow-match__foot">
         <Seats state={state} me={me} />

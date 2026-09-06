@@ -18,7 +18,45 @@ plus an independent harsh visual verdict. Do not claim visual, motion, UX, or mu
 without direct evidence.
 
 **Startup:** stop markers are absent; `master` is synchronized with `origin/master`. Baseline and
-the final scope decision are pending.
+the final scope decision completed on the synchronized checkout.
+
+**Baseline:** Power Grid **231/231**, DoW **338/338**, and server **58/58** tests passed. Client,
+DoW, and server no-emit TypeScript checks passed; both DoW SCSS entrypoints compiled; `git diff
+--check` passed; and `npm run build` completed, including the Vite production bundle. No dependency
+files changed.
+
+**What actually landed:** the two previously unwired art modules were retained and integrated in a
+narrow visual-only slice. `Board.tsx` now mounts the authored winter SVG definitions and location
+scenes. `parts.tsx` now renders illustrated item faces while preserving the face-down branch and
+existing interaction/hidden-information hooks. Card SVG definition IDs were namespaced to avoid a
+global collision. `Match.tsx` and the DoW stylesheet now give the hand a full-width dock at wide
+desktop sizes and a compact in-rail fallback at 1366×768, removing the prior 45px hand slivers and
+large 1920 dead region without changing rules or server behavior.
+
+**Runtime evidence:** fresh Chrome screenshots are saved at
+`.shots/run26-final-1920x1080.png` and `.shots/run26-final-1366x768.png`. Both had zero document
+overflow, zero page errors, and zero failed requests. At 1920 the board is fully visible and the
+five-card hand is readable; at 1366 the board and compact hand remain in view, but the hand is
+necessarily cramped. The console contained only expected Vite/debug output and one WebSocket
+closed-before-established warning.
+
+**Independent critics:** both critics kept the visual section **FAIL**. The board critic scored V3
+partial/gate FAIL and V8/V13/V14/V15 FAIL: the scenes read as shallow 48–56px ribbons, lack layered
+terrain, and only two resolutions plus a non-worst-case state were captured. The card critic scored
+V2/V11/V13/V14/V15 FAIL: item cards are readable at 1920 but shallow/monochrome, the survivor/crisis/
+crossroads/objective families are not evidenced, and compact iconography is too small. Both found
+the formal Wingspan gate still FAIL: official Steam material was reachable in this run, but it was
+not a clean game-only blind side-by-side. Hidden-information handling in the shown frame remained
+safe; broader redaction cases are unproven.
+
+**State changes:** queue item 0 is resolved as “retain and improve,” not as a quality PASS. Visual
+V2/V3/V8/V11/V13/V14/V15 remain FAIL; motion M1–M9, UX U1–U13, and N5/N8 remain unchanged.
+
+**Next run:** stay on `visual-core`. First replace the shallow location ribbons with taller layered
+scenes that remain legible at 1366, then extend the treatment to survivor/crisis/crossroads/objective
+card families and rerun harsh critics with 200% and all five required resolutions, including a true
+five-player/full-hand crowded worst-case capture. Do not claim visual, motion, UX, multiplayer, or
+Wingspan PASS without the corresponding evidence.
 
 ---
 

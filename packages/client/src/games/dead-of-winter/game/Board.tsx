@@ -22,6 +22,7 @@ import {
 import { EntranceRow, SurvivorChip } from './parts';
 import './board-visuals.scss';
 import { DowIcon } from './iconography';
+import { BoardArtDefs, LocationScene } from './board-art';
 
 export interface BoardProps {
   state: GameState;
@@ -49,6 +50,7 @@ export function Board({
 }: BoardProps): JSX.Element {
   return (
     <div className="dow-board dow-winter-board" aria-label="Dead of Winter board">
+      <BoardArtDefs />
       {allLocations.map((id) => (
         <LocationCard
           key={id}
@@ -175,27 +177,12 @@ function LocationCard({
         </span>
       }
     >
-      {isColony ? (
-        <div className="dow-hub__scene" aria-hidden="true">
-          <span className="dow-hub__moon" />
-          <span className="dow-hub__snowline" />
-          <span className="dow-hub__building" />
-          <span className="dow-hub__roof" />
-          <span className="dow-hub__window dow-hub__window--left" />
-          <span className="dow-hub__window dow-hub__window--right" />
-          <span className="dow-hub__door" />
-          <span className="dow-hub__lamp" />
-        </div>
-      ) : (
-        <div className={`dow-landmark dow-landmark--${location}`} aria-hidden="true">
-          <span className="dow-landmark__horizon" />
-          <span className="dow-landmark__snow" />
-          <span className="dow-landmark__structure" />
-          <span className="dow-landmark__roof" />
-          <span className="dow-landmark__detail" />
-          <span className="dow-landmark__door" />
-        </div>
-      )}
+      <div
+        className={`dow-place__scene ${isColony ? 'dow-place__scene--colony' : 'dow-place__scene--location'}`}
+        aria-hidden="true"
+      >
+        <LocationScene location={location} lit={occupied > 0} isColony={isColony} />
+      </div>
 
       <div className="dow-place__entrances">
         {entrances.map((entrance) => (

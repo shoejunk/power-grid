@@ -19,7 +19,7 @@
   --dow-gap: var(--tt-space-3);
 
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto auto auto auto auto;
   gap: var(--dow-gap);
   padding: var(--tt-space-3) var(--tt-space-4);
   height: 100vh;
@@ -151,6 +151,7 @@
   gap: var(--dow-gap);
   min-height: 0;
   min-width: 0;
+  align-items: start;
 }
 
 .dow-match__board,
@@ -165,6 +166,35 @@
   display: flex;
   flex-direction: column;
   gap: var(--dow-gap);
+}
+
+.dow-match__hand-dock {
+  min-width: 0;
+}
+
+.dow-match__rail-hand {
+  display: none;
+  min-width: 0;
+}
+
+.dow-match__hand-dock > .dow-panel--hand {
+  min-width: 0;
+}
+
+.dow-match__hand-dock .dow-hand {
+  grid-template-columns: repeat(var(--dow-hand-cols, 5), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--dow-hand-rows, 1), minmax(0, auto));
+}
+
+.dow-match__hand-dock .dow-card.dow-cardart {
+  min-height: clamp(150px, 12vw, 220px);
+}
+
+/* The dock is a wide hand, not a portrait-card gallery. A panoramic art
+   window keeps the illustration legible while reserving enough vertical room
+   for the complete board and the persistent table footer. */
+.dow-match__hand-dock .dow-card.dow-cardart .dow-cardart__art {
+  aspect-ratio: 4 / 1;
 }
 
 /* ------------------------------------------------------------------ *
@@ -1136,8 +1166,8 @@
     padding: 6px;
   }
 
-  /* Turn, hand and table share the rail's short row. The hand and table sit
-     beside one another so the hand never needs a second viewport to exist. */
+  /* The hand is a full-width dock now, so the rail can give action controls
+     their full desktop width and keep the table's public requests readable. */
   .dow-match__rail {
     display: grid;
     grid-template-columns: minmax(150px, 1fr) minmax(0, 1.55fr);
@@ -1150,47 +1180,53 @@
 
   .dow-match__rail > *,
   .dow-match__rail .tt-panel,
-  .dow-match__rail .dow-rail,
   .dow-match__rail .dow-actions {
     min-width: 0;
   }
 
-  .dow-match__rail > .dow-rail {
-    display: contents;
+  .dow-match__hand-dock {
+    display: none;
   }
 
   .dow-match__rail > .dow-vote {
     grid-column: 1 / -1;
   }
 
-  .dow-match__rail > .dow-rail > .tt-panel:first-child {
+  .dow-match__rail > .tt-panel.dow-panel--acting {
     grid-column: 1;
   }
 
-  .dow-match__rail > .dow-rail > .tt-panel:nth-child(2) {
+  .dow-match__rail-hand {
+    display: block;
     grid-column: 2;
+    min-width: 0;
   }
 
-  .dow-match__rail > .dow-rail > .tt-panel:nth-child(3) {
-    grid-column: 2;
+  .dow-match__rail-hand .tt-panel {
+    min-width: 0;
+    height: 100%;
   }
 
-  .dow-match__rail > .dow-rail > .tt-panel.dow-panel--public {
+  .dow-match__rail > .tt-panel.dow-panel--public {
     grid-column: 1 / -1;
   }
 
-  .dow-match__rail > .dow-rail > .tt-panel.dow-panel--public .tt-panel__header {
-    min-height: 0;
-    margin: 0;
-    padding: 0;
+  .dow-match__rail-hand .dow-hand {
+    grid-template-columns: repeat(var(--dow-hand-cols, 5), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--dow-hand-rows, 1), minmax(0, auto));
   }
 
-  .dow-match__rail > .dow-rail > .tt-panel.dow-panel--public .tt-panel__header > div {
-    display: none;
+  .dow-match__rail-hand .dow-card.dow-cardart {
+    min-height: 104px;
   }
 
-  .dow-match__rail > .dow-rail > .tt-panel.dow-panel--public {
-    padding: 2px;
+  .dow-match__hand-dock .dow-hand {
+    grid-template-columns: repeat(var(--dow-hand-cols, 5), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--dow-hand-rows, 1), minmax(0, auto));
+  }
+
+  .dow-match__hand-dock .dow-card.dow-cardart {
+    min-height: 104px;
   }
 
   .dow-hand {
@@ -1283,6 +1319,38 @@
   }
 }
 
+/* The 1366px compact rail has no spare vertical track. Keep every location's
+   entrance and survivor rows inside the board viewport while retaining a
+   readable illustrated scene above them. */
+@media (min-width: 1181px) and (max-width: 1500px) and (max-height: 1200px) {
+  .dow-match .dow-winter-board .dow-place__scene {
+    height: 42px;
+  }
+
+  .dow-match .dow-winter-board .dow-place__scene--colony {
+    height: 50px;
+  }
+}
+
+/* At wide desktop the hand has room to be the visual hero. The compact
+   short-viewport rules above keep the hand beside the rail instead, because
+   a 1366px-high desktop cannot reserve a full-width card dock. */
+@media (min-width: 1501px) {
+  .dow-match__hand-dock {
+    display: block;
+  }
+
+  .dow-match__rail-hand {
+    display: none;
+  }
+
+  .dow-match__rail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dow-gap);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dow-card {
     transition: none;
@@ -1360,6 +1428,7 @@
   .dow-match {
     height: auto;
     overflow: visible;
+    grid-template-rows: auto auto auto auto auto;
   }
 
   .dow-match__main {
