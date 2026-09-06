@@ -8,6 +8,20 @@ makes the next run worse — it is the only memory the next run has.
 
 ---
 
+## 2026-09-06 — nightly run 26
+
+**Intent:** continue the first unmet queue item, `visual-core`, on synchronized `master`. After
+the mandatory baseline, take one bounded visual slice toward AAA quality: inspect the existing
+Dead of Winter client surfaces, add the narrowest authored card/board treatment that can be
+verified without changing rules or interaction contracts, and obtain fresh running screenshots
+plus an independent harsh visual verdict. Do not claim visual, motion, UX, or multiplayer PASS
+without direct evidence.
+
+**Startup:** stop markers are absent; `master` is synchronized with `origin/master`. Baseline and
+the final scope decision are pending.
+
+---
+
 ## 2026-09-05 — nightly run 25
 
 **Startup:** `master` was synchronized with `origin/master` at `3f899f5` after the initial
