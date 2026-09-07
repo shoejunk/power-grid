@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-09-06** (nightly run 26: board/card art integrated and live; visual gates remain FAIL)
+Last updated: **2026-09-07** (nightly run 27: board/card art wired through live card surfaces; visual gates remain FAIL)
 
 ---
 
@@ -67,7 +67,7 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 | DoW engine — tested | **PASS for A1–A15 coverage** | 338 tests (run 24: +8 chooser, +6 vote secrecy). Every §23 criterion has a named suite; run 22 closed the last public §18.4 crossroads tranche. Two honest boundaries remain, recorded under Known debts |
 | DoW content pack | **PASS** | Authored `dow-base` v0.5.0-dev at the §2.0 counts. Original development content, not reproduced licensed retail text |
 | DoW client UI — exists | **PASS** | Match screen at `packages/client/src/games/dead-of-winter/` |
-| Visual (V1–V15) | **FAIL** | Run 26 wired authored board scenes and item-card faces into the live match; independent critics still fail V2/V3/V8/V11/V13/V14/V15. |
+| Visual (V1–V15) | **FAIL** | Run 27 deepened authored board scenes, added survivor/crisis/crossroads/objective card families, and wired objective/crisis/survivor detail surfaces; the independent critic still fails the visual bar and the required size/density/reference evidence is incomplete. |
 | Motion (M1–M9) | **FAIL** | **Zero animation code in the entire match screen.** No `motion.` element, no `AnimatePresence`, in any of the 11 match components. Not a judgement call |
 | UX (U1–U13) | — | Still unassessed. No critic pass has ever completed. Run 24 added one visible U5 gain (a "Only you can see these cards" label on the hand) as a side effect, unscored |
 | Multiplayer N1/N3/N6 | **PASS** | Proven run 22 against two real browsers, 8/8 checks — see `tools/screenshot/multiplayer.mjs` |
@@ -88,12 +88,14 @@ Captured from a real running 4-player match by `node tools/screenshot/capture.mj
 - **V11 improved but is not independently closed.** Literal Unicode pictograms were removed from the
   DoW match sources and replaced with an inline SVG vocabulary plus pip dice. A full 200% scale and
   contrast audit was not completed.
-- **V3 remains FAIL.** Run 26 wired authored winter location scenes into the board and removed the
-  former dead region at 1920×1080, but independent review found the scenes render as shallow ribbons
-  with insufficient foreground depth, lighting, and material texture.
-- **V2 remains FAIL/partial.** Run 26 made five item cards illustrated and readable in the wide hand
-  dock, but survivor, crisis, crossroads, and objective card families still lack card-scale treatment;
-  the 1366 compact hand is too small for a visual pass.
+- **V3 remains FAIL.** Run 27 added ridges, plane breaks and deterministic texture marks to the
+  authored winter location scenes and made them visibly deeper in a live 1280×720 match, but the
+  independent critic still found them below a painted winter environment with convincing foreground
+  depth, atmosphere and material.
+- **V2 improved but remains FAIL/partial.** Run 27 added deterministic survivor, crisis, crossroads
+  and objective family scenes, and the live 1280×720 match visibly rendered the main objective and
+  active crisis card previews; a survivor detail card also rendered in the modal. The complete family
+  audit at 200% and compact icon readability remain unproven.
 - **V8/V11 remain FAIL.** Card shadows and SVG treatment add some depth, but board elevation and
   icon readability are not at the bar, especially at compact size.
 - **Composition improved but is not closed.** The 1920×1080 normal state now shows the board and a
@@ -135,6 +137,16 @@ entrypoints compiled; `git diff --check` passed; and `npm run build` completed s
 including the Vite production bundle. The repository-local Vitest entrypoint was used for the server
 suite. No dependency files changed.
 
+Run 27 reverified all five TypeScript builds, DoW Sass entrypoints, and `npm run build` on Windows;
+the normal build hit the known Windows `spawn EPERM` process restriction, then the elevated retry
+completed the Vite bundle. Power Grid **231/231**, DoW **338/338**, and server **58/58** passed in
+elevated runs. A live in-app browser audit at 1280×720 showed the main objective, active crisis and
+survivor detail card; document width and height matched the viewport with no overflow. The Linux
+screenshot harness could not run because its Chromium path is unavailable on Windows, so the other
+four required sizes, five-player worst-case, private crossroads card, and clean Wingspan comparison
+remain unproven. The current visual diff still fails the independent critic's V2/V3/V8/V11/V13/V14/V15
+gate. No dependency files changed.
+
 ## Tooling you now have — use it, do not rebuild it
 
 `tools/screenshot/` (added run 22, with its own README):
@@ -151,14 +163,15 @@ Start both dev servers first (`npm run dev:server &`, `npm run dev:client &`).
 ## Queue — next workstreams, in dependency order
 
 0. **`visual-core` art modules — validated for retention, not quality closure.**
-   Run 26 wired `game/board-art.tsx` into `Board.tsx` and `game/card-art.tsx` into `parts.tsx`,
-   namespaced their SVG definitions, and captured the live result. They are no longer dead code, but
-   both independent critics found the current board/card treatment below the AAA bar. Keep them for
-   the next visual pass; do not call this item or the visual section PASS.
+   Run 27 wired `game/board-art.tsx` and `game/card-art.tsx` through the board, hand, objective,
+   crisis and survivor-detail surfaces, and captured the live result. They are no longer dead code,
+   but the independent critic found the current board/card treatment below the AAA bar. Keep them
+   for the next visual pass; do not call this item or the visual section PASS.
 
 1. **`visual-core`** — the board (V3), card art (V2), and the icon set (V11). This is the largest
    remaining gap between us and the benchmark and it is where the comparison is won or lost.
-   The measured defects are unchanged and visible in `.shots/run24-verify/match-1920x1080.png`:
+   Run 27 improved family coverage and live wiring, but the measured compact-size and scene-depth
+   defects remain; the five-size, 200% and five-player evidence is still missing.
    **~35% of a 1920×1080 screen is empty** below the board; the hand is **five ~45px slivers with
    names clipped mid-word**; survivor names ellipsize in the colony. Composition and hand size are
    the highest-value single change available.

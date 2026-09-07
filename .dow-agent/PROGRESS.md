@@ -297,7 +297,29 @@ So tonight runs three bounded units, not one:
 Sub-agents own disjoint file sets, run **no** Git commands, and never edit the engine. I integrate,
 typecheck, test and push each green unit on its own before starting the next.
 
-(in progress)
+**Implementation:** the two bounded workers completed the board and card-family pass. `board-art.tsx`
+and `board-visuals.scss` gained deeper deterministic winter layers, ridges and texture; `card-art.tsx`
+and `card-art.scss` gained survivor, crisis, crossroads and objective scenes; and `parts.tsx` gained
+typed family wrappers. The parent then wired those wrappers into `TopBar.tsx` (objective, active crisis
+and holder-only private crossroads) and `SurvivorDetailDialog.tsx`, with the supporting layout in
+`dead-of-winter.scss`. No engine, server, or hidden-information semantics were changed.
+
+**Verification:** all five TypeScript builds passed; the affected DoW Sass entrypoints compiled; the
+elevated production build transformed 570 modules and completed; Power Grid **231/231**, DoW
+**338/338**, and server **58/58** passed. Normal Vite build first hit the known Windows `spawn EPERM`
+restriction and the elevated retry passed. A live in-app browser audit of the restored 4-player match
+at 1280×720 visibly showed the deeper board, main objective card, active crisis card, item hand and
+survivor detail card; document width/height matched the viewport with no overflow. The private
+crossroads branch remained correctly hidden because Bot 3 held it. The Linux screenshot harness could
+not run on Windows because it hardcodes `/opt/pw-browsers/chromium`.
+
+**Critic verdict:** independent critic: visual section **FAIL** — V2, V3, V8, V11, V13, V14 and V15
+remain below or unproven against the bar. In particular, the five-size matrix, 200% audit, true
+five-player/full-hand crowded state, holder-only crossroads capture, motion, and clean Wingspan
+comparison remain outstanding. Keep this run on `visual-core`; do not mark `.aaa-complete`.
+
+**Next run should do first:** obtain a true five-player/full-hand capture at the required sizes, then
+address the confirmed compact-density and scene-depth failures before adding more decorative art.
 
 ---
 
