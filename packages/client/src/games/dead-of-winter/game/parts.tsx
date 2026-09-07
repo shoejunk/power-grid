@@ -8,8 +8,14 @@
 
 import {
   SEAT_COLOR_HEX,
+  type CrisisCardDefinition,
+  type CrossroadsCardDefinition,
   type GameState,
+  type MainObjectiveDefinition,
+  type MainObjectiveSide,
+  type SecretObjectiveDefinition,
   type SeatColorId,
+  type SurvivorCardDefinition,
   type SurvivorInstance,
 } from '@game/dead-of-winter';
 import { Badge, Tooltip } from '@tt/ui';
@@ -234,6 +240,184 @@ export function ItemCard({ state, iid, selected = false, onClick, disabled }: It
     </button>
   ) : (
     <span className={classes}>{inner}</span>
+  );
+}
+
+interface PrintedCardInteractionProps {
+  selected?: boolean;
+  onClick?: () => void;
+  disabled?: boolean;
+}
+
+interface PrintedCardShellProps extends PrintedCardInteractionProps {
+  kind: 'survivor' | 'crisis' | 'crossroads' | 'objective';
+  children: ReactNode;
+}
+
+/** Shared interaction shell for resolved public card definitions. */
+function PrintedCardShell({
+  kind,
+  selected = false,
+  onClick,
+  disabled,
+  children,
+}: PrintedCardShellProps): JSX.Element {
+  const classes = [
+    'dow-card',
+    cardArtClasses(kind),
+    selected ? 'dow-card--selected' : '',
+    onClick && !disabled ? 'dow-card--live' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return onClick ? (
+    <button
+      type="button"
+      className={classes}
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={selected}
+    >
+      {children}
+    </button>
+  ) : (
+    <span className={classes}>{children}</span>
+  );
+}
+
+export interface SurvivorCardProps extends PrintedCardInteractionProps {
+  card: SurvivorCardDefinition;
+}
+
+/** Printed survivor face for places that already hold a resolved survivor definition. */
+export function SurvivorCard({ card, ...interaction }: SurvivorCardProps): JSX.Element {
+  const statline = (
+    <span className="dow-cardart__statline">
+      <span><DowIcon name="attack" size={11} decorative />{card.attackThreshold}+</span>
+      <span><DowIcon name="search" size={11} decorative />{card.searchThreshold}+</span>
+      <span><DowIcon name="influence" size={11} decorative />{card.influence}</span>
+    </span>
+  );
+
+  return (
+    <PrintedCardShell kind="survivor" {...interaction}>
+      <CardFace
+        kind="survivor"
+        family="survivor"
+        name={card.name}
+        text={card.ability?.text ?? 'No special ability printed.'}
+        symbols={['survivor', 'attack', 'search', 'influence']}
+        symbolsLabel="Survivor, attack, search and influence marks"
+        tag="Survivor"
+        seedKey={card.id}
+        meta={<span className="dow-cardart__occupation">{card.occupation}</span>}
+      />
+      <span className="dow-cardart__stats" aria-label={`Attack ${card.attackThreshold} plus, search ${card.searchThreshold} plus, influence ${card.influence}`}>
+        {statline}
+      </span>
+    </PrintedCardShell>
+  );
+}
+
+export interface CrisisCardProps extends PrintedCardInteractionProps {
+  card: CrisisCardDefinition;
+}
+
+/** Printed crisis face; only the resolved public crisis definition is accepted. */
+export function CrisisCard({ card, ...interaction }: CrisisCardProps): JSX.Element {
+  const accepted = card.acceptedSymbols.length;
+  return (
+    <PrintedCardShell kind="crisis" {...interaction}>
+      <CardFace
+        kind="crisis"
+        family="crisis"
+        name={card.name}
+        text={card.text}
+        symbols={card.acceptedSymbols}
+        symbolsLabel={accepted ? `Accepted symbols: ${card.acceptedSymbols.join(', ')}` : 'No symbols accepted'}
+        tag="Crisis"
+        seedKey={card.id}
+        meta={accepted ? `${accepted} accepted` : 'No symbols accepted'}
+      />
+    </PrintedCardShell>
+  );
+}
+
+export interface CrossroadsCardProps extends PrintedCardInteractionProps {
+  card: CrossroadsCardDefinition;
+}
+
+/** Printed crossroads face; story text is public once this definition is supplied. */
+export function CrossroadsCard({ card, ...interaction }: CrossroadsCardProps): JSX.Element {
+  const chooser = card.chooser === 'firstPlayer' ? 'First player chooses' : 'Active player chooses';
+  return (
+    <PrintedCardShell kind="crossroads" {...interaction}>
+      <CardFace
+        kind="crossroads"
+        family="crossroads"
+        name={card.name}
+        text={card.story}
+        symbols={['card', 'survivor']}
+        symbolsLabel="Crossroads story and survivor marks"
+        tag="Crossroads"
+        seedKey={card.id}
+        meta={chooser}
+      />
+    </PrintedCardShell>
+  );
+}
+
+export type ObjectiveCardProps = PrintedCardInteractionProps & (
+  | {
+      variant: 'main';
+      card: MainObjectiveDefinition;
+      side: MainObjectiveSide;
+      sideLabel?: string;
+    }
+  | {
+      variant: 'secret';
+      card: SecretObjectiveDefinition;
+    }
+);
+
+/** Printed objective face for a resolved main side or an already-visible secret objective. */
+export function ObjectiveCard(props: ObjectiveCardProps): JSX.Element {
+  const face = props.variant === 'main' ? (
+    <CardFace
+      kind="objective"
+      family="objective"
+      name={props.card.name}
+      text={props.side.text}
+      symbols={['card', 'influence', 'survivor']}
+      symbolsLabel="Objective, influence and survivor marks"
+      tag="Main objective"
+      seedKey={`${props.card.id}:${props.sideLabel ?? 'standard'}`}
+      meta={props.sideLabel ?? 'Standard side'}
+    />
+  ) : (
+    <CardFace
+      kind="objective"
+      family="objective"
+      name={props.card.name}
+      text={props.card.text}
+      symbols={['card', 'influence']}
+      symbolsLabel="Secret objective and influence marks"
+      tag={props.card.kind === 'betrayal' ? 'Betrayal objective' : 'Secret objective'}
+      seedKey={props.card.id}
+      meta={props.card.kind === 'exiled' ? 'Exiled' : props.card.kind === 'betrayal' ? 'Betrayal' : 'Private'}
+    />
+  );
+
+  return (
+    <PrintedCardShell
+      kind="objective"
+      selected={props.selected}
+      onClick={props.onClick}
+      disabled={props.disabled}
+    >
+      {face}
+    </PrintedCardShell>
   );
 }
 

@@ -40,6 +40,8 @@
   --dow-plate-bot: #101a24;
   --dow-plate-edge: rgba(206, 230, 248, 0.22);
   --dow-lip: rgba(214, 232, 246, 0.26);
+  --dow-art-ratio: 8 / 5;
+  --dow-family-accent: #6f9fbd;
 
   container-type: inline-size;
   position: relative;
@@ -102,7 +104,7 @@
   z-index: 1;
   flex: 0 0 auto;
   width: 100%;
-  aspect-ratio: 8 / 5;
+  aspect-ratio: var(--dow-art-ratio);
   min-height: 0;
   overflow: hidden;
   background: #070c12;
@@ -226,9 +228,48 @@
 
 .dow-card.dow-cardart .dow-cardart__meta {
   flex: 0 0 auto;
+  min-width: 0;
+  max-width: 48%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: clamp(7px, 6cqw, 11px);
   font-variant-numeric: tabular-nums;
   color: #9db6cc;
+}
+
+.dow-card.dow-cardart .dow-cardart__occupation {
+  color: #b4c8d8;
+  font-style: italic;
+}
+
+.dow-card.dow-cardart .dow-cardart__stats {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  padding: clamp(2px, 2cqw, 5px) clamp(4px, 3.6cqw, 10px);
+  color: var(--dow-family-accent);
+  background: linear-gradient(180deg, var(--dow-plate-bot), #080f17);
+  box-shadow: inset 0 1px 0 var(--dow-plate-edge);
+}
+
+.dow-card.dow-cardart .dow-cardart__statline {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: clamp(4px, 2.8cqw, 8px);
+  font-size: clamp(7px, 6cqw, 10px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0.04em;
+}
+
+.dow-card.dow-cardart .dow-cardart__statline span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
 }
 
 /* ------------------------------------------------------------------ *
@@ -375,6 +416,22 @@
 
 /* Crisis — a rust-stained notice. The plate runs hot because a crisis is
    the one card on the table that is actively working against you. */
+.dow-card.dow-cardart--survivor {
+  --dow-stock-top: #d4dfe2;
+  --dow-stock-mid: #b9c8cb;
+  --dow-stock-bot: #a6b7bc;
+  --dow-plate-top: #1b4b5a;
+  --dow-plate-bot: #0d2834;
+  --dow-plate-edge: rgba(167, 232, 235, 0.3);
+  --dow-lip: rgba(140, 223, 230, 0.3);
+  --dow-art-ratio: 5 / 4;
+  --dow-family-accent: #9ee3e2;
+}
+
+.dow-card.dow-cardart--survivor .dow-card__text {
+  color: #152b35;
+}
+
 .dow-card.dow-cardart--crisis {
   --dow-stock-top: #cdd0cb;
   --dow-stock-mid: #b6b7ae;
@@ -382,6 +439,8 @@
   --dow-plate-top: #4e2018;
   --dow-plate-bot: #29100c;
   --dow-plate-edge: rgba(255, 190, 160, 0.24);
+  --dow-art-ratio: 5 / 4;
+  --dow-family-accent: #f0a06d;
 }
 
 .dow-card.dow-cardart--crisis .dow-card__kind {
@@ -390,9 +449,14 @@
 
 /* Objective — brass plate, the colony's own paperwork. */
 .dow-card.dow-cardart--objective {
+  --dow-stock-top: #d9d4c5;
+  --dow-stock-mid: #c6bfab;
+  --dow-stock-bot: #aca38e;
   --dow-plate-top: #4a3a1c;
   --dow-plate-bot: #241b0d;
   --dow-plate-edge: rgba(255, 220, 160, 0.26);
+  --dow-art-ratio: 5 / 4;
+  --dow-family-accent: #e3bd6e;
 }
 
 .dow-card.dow-cardart--objective .dow-card__name {
@@ -409,6 +473,8 @@
   --dow-plate-bot: #1e140c;
   --dow-plate-edge: rgba(247, 168, 95, 0.3);
   --dow-lip: rgba(247, 168, 95, 0.24);
+  --dow-art-ratio: 5 / 4;
+  --dow-family-accent: #f7b36a;
   color: #dfe8f2;
 }
 
@@ -427,6 +493,35 @@
 
 .dow-card.dow-cardart--crossroads .dow-cardart__rule {
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0 1px, rgba(247, 168, 95, 0.35) 1px 2px);
+}
+
+/* Non-item faces are meant to be read as small printed cards, not panoramic
+   rail banners. Keep their deeper windows even where the hand dock compacts
+   item cards for density. */
+.dow-match__hand-dock .dow-card.dow-cardart:not(.dow-cardart--item) .dow-cardart__art {
+  aspect-ratio: var(--dow-art-ratio);
+}
+
+@container (max-width: 150px) {
+  .dow-card.dow-cardart .dow-cardart__plate {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .dow-card.dow-cardart .dow-cardart__meta {
+    flex-basis: 100%;
+    max-width: 100%;
+    order: 3;
+  }
+
+  .dow-card.dow-cardart .dow-cardart__text {
+    -webkit-line-clamp: 3;
+    font-size: clamp(7px, 6.4cqw, 10px);
+  }
+
+  .dow-card.dow-cardart .dow-cardart__stats {
+    padding-block: 3px;
+  }
 }
 
 /* Face down — a real card back, edge to edge, with a deck banner so the

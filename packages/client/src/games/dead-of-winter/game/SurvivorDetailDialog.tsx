@@ -4,9 +4,9 @@ import { Badge, Button, Modal } from '@tt/ui';
 import {
   itemDef,
   locationName,
-  survivorArtPath,
   survivorDef,
 } from '../content';
+import { SurvivorCard } from './parts';
 
 export interface SurvivorDetailDialogProps {
   state: GameState;
@@ -46,11 +46,9 @@ export function SurvivorDetailDialog({
     >
       <div className="dow-survivor-detail">
         <div className="dow-survivor-detail__hero">
-          <img
-            className="dow-survivor-detail__art"
-            src={survivorArtPath(survivor.cardId)}
-            alt={`${def.name}, ${def.occupation}`}
-          />
+          <div className="dow-survivor-detail__card">
+            <SurvivorCard card={def} />
+          </div>
           <div className="dow-survivor-detail__identity">
             <div className="dow-survivor-detail__eyebrow">
               {survivor.isLeader ? <Badge tone="warning">Group leader</Badge> : null}

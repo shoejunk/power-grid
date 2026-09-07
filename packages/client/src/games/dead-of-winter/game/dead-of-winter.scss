@@ -113,6 +113,41 @@
   color: var(--tt-text-faint);
 }
 
+.dow-top__card-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(94px, 116px);
+  gap: var(--tt-space-3);
+  align-items: stretch;
+  min-width: 0;
+}
+
+.dow-top__card-copy {
+  min-width: 0;
+}
+
+.dow-top__card-content > .dow-card {
+  width: 100%;
+  min-height: 0;
+  align-self: stretch;
+}
+
+.dow-top__card-content > .dow-card .dow-card__text {
+  -webkit-line-clamp: 4;
+}
+
+.dow-top__private-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(94px, 116px);
+  gap: var(--tt-space-2);
+  align-items: start;
+  width: min(100%, 300px);
+  margin-top: var(--tt-space-2);
+}
+
+.dow-top__private-card > .dow-card {
+  width: 100%;
+}
+
 .dow-stat {
   display: flex;
   flex-direction: column;
@@ -403,9 +438,20 @@
 
 .dow-survivor-detail__hero {
   display: grid;
-  grid-template-columns: 190px 1fr;
+  grid-template-columns: 240px 1fr;
   gap: var(--tt-space-4);
   align-items: stretch;
+}
+
+.dow-survivor-detail__card {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.dow-survivor-detail__card > .dow-card {
+  width: 230px;
+  max-width: 100%;
 }
 
 .dow-survivor-detail__art {
@@ -1445,7 +1491,11 @@
   }
 
   .dow-survivor-detail__hero {
-    grid-template-columns: 150px 1fr;
+    grid-template-columns: 190px 1fr;
+  }
+
+.dow-survivor-detail__card > .dow-card {
+    width: 180px;
   }
 
   .dow-survivor-detail__art {
@@ -1457,6 +1507,11 @@
 @media (max-width: 560px) {
   .dow-survivor-detail__hero {
     grid-template-columns: 1fr;
+  }
+
+.dow-survivor-detail__card > .dow-card {
+    width: 100%;
+    max-width: 320px;
   }
 
   .dow-survivor-detail__art {

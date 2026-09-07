@@ -30,7 +30,7 @@
 import type { ItemSymbol } from '@game/dead-of-winter';
 import { useEffect, type ReactNode } from 'react';
 
-import { DowIcon } from './iconography';
+import { DowIcon, type DowIconName } from './iconography';
 import './card-art.scss';
 
 /* ------------------------------------------------------------------ *
@@ -336,7 +336,7 @@ function Grit({ seed, y0, y1, count = 18 }: {
 }
 
 /* ------------------------------------------------------------------ *
- * The seven object studies
+ * The item object studies
  * ------------------------------------------------------------------ */
 
 function WeaponScene({ seed, variant }: { seed: number; variant: number }): JSX.Element {
@@ -746,6 +746,129 @@ function SurvivorScene({ seed, variant }: { seed: number; variant: number }): JS
   );
 }
 
+/* ------------------------------------------------------------------ *
+ * Printed family scenes
+ * ------------------------------------------------------------------ */
+
+/** A crisis is a posted emergency notice: paper, staples, tape and a hot flare. */
+function CrisisScene({ seed, variant }: { seed: number; variant: number }): JSX.Element {
+  return (
+    <g>
+      <Stage backdrop="planks" horizon={66} lightX={54} />
+      <g opacity="0.56">
+        <path d="M20 10h42l4 42H24Z" fill="url(#dowPaper)" />
+        <path d="M24 18h30M26 25h25M27 32h20M29 39h18" stroke="#253443" strokeWidth="1.4" opacity="0.52" />
+        <circle cx="27" cy="13" r="2" fill="#8d9ca8" />
+      </g>
+      <g opacity="0.68" transform="translate(112 8) rotate(8)">
+        <path d="M0 0h30v48H0Z" fill="#3b1c17" />
+        <path d="M5 7h20M5 14h14M5 21h18M5 28h11" stroke="#e3a37d" strokeWidth="1.5" opacity="0.5" />
+      </g>
+      <ellipse cx="84" cy="91" rx="52" ry="7" fill="url(#dowCast)" opacity="0.92" />
+      <g transform={`translate(${80 + (variant - 1) * 7} 85) rotate(${variant === 0 ? -5 : variant === 2 ? 5 : 0})`}>
+        <path d="M-31 3-25-51c1-4 4-6 8-6h46c4 0 7 2 8 6l6 54Z" fill="url(#dowPaper)" />
+        <path d="M-25-51h54l2 11h-58Z" fill="#9d3f2c" opacity="0.9" />
+        <path d="M-25-41 31 2M-13-51 43-8M-37-25 19 18" stroke="#e5b47e" strokeWidth="4.4" opacity="0.78" />
+        <path d="M-37-25 19 18M-25-51 31 2M-13-51 43-8" stroke="#5a2119" strokeWidth="1.1" opacity="0.62" />
+        <path d="M-17-28h34v21h-34Z" fill="#531c16" opacity="0.96" />
+        <path d="m0-24 7 13h-14Z" fill="#f1c27e" />
+        <path d="M0-20v4M0-13v1" stroke="#531c16" strokeWidth="1.7" strokeLinecap="round" />
+        <path d="M-15-2h30M-13 5h24" stroke="#36404a" strokeWidth="1.4" opacity="0.65" />
+        <path d="M-28-50c2-4 6-6 11-6h28" stroke="#fff0d0" strokeWidth="1.7" fill="none" opacity="0.5" />
+      </g>
+      <g transform="translate(34 84)">
+        <Cast x={0} y={8} rx={17} ry={4} o={0.65} />
+        <path d="M-11 1-8-17c1-3 3-4 6-4h7c3 0 5 2 5 5L8 1Z" fill="url(#dowSteelCyl)" />
+        <path d="M-7-17h11l2-4H-5Z" fill="#b8c6cf" opacity="0.75" />
+        <path d="M-7-12h13M-8-5h14" stroke="#16212b" strokeWidth="1.3" opacity="0.55" />
+        <path d="M-5-19c2-2 6-2 9 0" stroke="#eef6fb" strokeWidth="1" fill="none" opacity="0.5" />
+      </g>
+      <circle cx="126" cy="71" r="18" fill="url(#dowGlow)" opacity="0.52" />
+      <path d="M126 63v13M122.5 67.5h7" stroke="#ffd39c" strokeWidth="2" strokeLinecap="round" opacity="0.72" />
+      <Grit seed={seed + 31} y0={64} y1={99} count={14} />
+      <rect width={W} height={H} fill="url(#dowVig)" />
+    </g>
+  );
+}
+
+/** A crossroads is a lantern-lit fork in the snow, with a readable signpost. */
+function CrossroadsScene({ seed, variant }: { seed: number; variant: number }): JSX.Element {
+  const signTilt = variant === 0 ? -4 : variant === 2 ? 4 : 0;
+  return (
+    <g>
+      <Stage backdrop="open" horizon={67} lightX={94} />
+      <g fill="#0a141d" opacity="0.62">
+        <path d="M4 68 16 40 28 68ZM32 68 43 47 54 68ZM112 68 124 42 136 68ZM139 68 149 49 159 68Z" />
+      </g>
+      <path d="M0 76c24-7 46-3 66-8 25-6 54-8 94-1v33H0Z" fill="#253746" />
+      <path d="M0 76c25-7 46-3 66-8 25-6 54-8 94-1" stroke="#d5e5ee" strokeWidth="1.4" fill="none" opacity="0.55" />
+      <g fill="none" strokeLinecap="round">
+        <path d="M82 96c1-13-4-23-20-38" stroke="#9ab1bf" strokeWidth="8" opacity="0.33" />
+        <path d="M82 96c1-13 9-24 31-39" stroke="#9ab1bf" strokeWidth="8" opacity="0.28" />
+        <path d="M82 96c1-13-4-23-20-38M82 96c1-13 9-24 31-39" stroke="#dbeaf3" strokeWidth="1.2" opacity="0.5" />
+      </g>
+      <ellipse cx="80" cy="94" rx="46" ry="6" fill="url(#dowCast)" opacity="0.78" />
+      <g transform="translate(82 89)">
+        <path d="M-3 0h6l-1-51h-4Z" fill="url(#dowWood)" />
+        <path d="M-2-41 0-52 2-41" fill="#cba875" opacity="0.5" />
+        <g transform={`translate(0 -38) rotate(${signTilt})`}>
+          <path d="M-3-10h30l-4 11H-3Z" fill="url(#dowWood)" />
+          <path d="M-3-10h30l-4 11H-3Z" fill="url(#dowSheen)" />
+          <path d="M4-6h14M4-2h9" stroke="#2d2116" strokeWidth="1.3" opacity="0.72" />
+        </g>
+        <g transform={`translate(-2 -25) rotate(-${signTilt + 5})`}>
+          <path d="M-27-9h27l4 11h-31Z" fill="url(#dowWood)" />
+          <path d="M-20-5h13M-19-1h8" stroke="#2d2116" strokeWidth="1.3" opacity="0.72" />
+        </g>
+      </g>
+      <g transform="translate(126 80)">
+        <circle cx="0" cy="-6" r="19" fill="url(#dowGlow)" opacity="0.6" />
+        <path d="M-6 1v-18h12V1Z" fill="#25313a" />
+        <rect x="-4.5" y="-16" width="9" height="13" rx="1.5" fill="#f5bd69" opacity="0.9" />
+        <path d="M-8-18h16M0-23v5" stroke="#9aadb8" strokeWidth="1.4" fill="none" />
+      </g>
+      <Snow seed={seed + 47} count={24} />
+      <rect width={W} height={H} fill="url(#dowVig)" />
+    </g>
+  );
+}
+
+/** An objective is a colony map on a scarred table: route, pin and compass. */
+function ObjectiveScene({ seed, variant }: { seed: number; variant: number }): JSX.Element {
+  return (
+    <g>
+      <Stage backdrop="tiles" horizon={62} lightX={62} />
+      <ellipse cx="82" cy="88" rx="67" ry="9" fill="url(#dowCast)" opacity="0.9" />
+      <g transform={`translate(${78 + (variant - 1) * 3} 82) rotate(${variant === 0 ? -3 : variant === 2 ? 4 : 0})`}>
+        <path d="M-56-4-46-57 53-52 59 2Z" fill="url(#dowPaper)" />
+        <path d="M-44-48 48-44M-49-39 40-36M-51-30 35-27" stroke="#516879" strokeWidth="1.2" opacity="0.44" />
+        <path d="M-36-12c13-18 22-3 33-17s20 5 31-10 18 4 29-9" fill="none" stroke="#9b3f30" strokeWidth="2.6" opacity="0.78" />
+        <path d="M-36-12c13-18 22-3 33-17s20 5 31-10 18 4 29-9" fill="none" stroke="#edb27d" strokeWidth="0.8" opacity="0.7" />
+        <path d="M-39-14h7M-6-31h7M26-40h7M55-49h7" stroke="#5c7384" strokeWidth="2" opacity="0.55" />
+        <g transform="translate(-28 -42)">
+          <circle r="6" fill="#a74332" opacity="0.88" />
+          <circle r="2" fill="#f2c17e" />
+          <path d="M0-7v14M-7 0h14" stroke="#f2c17e" strokeWidth="0.8" opacity="0.7" />
+        </g>
+        <g transform="translate(35 -15) rotate(18)">
+          <circle r="12" fill="#6c5130" opacity="0.52" />
+          <circle r="9" fill="none" stroke="#e9cf9c" strokeWidth="1" opacity="0.78" />
+          <path d="m0-7 2 7-2 7-2-7Z" fill="#e9cf9c" />
+          <path d="M-7 0h14" stroke="#e9cf9c" strokeWidth="0.8" opacity="0.7" />
+        </g>
+        <path d="M-53-55c20-3 59-2 100 3" stroke="#fff0d0" strokeWidth="1.6" opacity="0.52" />
+      </g>
+      <g transform="translate(34 86) rotate(-16)">
+        <path d="M-2 0h4l1-30-3-7-3 7Z" fill="#9b3f30" />
+        <path d="M0-37v7" stroke="#f1c48b" strokeWidth="1.2" />
+        <ellipse cy="1" rx="7" ry="2.6" fill="#42251b" opacity="0.72" />
+      </g>
+      <Grit seed={seed + 59} y0={63} y1={99} count={18} />
+      <rect width={W} height={H} fill="url(#dowVig)" />
+    </g>
+  );
+}
+
 const SCENES: Record<ItemSymbol, (p: { seed: number; variant: number }) => JSX.Element> = {
   weapon: WeaponScene,
   fuel: FuelScene,
@@ -756,6 +879,16 @@ const SCENES: Record<ItemSymbol, (p: { seed: number; variant: number }) => JSX.E
   survivor: SurvivorScene,
 };
 
+export type CardArtFamily = 'item' | 'survivor' | 'crisis' | 'crossroads' | 'objective';
+
+const FAMILY_SCENES: Record<CardArtFamily, (p: { seed: number; variant: number }) => JSX.Element> = {
+  item: ToolScene,
+  survivor: SurvivorScene,
+  crisis: CrisisScene,
+  crossroads: CrossroadsScene,
+  objective: ObjectiveScene,
+};
+
 /* ------------------------------------------------------------------ *
  * Public art components
  * ------------------------------------------------------------------ */
@@ -763,6 +896,8 @@ const SCENES: Record<ItemSymbol, (p: { seed: number; variant: number }) => JSX.E
 export interface CardVignetteProps {
   /** Drives which object study is staged. */
   symbol?: ItemSymbol;
+  /** Selects the printed family scene when the face is not an item. */
+  family?: CardArtFamily;
   /** Card identity — the same card always gets the same scene. */
   seedKey: string;
 }
@@ -773,9 +908,9 @@ export interface CardVignetteProps {
  * `preserveAspectRatio="xMidYMid slice"` so the scene fills whatever shape the
  * card ends up with instead of letterboxing inside it.
  */
-export function CardVignette({ symbol, seedKey }: CardVignetteProps): JSX.Element {
+export function CardVignette({ symbol, family = 'item', seedKey }: CardVignetteProps): JSX.Element {
   const h = hash32(seedKey);
-  const Scene = symbol ? SCENES[symbol] : ToolScene;
+  const Scene = family === 'item' ? (symbol ? SCENES[symbol] : ToolScene) : FAMILY_SCENES[family];
   const variant = h % 3;
   return (
     <svg
@@ -833,14 +968,14 @@ export function CardBack(): JSX.Element {
  * The card face
  * ------------------------------------------------------------------ */
 
-export type CardClass = 'item' | 'crisis' | 'crossroads' | 'objective' | 'facedown';
+export type CardClass = 'item' | 'survivor' | 'crisis' | 'crossroads' | 'objective' | 'facedown';
 
 export interface CardFaceProps {
   /** Which printed stock and plate treatment to use. */
   kind: CardClass;
   name: string;
   text?: string;
-  symbols?: readonly ItemSymbol[];
+  symbols?: readonly DowIconName[];
   /** Accessible description of the symbol row; omitted for a decorative row. */
   symbolsLabel?: string;
   /** The small stamped tag along the bottom rule — "Equip", "Crisis", … */
@@ -849,6 +984,8 @@ export interface CardFaceProps {
   seedKey?: string;
   /** The symbol the illustration is staged around. */
   artSymbol?: ItemSymbol;
+  /** Family scene; defaults to the face kind for non-item faces. */
+  family?: CardArtFamily;
   /** Anything extra to stamp into the plate, e.g. a contribution count. */
   meta?: ReactNode;
 }
@@ -869,15 +1006,17 @@ export function CardFace({
   tag,
   seedKey,
   artSymbol,
+  family,
   meta,
 }: CardFaceProps): JSX.Element {
   useEffect(ensureCardArtDefs, []);
   const facedown = kind === 'facedown';
+  const artFamily: CardArtFamily = family ?? (kind === 'facedown' ? 'item' : kind);
 
   return (
     <>
       <span className="dow-cardart__art">
-        {facedown ? <CardBack /> : <CardVignette symbol={artSymbol} seedKey={seedKey ?? name} />}
+        {facedown ? <CardBack /> : <CardVignette family={artFamily} symbol={artSymbol} seedKey={seedKey ?? name} />}
         <span className="dow-cardart__grain" aria-hidden="true" />
         <span className="dow-cardart__glaze" aria-hidden="true" />
         {!facedown && symbols && symbols.length > 0 ? (

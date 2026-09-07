@@ -376,19 +376,39 @@ function Sky({ w, h, horizon, seed }: BandProps & { horizon: number; seed: numbe
 
 /** The snow field: three planes, each nearer one brighter and more contrasty. */
 function Ground({ w, h, horizon, seed }: BandProps & { horizon: number; seed: number }): JSX.Element {
+  const r = rng(seed * 19 + 3);
   return (
     <g>
       <rect x={-10} y={horizon - 1} width={w + 20} height={h - horizon + 12} fill="url(#dowSnowFar)" />
+      {/* A distant bank establishes the horizon before the nearer planes overlap it. */}
+      <path
+        d={`M-10 ${n2(horizon + 8)} Q${n2(w * 0.17)} ${n2(horizon - 1.5)} ${n2(w * 0.38)} ${n2(horizon + 5)} Q${n2(w * 0.67)} ${n2(horizon - 3)} ${n2(w + 10)} ${n2(horizon + 4)} L${n2(w + 10)} ${n2(horizon + 15)} L-10 ${n2(horizon + 15)} Z`}
+        fill="#7894a7"
+        opacity="0.42"
+      />
+      <path
+        d={`M-10 ${n2(horizon + 8.5)} Q${n2(w * 0.18)} ${n2(horizon - 1)} ${n2(w * 0.39)} ${n2(horizon + 5.5)} Q${n2(w * 0.68)} ${n2(horizon - 2.5)} ${n2(w + 10)} ${n2(horizon + 4.5)}`}
+        fill="none"
+        stroke="#dbeaf0"
+        strokeOpacity="0.28"
+        strokeWidth="0.8"
+      />
       <path d={drift(seed, w, horizon + (h - horizon) * 0.28, h + 10, 5, h * 0.035)} fill="url(#dowSnowMid)" />
+      {/* Blue plane-breaks make the middle distance read as snow, not a flat fill. */}
+      <path
+        d={drift(seed + 5, w, horizon + (h - horizon) * 0.49, h + 10, 5, h * 0.038)}
+        fill="#b5cbd8"
+        opacity="0.42"
+      />
       <path
         d={drift(seed + 7, w, horizon + (h - horizon) * 0.62, h + 10, 4, h * 0.055)}
         fill="url(#dowSnowNear)"
       />
       {/* Wind-scoured ripples catching the low key light. */}
-      <g opacity="0.5" stroke="#ffffff" strokeOpacity="0.5" strokeLinecap="round" fill="none">
-        {Array.from({ length: 7 }, (_, i) => {
+      <g opacity="0.62" stroke="#ffffff" strokeOpacity="0.55" strokeLinecap="round" fill="none">
+        {Array.from({ length: 9 }, (_, i) => {
           const r = rng(seed * 13 + i)();
-          const y = horizon + (h - horizon) * (0.34 + i * 0.09);
+          const y = horizon + (h - horizon) * (0.28 + i * 0.075);
           const x = w * (0.04 + r * 0.6);
           return (
             <path
@@ -397,6 +417,13 @@ function Ground({ w, h, horizon, seed }: BandProps & { horizon: number; seed: nu
               strokeWidth={0.35 + r * 0.3}
             />
           );
+        })}
+      </g>
+      <g fill="none" stroke="#58798d" strokeOpacity="0.3" strokeLinecap="round">
+        {Array.from({ length: 5 }, (_, i) => {
+          const y = horizon + (h - horizon) * (0.43 + i * 0.105);
+          const x = r() * w * 0.22;
+          return <path key={i} d={`M${n2(x)} ${n2(y)} q${n2(w * 0.11)} ${n2(-1.1 - r() * 1.2)} ${n2(w * 0.25)} 0`} strokeWidth="0.55" />;
         })}
       </g>
     </g>
@@ -1365,7 +1392,7 @@ export function LocationScene({ location, lit, isColony }: LocationSceneProps): 
     <svg
       className="dow-scene__svg"
       viewBox={`0 0 ${w} ${height}`}
-      preserveAspectRatio="xMidYMax slice"
+      preserveAspectRatio="none"
       aria-hidden="true"
       focusable="false"
     >

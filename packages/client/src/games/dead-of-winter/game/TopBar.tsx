@@ -7,16 +7,17 @@
  * scrolls.
  */
 
-import type { GameState } from '@game/dead-of-winter';
+import { ACTIVE_PACK, type GameState } from '@game/dead-of-winter';
 import { Badge, Panel } from '@tt/ui';
 import type { PlayerId } from '@tt/core';
 
 import { crisisCard, crossroadsCard, mainObjectiveName, mainObjectiveSide } from '../content';
 import { foodDue, phaseLabel } from './model';
-import { Stat } from './parts';
+import { CrisisCard, CrossroadsCard, ObjectiveCard, Stat } from './parts';
 
 export function TopBar({ state, me }: { state: GameState; me: PlayerId | null }): JSX.Element {
   const objective = mainObjectiveSide(state);
+  const objectiveCard = ACTIVE_PACK.mainObjectives.get(state.mainObjective.cardId);
   const crisis = crisisCard(state);
   const due = foodDue(state);
   const holder = state.turn ? state.players[state.turn.crossroadsHolderId] : undefined;
@@ -68,9 +69,12 @@ export function TopBar({ state, me }: { state: GameState; me: PlayerId | null })
             </Badge>
           ) : null}
           {heldCrossroads ? (
-            <Badge tone="warning" title={heldCrossroads.story}>
-              You hold “{heldCrossroads.name}”
-            </Badge>
+            <div className="dow-top__private-card">
+              <Badge tone="warning" title={heldCrossroads.story}>
+                Private crossroads
+              </Badge>
+              <CrossroadsCard card={heldCrossroads} />
+            </div>
           ) : null}
         </div>
       </Panel>
@@ -82,16 +86,28 @@ export function TopBar({ state, me }: { state: GameState; me: PlayerId | null })
         actions={<Badge tone="info">{state.mainObjective.contributions.length} added</Badge>}
         className="dow-top__objective"
       >
-        <p className="tt-caption">{objective?.text ?? 'Unknown objective.'}</p>
-        {Object.entries(state.mainObjective.counters).length > 0 ? (
-          <div className="dow-top__counters">
-            {Object.entries(state.mainObjective.counters).map(([id, value]) => (
-              <Badge key={id} tone="neutral">
-                {id}: {value}
-              </Badge>
-            ))}
+        <div className="dow-top__card-content">
+          <div className="dow-top__card-copy">
+            <p className="tt-caption">{objective?.text ?? 'Unknown objective.'}</p>
+            {Object.entries(state.mainObjective.counters).length > 0 ? (
+              <div className="dow-top__counters">
+                {Object.entries(state.mainObjective.counters).map(([id, value]) => (
+                  <Badge key={id} tone="neutral">
+                    {id}: {value}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
           </div>
-        ) : null}
+          {objectiveCard && objective ? (
+            <ObjectiveCard
+              variant="main"
+              card={objectiveCard}
+              side={objective}
+              sideLabel={state.mainObjective.side === 'hardcore' ? 'Hardcore side' : 'Standard side'}
+            />
+          ) : null}
+        </div>
       </Panel>
 
       <Panel
@@ -104,13 +120,18 @@ export function TopBar({ state, me }: { state: GameState; me: PlayerId | null })
         }
         className="dow-top__crisis"
       >
-        <p className="tt-caption">{crisis?.text ?? 'The next crisis arrives with the round.'}</p>
-        {crisis ? (
-          <p className="tt-caption dow-top__symbols">
-            Wants: {crisis.acceptedSymbols.join(', ') || 'nothing'} — anything else counts against
-            it. §11.3
-          </p>
-        ) : null}
+        <div className="dow-top__card-content">
+          <div className="dow-top__card-copy">
+            <p className="tt-caption">{crisis?.text ?? 'The next crisis arrives with the round.'}</p>
+            {crisis ? (
+              <p className="tt-caption dow-top__symbols">
+                Wants: {crisis.acceptedSymbols.join(', ') || 'nothing'} — anything else counts against
+                it. §11.3
+              </p>
+            ) : null}
+          </div>
+          {crisis ? <CrisisCard card={crisis} /> : null}
+        </div>
       </Panel>
     </div>
   );
