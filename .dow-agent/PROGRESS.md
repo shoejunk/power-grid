@@ -1223,3 +1223,13 @@ absent.
 
 **Next run should do first:** `engine-tests`. Nothing downstream can be trusted until the engine is
 verified against §23 and §18.
+## 2026-09-07 — nightly run 27
+
+**Intent:** continue the authoritative `visual-core` workstream. This run will take one bounded
+visual unit toward the AAA bar: deepen the authored winter board scenes and complete the missing
+survivor, crisis, crossroads, and objective card-family treatments while preserving the live
+interaction and hidden-information branches. I will compile the affected Sass/TypeScript, capture
+fresh running-game evidence, and record an independent harsh visual verdict; the Wingspan comparison
+remains FAIL unless a clean reference image is available.
+
+(in progress)
