@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-09-07** (nightly run 27: board/card art wired through live card surfaces; visual gates remain FAIL)
+Last updated: **2026-09-08** (nightly run 29: visual art/layout pass verified; visual gates remain FAIL)
 
 ---
 
@@ -67,7 +67,7 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 | DoW engine — tested | **PASS for A1–A15 coverage** | 338 tests (run 24: +8 chooser, +6 vote secrecy). Every §23 criterion has a named suite; run 22 closed the last public §18.4 crossroads tranche. Two honest boundaries remain, recorded under Known debts |
 | DoW content pack | **PASS** | Authored `dow-base` v0.5.0-dev at the §2.0 counts. Original development content, not reproduced licensed retail text |
 | DoW client UI — exists | **PASS** | Match screen at `packages/client/src/games/dead-of-winter/` |
-| Visual (V1–V15) | **FAIL** | Run 27 deepened authored board scenes, added survivor/crisis/crossroads/objective card families, and wired objective/crisis/survivor detail surfaces; the independent critic still fails the visual bar and the required size/density/reference evidence is incomplete. |
+| Visual (V1–V15) | **FAIL** | Run 29 added two local painted hero plates, stronger card hierarchy, deeper board framing, and responsive no-overlap layouts; independent critics still fail V2/V3/V8/V11/V13 and the five-player/full-density/reference evidence is incomplete. |
 | Motion (M1–M9) | **FAIL** | **Zero animation code in the entire match screen.** No `motion.` element, no `AnimatePresence`, in any of the 11 match components. Not a judgement call |
 | UX (U1–U13) | — | Still unassessed. No critic pass has ever completed. Run 24 added one visible U5 gain (a "Only you can see these cards" label on the hand) as a side effect, unscored |
 | Multiplayer N1/N3/N6 | **PASS** | Proven run 22 against two real browsers, 8/8 checks — see `tools/screenshot/multiplayer.mjs` |
@@ -88,20 +88,25 @@ Captured from a real running 4-player match by `node tools/screenshot/capture.mj
 - **V11 improved but is not independently closed.** Literal Unicode pictograms were removed from the
   DoW match sources and replaced with an inline SVG vocabulary plus pip dice. A full 200% scale and
   contrast audit was not completed.
-- **V3 remains FAIL.** Run 27 added ridges, plane breaks and deterministic texture marks to the
-  authored winter location scenes and made them visibly deeper in a live 1280×720 match, but the
-  independent critic still found them below a painted winter environment with convincing foreground
-  depth, atmosphere and material.
-- **V2 improved but remains FAIL/partial.** Run 27 added deterministic survivor, crisis, crossroads
-  and objective family scenes, and the live 1280×720 match visibly rendered the main objective and
-  active crisis card previews; a survivor detail card also rendered in the modal. The complete family
-  audit at 200% and compact icon readability remain unproven.
-- **V8/V11 remain FAIL.** Card shadows and SVG treatment add some depth, but board elevation and
-  icon readability are not at the bar, especially at compact size.
-- **Composition improved but is not closed.** The 1920×1080 normal state now shows the board and a
-  readable five-card hand without document overflow. The 1366×768 fallback keeps the board and hand
-  in view, but is cramped. Only these two resolutions were captured in run 26; the five-resolution
-  matrix and a true five-player/full-hand worst-case remain unproven.
+- **V3 remains FAIL.** Run 29 added far ridges, atmospheric veils, snowbank framing and material
+  overlays to the authored winter scenes, but the independent board critic still found them below a
+  painted winter environment with convincing foreground depth and material.
+- **V2 remains FAIL/partial.** Run 29 added local painted survivor and crossroads hero plates and
+  verified the survivor plate in the live detail modal. Items, crises and objectives still use the
+  authored vector fallback; the independent card critic therefore still fails V2 and the complete
+  family audit at 200% remains unproven.
+- **V8/V11 remain FAIL overall.** Card bevels, family seals and larger icon pips improve hierarchy;
+  the card critic called V8 narrowly improved but still failed V11 at compact scale, while the board
+  critic still failed board elevation.
+- **V13/V14/V15 remain FAIL/unproven.** The fresh CUA matrix measured no board/rail/hand-dock/foot
+  overlap at 1280×720, 1366×768, 1920×1080, 2560×1440 or 3840×2160. The compact 1280/1366 match
+  intentionally scrolls internally (`scrollHeight=1160`) so the viewport does not paint state beneath
+  another section; this is not a PASS for the rubric's no-scroll/full-density requirement. A true
+  five-player worst-case and one-screen nine-area proof remain unverified.
+- **Runtime hygiene is PASS for this audit.** The live match had no console errors/warnings and no
+  duplicate IDs; the Windows CUA fallback was used because the Linux screenshot harness's Chromium
+  path is unavailable on Windows. The official Wingspan material reached by critics was not a clean
+  blind game-only side-by-side, so the reference gate remains FAIL.
 
 Passing, with evidence: the document itself never scrolls at any of the five resolutions, and the
 console is **clean** — zero page errors and zero failed requests at all five. The production build
@@ -147,6 +152,15 @@ four required sizes, five-player worst-case, private crossroads card, and clean 
 remain unproven. The current visual diff still fails the independent critic's V2/V3/V8/V11/V13/V14/V15
 gate. No dependency files changed.
 
+Run 29 reverified the five TypeScript checks, the affected DoW Sass entrypoint, `git diff --check`,
+and `npm run build` on Windows. Power Grid **231/231**, DoW **338/338**, and server **58/58** passed.
+The Vite bundle emitted both local hero PNGs. A live CUA audit covered all five required viewport
+sizes: 1280/1366 used the intentional compact internal scroll with no section overlap; 1920/2560/3840
+fit the board, rail/hand, and foot without overlap or document overflow. The survivor detail modal
+rendered one `.dow-cardart__raster`; crossroads wiring is present but its private card was held by
+another player and was not exposed. Independent card and board critics still rejected the visual bar;
+no clean Wingspan comparison or five-player worst-case was obtained. No dependency files changed.
+
 ## Tooling you now have — use it, do not rebuild it
 
 `tools/screenshot/` (added run 22, with its own README):
@@ -163,18 +177,17 @@ Start both dev servers first (`npm run dev:server &`, `npm run dev:client &`).
 ## Queue — next workstreams, in dependency order
 
 0. **`visual-core` art modules — validated for retention, not quality closure.**
-   Run 27 wired `game/board-art.tsx` and `game/card-art.tsx` through the board, hand, objective,
-   crisis and survivor-detail surfaces, and captured the live result. They are no longer dead code,
-   but the independent critic found the current board/card treatment below the AAA bar. Keep them
-   for the next visual pass; do not call this item or the visual section PASS.
+   Run 29 added and wired `art/survivor-hero-v1.png` and `art/crossroads-hero-v1.png`, deepened the
+   board scenes, and corrected large/compact layout overlap. They are no longer dead code, but the
+   independent critics still found the board/card treatment below the AAA bar. Keep the assets and
+   continue the visual pass; do not call this item or the visual section PASS.
 
 1. **`visual-core`** — the board (V3), card art (V2), and the icon set (V11). This is the largest
    remaining gap between us and the benchmark and it is where the comparison is won or lost.
-   Run 27 improved family coverage and live wiring, but the measured compact-size and scene-depth
-   defects remain; the five-size, 200% and five-player evidence is still missing.
-   **~35% of a 1920×1080 screen is empty** below the board; the hand is **five ~45px slivers with
-   names clipped mid-word**; survivor names ellipsize in the colony. Composition and hand size are
-   the highest-value single change available.
+   Run 29 improved family coverage and proved no-overlap geometry across the five viewport sizes,
+   but compact view now scrolls internally and the measured scene-depth, 200% and five-player
+   evidence gaps remain. The next highest-value unit is the remaining painted card-family coverage
+   plus a genuine five-player/full-hand capture at compact size.
 2. **`layout-density`** — V14/V15. Normal-state overflow is now measured clean at five sizes, but
    the full worst-case state and visual composition still need proof.
 3. **`motion`** — M1–M9, all currently FAIL with zero animation code. `@tt/ui` already ships motion
@@ -216,8 +229,9 @@ Start both dev servers first (`npm run dev:server &`, `npm run dev:client &`).
   content or RNG change may require re-finding seeds.
 - `testPack` remains a fixture for isolated engine tests only; the live `dow-base` pack no longer
   uses fixture-backed objective families.
-- Survivor portraits cover the 30-card base roster. No item, crisis, crossroads, objective, board,
-  zombie or token art exists.
+- Two local painted hero plates now cover survivor and crossroads card families; item, crisis,
+  objective, board, zombie and token art remain authored vector/CSS treatments and are not yet at the
+  visual bar.
 - **The Windows npm debt is Windows-only.** Earlier runs recorded the global `npm`/`npx` shims
   resolving a missing user-prefix CLI and the user npm config forcing `os=linux`. None of that
   applies in the Linux sandbox, where `npm install` is clean. Do not let that note stop you.

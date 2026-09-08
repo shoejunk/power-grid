@@ -363,7 +363,29 @@ state supports. I will preserve interaction and hidden-information branches, run
 checks, and record an independent harsh verdict. The Wingspan comparison and completion gates remain
 unclaimed until fresh evidence supports them.
 
-(in progress)
+**Landed and verified:**
+
+- Added deterministic far ridges, atmospheric veils, snowbank framing and material overlays to the
+  winter board scenes in `board-art.tsx` and `board-visuals.scss`.
+- Added card-family seals, larger compact-scale item pips, bevel/cold-light/grain treatment, and local
+  painted survivor/crossroads hero plates in `card-art.tsx`, `card-art.scss`, and
+  `art/{survivor-hero-v1,crossroads-hero-v1}.png`.
+- Rebalanced desktop composition in `dead-of-winter.scss`: the 1280/1366 frame scrolls internally
+  instead of overlapping state, 1920 keeps the hand in the rail, 2560 uses a two-column rail, and
+  3840 uses the full hand dock. The five-viewport live audit measured no board/rail/hand/foot overlap.
+- Verified the survivor painted plate in the live detail modal. The crossroads plate is wired but was
+  not exposed from another player's private hand.
+
+**Independent verdict:** the card critic still failed V2/V11/V13 (V8 only narrowly improved); the
+board critic still failed V3/V8/V13. The live CUA audit found no console errors/warnings or duplicate
+IDs. The compact view's internal scroll and the lack of a clean Wingspan side-by-side keep V13/V14/V15
+and the reference gate unpassed. No completion marker is written.
+
+**Verification:** five TypeScript checks, affected Sass compile, `git diff --check`, and `npm run
+build` passed. Power Grid **231/231**, DoW **338/338**, and server **58/58** passed. No dependency
+files changed.
+
+(complete)
 
 ---
 
