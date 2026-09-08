@@ -354,6 +354,19 @@ the Windows npm shim points to a missing user-prefix CLI; the installed npm equi
 
 ---
 
+## 2026-09-08 — nightly run 29
+
+**Intent:** continue the authoritative `visual-core` workstream. This run will first re-establish the
+required baseline, then take one bounded visual unit toward the AAA bar: deepen the remaining card and
+board hierarchy or capture the missing multi-resolution/five-player evidence, whichever the current
+state supports. I will preserve interaction and hidden-information branches, run the full regression
+checks, and record an independent harsh verdict. The Wingspan comparison and completion gates remain
+unclaimed until fresh evidence supports them.
+
+(in progress)
+
+---
+
 ## 2026-09-01 — nightly run 20
 
 **Intent:** remain on the first non-PASS queue item, `engine-tests`, and land three bounded,
@@ -1253,5 +1266,18 @@ survivor, crisis, crossroads, and objective card-family treatments while preserv
 interaction and hidden-information branches. I will compile the affected Sass/TypeScript, capture
 fresh running-game evidence, and record an independent harsh visual verdict; the Wingspan comparison
 remains FAIL unless a clean reference image is available.
+
+(in progress)
+
+---
+
+## 2026-09-07 — nightly run 28
+
+**Intent:** continue the authoritative `visual-core` workstream. This run will take one bounded
+visual unit toward the AAA bar: improve the remaining card-family hierarchy and capture the required
+multi-resolution/five-player visual evidence, while preserving the live interaction and hidden-
+information branches. I will establish the documented baseline first, then make only evidence-backed
+visual changes, run the full regression checks, and record an independent harsh verdict. The clean
+Wingspan comparison and completion gates remain unclaimed until fresh evidence supports them.
 
 (in progress)
