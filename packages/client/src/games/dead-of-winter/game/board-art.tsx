@@ -350,6 +350,12 @@ interface BandProps {
 /** Sky, cloud banding, low dusk warmth and the haze that sits on the horizon. */
 function Sky({ w, h, horizon, seed }: BandProps & { horizon: number; seed: number }): JSX.Element {
   const r = rng(seed);
+  const farRidge = Array.from({ length: 5 }, (_, i) => {
+    const left = -w * 0.08 + i * w * 0.22 + r() * w * 0.08;
+    const peak = horizon - 4 - r() * 6;
+    const right = left + w * (0.26 + r() * 0.12);
+    return `M${n2(left)} ${n2(horizon + 7)} L${n2(left + (right - left) * 0.48)} ${n2(peak)} L${n2(right)} ${n2(horizon + 7)} Z`;
+  }).join(' ');
   return (
     <g>
       <rect x={-10} y={-10} width={w + 20} height={horizon + 12} fill="url(#dowSky)" />
@@ -368,6 +374,19 @@ function Sky({ w, h, horizon, seed }: BandProps & { horizon: number; seed: numbe
           />
         );
       })}
+      <path d={farRidge} fill="#183342" opacity="0.48" />
+      <path
+        d={`M-10 ${n2(horizon - 1)} Q${n2(w * 0.2)} ${n2(horizon - 4.5)} ${n2(w * 0.42)} ${n2(horizon - 1.5)} T${n2(w + 10)} ${n2(horizon - 2.5)}`}
+        fill="none"
+        stroke="#d6e9ef"
+        strokeOpacity="0.2"
+        strokeWidth="0.7"
+      />
+      <path
+        d={`M-10 ${n2(horizon + 1)} Q${n2(w * 0.28)} ${n2(horizon - 1)} ${n2(w * 0.58)} ${n2(horizon + 1.5)} T${n2(w + 10)} ${n2(horizon + 0.5)} L${n2(w + 10)} ${n2(horizon + 6)} L-10 ${n2(horizon + 6)} Z`}
+        fill="#b8d0d9"
+        opacity="0.12"
+      />
       <rect x={-10} y={horizon - h * 0.34} width={w + 20} height={h * 0.34 + 4} fill="url(#dowSkyDusk)" />
       <rect x={-10} y={horizon - h * 0.2} width={w + 20} height={h * 0.2 + 4} fill="url(#dowHaze)" />
     </g>
@@ -613,6 +632,37 @@ function Finish({ w, h }: BandProps): JSX.Element {
       <rect className="dow-scene__grain" x={0} y={0} width={w} height={h} filter="url(#dowGrain)" />
       <rect x={-4} y={h - h * 0.19} width={w + 8} height={h * 0.19 + 2} fill="url(#dowSink)" />
       <rect x={-4} y={-2} width={w + 8} height={h * 0.42} fill="url(#dowTopScrim)" />
+    </g>
+  );
+}
+
+/** A near snowbank and quiet corner silhouettes make the scene feel framed by the table. */
+function ForegroundFrame({ w, h }: BandProps): JSX.Element {
+  const y = h - Math.max(10, h * 0.16);
+  return (
+    <g className="dow-scene__foreground" aria-hidden="true">
+      <path
+        d={`M-6 ${n2(h + 2)} L-6 ${n2(y + 6)} Q${n2(w * 0.16)} ${n2(y - 2)} ${n2(w * 0.36)} ${n2(y + 4)} T${n2(w * 0.72)} ${n2(y + 1)} T${n2(w + 6)} ${n2(y + 5)} L${n2(w + 6)} ${n2(h + 2)} Z`}
+        fill="#102b3a"
+        opacity="0.38"
+      />
+      <path
+        d={`M-6 ${n2(y + 5)} Q${n2(w * 0.16)} ${n2(y - 3)} ${n2(w * 0.36)} ${n2(y + 3)} T${n2(w * 0.72)} ${n2(y)} T${n2(w + 6)} ${n2(y + 4)}`}
+        fill="none"
+        stroke="#f1f8fa"
+        strokeOpacity="0.25"
+        strokeWidth={Math.max(0.7, w * 0.004)}
+      />
+      <path
+        d={`M-4 ${n2(h + 1)} L${n2(w * 0.08)} ${n2(h - 10)} L${n2(w * 0.12)} ${n2(h - 5)} L${n2(w * 0.18)} ${n2(h - 12)} L${n2(w * 0.21)} ${n2(h + 1)} Z`}
+        fill="#102735"
+        opacity="0.46"
+      />
+      <path
+        d={`M${n2(w - 2)} ${n2(h + 1)} L${n2(w * 0.9)} ${n2(h - 8)} L${n2(w * 0.86)} ${n2(h - 3)} L${n2(w * 0.79)} ${n2(h - 10)} L${n2(w * 0.76)} ${n2(h + 1)} Z`}
+        fill="#102735"
+        opacity="0.4"
+      />
     </g>
   );
 }
@@ -1401,6 +1451,7 @@ export function LocationScene({ location, lit, isColony }: LocationSceneProps): 
       </g>
       <Snowfall w={w} h={height} seed={isColony ? 211 : 223} density={isColony ? 54 : 24} />
       <Finish w={w} h={height} />
+      <ForegroundFrame w={w} h={height} />
     </svg>
   );
 }

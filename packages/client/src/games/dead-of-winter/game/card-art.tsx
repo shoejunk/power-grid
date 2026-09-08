@@ -6,12 +6,11 @@
  * hero element*. A card that is a dark rectangle with a pictogram on it fails
  * V2 no matter how well the rest of the screen is laid out.
  *
- * We cannot ship raster paintings, so every card carries an authored vector
- * illustration instead: a staged little object study with a back wall, a floor
- * plane, a single cold light source from the upper left, a cast shadow, rim
- * light, surface texture and an atmospheric vignette. Drawn that way a vector
- * scene reads as illustration rather than as an icon, and being `viewBox`-based
- * it stays sharp at 4K (V13).
+ * The family heroes use local, text-free painted plates where they matter most
+ * (survivor and crossroads). Items and the remaining families retain authored
+ * vector studies with a back wall, floor plane, cold light, cast shadow, rim
+ * light, texture and atmospheric vignette. Every branch stays deterministic
+ * and the vector fallback remains sharp at 4K (V13).
  *
  * Three rules shape the implementation:
  *
@@ -30,6 +29,8 @@
 import type { ItemSymbol } from '@game/dead-of-winter';
 import { useEffect, type ReactNode } from 'react';
 
+import crossroadsHeroUrl from '../art/crossroads-hero-v1.png';
+import survivorHeroUrl from '../art/survivor-hero-v1.png';
 import { DowIcon, type DowIconName } from './iconography';
 import './card-art.scss';
 
@@ -889,6 +890,20 @@ const FAMILY_SCENES: Record<CardArtFamily, (p: { seed: number; variant: number }
   objective: ObjectiveScene,
 };
 
+const FAMILY_RASTER_ART: Partial<Record<CardArtFamily, string>> = {
+  survivor: survivorHeroUrl,
+  crossroads: crossroadsHeroUrl,
+};
+
+/** A small printed seal makes the family legible before the title is read. */
+const FAMILY_MARKS: Record<CardArtFamily, DowIconName> = {
+  item: 'card',
+  survivor: 'survivor',
+  crisis: 'zombie',
+  crossroads: 'search',
+  objective: 'influence',
+};
+
 /* ------------------------------------------------------------------ *
  * Public art components
  * ------------------------------------------------------------------ */
@@ -912,6 +927,7 @@ export function CardVignette({ symbol, family = 'item', seedKey }: CardVignetteP
   const h = hash32(seedKey);
   const Scene = family === 'item' ? (symbol ? SCENES[symbol] : ToolScene) : FAMILY_SCENES[family];
   const variant = h % 3;
+  const rasterArt = FAMILY_RASTER_ART[family];
   return (
     <svg
       className="dow-cardart__svg"
@@ -920,7 +936,20 @@ export function CardVignette({ symbol, family = 'item', seedKey }: CardVignetteP
       aria-hidden="true"
       focusable="false"
     >
-      <Scene seed={h} variant={variant} />
+      {rasterArt ? (
+        <image
+          className="dow-cardart__raster"
+          href={rasterArt}
+          x="0"
+          y="0"
+          width={W}
+          height={H}
+          preserveAspectRatio="xMidYMid slice"
+        />
+      ) : (
+        <Scene seed={h} variant={variant} />
+      )}
+      {rasterArt ? <rect width={W} height={H} fill="url(#dowVig)" /> : null}
     </svg>
   );
 }
@@ -1012,6 +1041,7 @@ export function CardFace({
   useEffect(ensureCardArtDefs, []);
   const facedown = kind === 'facedown';
   const artFamily: CardArtFamily = family ?? (kind === 'facedown' ? 'item' : kind);
+  const familyMark = FAMILY_MARKS[artFamily];
 
   return (
     <>
@@ -1038,6 +1068,11 @@ export function CardFace({
       </span>
 
       <span className="dow-cardart__plate">
+        {!facedown ? (
+          <span className="dow-cardart__family-mark" aria-hidden="true">
+            <DowIcon name={familyMark} size={15} decorative />
+          </span>
+        ) : null}
         <span className="dow-card__name">{name}</span>
         {meta ? <span className="dow-cardart__meta">{meta}</span> : null}
       </span>

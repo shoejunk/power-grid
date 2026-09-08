@@ -123,6 +123,32 @@
   pointer-events: none;
 }
 
+.dow-winter-board .dow-place__scene::before,
+.dow-winter-board .dow-place__scene::after {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  content: '';
+  pointer-events: none;
+}
+
+.dow-winter-board .dow-place__scene::before {
+  top: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at 18% 100%, rgba(232, 246, 250, 0.13), transparent 32%),
+    linear-gradient(180deg, rgba(221, 241, 247, 0.16), transparent 27%, transparent 72%, rgba(4, 14, 21, 0.18));
+  mix-blend-mode: screen;
+}
+
+.dow-winter-board .dow-place__scene::after {
+  bottom: 0;
+  height: 24%;
+  border-top: 1px solid rgba(238, 249, 251, 0.16);
+  background: linear-gradient(180deg, transparent, rgba(5, 15, 22, 0.3) 48%, rgba(5, 14, 20, 0.56));
+}
+
 .dow-winter-board .dow-place__scene--colony {
   height: clamp(92px, 8vw, 128px);
   margin-top: 1px;
@@ -729,13 +755,13 @@
 
 @media (min-width: 1181px) and (max-height: 1200px) {
   .dow-winter-board .dow-place__scene {
-    height: clamp(68px, 5.4vw, 74px);
+    height: clamp(78px, 6vw, 86px);
     margin-top: 1px;
     margin-bottom: 6px;
   }
 
   .dow-winter-board .dow-place__scene--colony {
-    height: clamp(82px, 6.6vw, 92px);
+    height: clamp(96px, 7.2vw, 106px);
   }
 }
 
