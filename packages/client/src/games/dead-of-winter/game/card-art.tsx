@@ -7,8 +7,8 @@
  * V2 no matter how well the rest of the screen is laid out.
  *
  * The family heroes use local, text-free painted plates where they matter most
- * (survivor and crossroads). Items and the remaining families retain authored
- * vector studies with a back wall, floor plane, cold light, cast shadow, rim
+ * (survivor, crisis, crossroads and objective). Items retain authored vector
+ * object studies with a back wall, floor plane, cold light, cast shadow, rim
  * light, texture and atmospheric vignette. Every branch stays deterministic
  * and the vector fallback remains sharp at 4K (V13).
  *
@@ -30,6 +30,8 @@ import type { ItemSymbol } from '@game/dead-of-winter';
 import { useEffect, type ReactNode } from 'react';
 
 import crossroadsHeroUrl from '../art/crossroads-hero-v1.png';
+import crisisHeroUrl from '../art/crisis-hero-v1.png';
+import objectiveHeroUrl from '../art/objective-hero-v1.png';
 import survivorHeroUrl from '../art/survivor-hero-v1.png';
 import { DowIcon, type DowIconName } from './iconography';
 import './card-art.scss';
@@ -893,6 +895,8 @@ const FAMILY_SCENES: Record<CardArtFamily, (p: { seed: number; variant: number }
 const FAMILY_RASTER_ART: Partial<Record<CardArtFamily, string>> = {
   survivor: survivorHeroUrl,
   crossroads: crossroadsHeroUrl,
+  crisis: crisisHeroUrl,
+  objective: objectiveHeroUrl,
 };
 
 /** A small printed seal makes the family legible before the title is read. */
