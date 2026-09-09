@@ -1321,3 +1321,31 @@ FAIL unless this run obtains admissible evidence.
 **Selected scope:** `visual-core` card-family coverage. I will add painted, text-free crisis and
 objective hero plates, wire them through the existing deterministic family-art path, and leave
 board geometry, motion, rules, and multiplayer behavior out of scope for this run.
+
+## 2026-09-09 — nightly run 30 final — 02:23:56 -07:00
+
+**Implemented and pushed:** commit `97164b4` (`feat(dow): add painted crisis and objective cards`).
+Generated and inspected two new text-free painted plates with the image-generation skill, copied them
+into `packages/client/src/games/dead-of-winter/art/`, and wired `crisis` and `objective` into the
+existing `FAMILY_RASTER_ART` map in `game/card-art.tsx`. No rules, interaction, privacy, layout, or
+multiplayer code changed. The unit was pushed to `origin/master`; the earlier intent/scope checkpoints
+are `fe1a77e` and `cbe799a`.
+
+**Verification:** all five TypeScript checks passed; both Dead of Winter Sass entrypoints compiled;
+`git diff --check` passed; the elevated production build passed and bundled both new PNGs; Power Grid
+passed 231/231, Dead of Winter 338/338, and server 58/58 with the repository-local elevated
+single-thread Vitest fallback. The exact `npm install` hit the known Windows Rollup EBUSY lock; exact
+parallel Vitest and `npx vitest` hit the known Windows spawn/npx restrictions. A fresh live 1280×720
+CUA screenshot and DOM probe showed both new card families rendered and no document overflow. The
+headless harness wrote its first 1280×720 PNG but stalled before producing a report or remaining sizes.
+
+**Critics:** the independent card critic confirmed the pre-change highest-value fix was exactly the
+crisis/objective painted coverage, then still FAILed formal V2/V11 because item art, per-card
+uniqueness, compact icon readability, and 200% evidence remain missing; V8 is only partial. The
+independent evidence critic FAILed V13/V14/V15 because the harness has no worst-case-state driver,
+does not assert modal absence or visibility, and stalled before the five-size report. Both critics
+kept the clean blind Wingspan comparison FAIL/BLOCKED because no clean game-only reference was obtained.
+
+**Handoff:** visual-core remains the first queue item. Next run should pursue painted item treatment or
+a bounded board-depth pass, then obtain admissible 200% and five-player/full-density evidence. Motion,
+UX, N5/N8 multiplayer proof, and the Wingspan gate remain outstanding. No completion marker was written.

@@ -3,7 +3,7 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-09-08** (nightly run 29: visual art/layout pass verified; visual gates remain FAIL)
+Last updated: **2026-09-09** (nightly run 30: crisis/objective raster art verified; visual gates remain FAIL)
 
 ---
 
@@ -67,7 +67,7 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 | DoW engine — tested | **PASS for A1–A15 coverage** | 338 tests (run 24: +8 chooser, +6 vote secrecy). Every §23 criterion has a named suite; run 22 closed the last public §18.4 crossroads tranche. Two honest boundaries remain, recorded under Known debts |
 | DoW content pack | **PASS** | Authored `dow-base` v0.5.0-dev at the §2.0 counts. Original development content, not reproduced licensed retail text |
 | DoW client UI — exists | **PASS** | Match screen at `packages/client/src/games/dead-of-winter/` |
-| Visual (V1–V15) | **FAIL** | Run 29 added two local painted hero plates, stronger card hierarchy, deeper board framing, and responsive no-overlap layouts; independent critics still fail V2/V3/V8/V11/V13 and the five-player/full-density/reference evidence is incomplete. |
+| Visual (V1–V15) | **FAIL** | Run 30 added local painted crisis/objective hero plates and verified them in a live 1280×720 match; the card critic still fails V2/V11, the board critic still fails V3/V8, and V13/V14/V15 plus the clean Wingspan comparison remain unproven/FAIL. |
 | Motion (M1–M9) | **FAIL** | **Zero animation code in the entire match screen.** No `motion.` element, no `AnimatePresence`, in any of the 11 match components. Not a judgement call |
 | UX (U1–U13) | — | Still unassessed. No critic pass has ever completed. Run 24 added one visible U5 gain (a "Only you can see these cards" label on the hand) as a side effect, unscored |
 | Multiplayer N1/N3/N6 | **PASS** | Proven run 22 against two real browsers, 8/8 checks — see `tools/screenshot/multiplayer.mjs` |
@@ -92,9 +92,11 @@ Captured from a real running 4-player match by `node tools/screenshot/capture.mj
   overlays to the authored winter scenes, but the independent board critic still found them below a
   painted winter environment with convincing foreground depth and material.
 - **V2 remains FAIL/partial.** Run 29 added local painted survivor and crossroads hero plates and
-  verified the survivor plate in the live detail modal. Items, crises and objectives still use the
-  authored vector fallback; the independent card critic therefore still fails V2 and the complete
-  family audit at 200% remains unproven.
+  verified the survivor plate in the live detail modal. Run 30 added and wired text-free painted
+  crisis and objective plates; a fresh 1280×720 running match visibly rendered both families and
+  the live DOM reported the expected raster URLs. Items remain authored vector studies, per-card
+  illustration uniqueness is absent, and the complete family audit at 200% remains unproven, so
+  the independent card critic still fails the formal V2 gate.
 - **V8/V11 remain FAIL overall.** Card bevels, family seals and larger icon pips improve hierarchy;
   the card critic called V8 narrowly improved but still failed V11 at compact scale, while the board
   critic still failed board elevation.
@@ -107,6 +109,12 @@ Captured from a real running 4-player match by `node tools/screenshot/capture.mj
   duplicate IDs; the Windows CUA fallback was used because the Linux screenshot harness's Chromium
   path is unavailable on Windows. The official Wingspan material reached by critics was not a clean
   blind game-only side-by-side, so the reference gate remains FAIL.
+
+- **Run 30 runtime evidence is intentionally narrow.** The CUA screenshot and DOM probe at 1280×720
+  showed the new crisis/objective raster plates and document dimensions of 1280×720 with no document
+  overflow. The Windows headless harness wrote only its first 1280×720 PNG before stalling during the
+  fresh-match loop; it produced no report or remaining resolutions. V13/V14/V15 therefore remain FAIL,
+  not PASS.
 
 Passing, with evidence: the document itself never scrolls at any of the five resolutions, and the
 console is **clean** — zero page errors and zero failed requests at all five. The production build
@@ -161,6 +169,15 @@ rendered one `.dow-cardart__raster`; crossroads wiring is present but its privat
 another player and was not exposed. Independent card and board critics still rejected the visual bar;
 no clean Wingspan comparison or five-player worst-case was obtained. No dependency files changed.
 
+Run 30 reverified all five TypeScript checks, both Dead of Winter Sass entrypoints, `git diff --check`,
+and the production build; the normal Vite build hit Windows `spawn EPERM`, then the elevated retry
+bundled both new PNGs successfully. Power Grid **231/231**, Dead of Winter **338/338**, and server
+**58/58** passed with the repository-local elevated single-thread Vitest fallback. Exact `npm install`
+hit the known Windows Rollup EBUSY lock, and exact parallel Vitest/npx commands hit the known Windows
+spawn/npx restrictions. A fresh live 1280×720 screenshot showed crisis/objective art and the DOM probe
+showed no document overflow; the all-resolution harness stalled after its first image without a report.
+No dependency files changed.
+
 ## Tooling you now have — use it, do not rebuild it
 
 `tools/screenshot/` (added run 22, with its own README):
@@ -177,17 +194,17 @@ Start both dev servers first (`npm run dev:server &`, `npm run dev:client &`).
 ## Queue — next workstreams, in dependency order
 
 0. **`visual-core` art modules — validated for retention, not quality closure.**
-   Run 29 added and wired `art/survivor-hero-v1.png` and `art/crossroads-hero-v1.png`, deepened the
-   board scenes, and corrected large/compact layout overlap. They are no longer dead code, but the
+   Run 29 added and wired `art/survivor-hero-v1.png` and `art/crossroads-hero-v1.png`; run 30 added
+   `art/crisis-hero-v1.png` and `art/objective-hero-v1.png`. They are no longer dead code, but the
    independent critics still found the board/card treatment below the AAA bar. Keep the assets and
    continue the visual pass; do not call this item or the visual section PASS.
 
 1. **`visual-core`** — the board (V3), card art (V2), and the icon set (V11). This is the largest
    remaining gap between us and the benchmark and it is where the comparison is won or lost.
-   Run 29 improved family coverage and proved no-overlap geometry across the five viewport sizes,
-   but compact view now scrolls internally and the measured scene-depth, 200% and five-player
-   evidence gaps remain. The next highest-value unit is the remaining painted card-family coverage
-   plus a genuine five-player/full-hand capture at compact size.
+   Run 29 improved family coverage and proved no-overlap geometry across the five viewport sizes; run
+   30 completed painted crisis/objective coverage but compact icon scale, item-family art, measured
+   scene-depth, 200% and five-player evidence gaps remain. The next highest-value unit is painted item
+   treatment or a bounded board-depth pass, paired with admissible full-density evidence if possible.
 2. **`layout-density`** — V14/V15. Normal-state overflow is now measured clean at five sizes, but
    the full worst-case state and visual composition still need proof.
 3. **`motion`** — M1–M9, all currently FAIL with zero animation code. `@tt/ui` already ships motion
@@ -229,9 +246,10 @@ Start both dev servers first (`npm run dev:server &`, `npm run dev:client &`).
   content or RNG change may require re-finding seeds.
 - `testPack` remains a fixture for isolated engine tests only; the live `dow-base` pack no longer
   uses fixture-backed objective families.
-- Two local painted hero plates now cover survivor and crossroads card families; item, crisis,
-  objective, board, zombie and token art remain authored vector/CSS treatments and are not yet at the
-  visual bar.
+- Four local painted hero plates now cover survivor, crisis, crossroads and objective card families;
+  item, board, zombie and token art remain authored vector/CSS treatments and are not yet at the visual
+  bar. The run-30 critic still flags item-family coverage, per-card uniqueness, compact icon scale and
+  missing 200% evidence.
 - **The Windows npm debt is Windows-only.** Earlier runs recorded the global `npm`/`npx` shims
   resolving a missing user-prefix CLI and the user npm config forcing `os=linux`. None of that
   applies in the Linux sandbox, where `npm install` is clean. Do not let that note stop you.
