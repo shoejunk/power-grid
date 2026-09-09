@@ -1303,3 +1303,17 @@ visual changes, run the full regression checks, and record an independent harsh 
 Wingspan comparison and completion gates remain unclaimed until fresh evidence supports them.
 
 (in progress)
+
+---
+
+## 2026-09-09 — nightly run 30
+
+**Intent:** continue the authoritative `visual-core` workstream after the run-29 art/layout pass.
+This run will first establish the required Windows baseline, then take one bounded visual unit
+toward the AAA bar: strengthen the remaining painted card-family treatment and obtain fresh
+full-density/five-player evidence if the live harness can support it. I will preserve hidden
+information and interaction semantics, compile Sass and TypeScript, run the full regression suite,
+and record an independent harsh verdict. The Wingspan blind comparison and completion gates remain
+FAIL unless this run obtains admissible evidence.
+
+(in progress)
