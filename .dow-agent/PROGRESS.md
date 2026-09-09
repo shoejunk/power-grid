@@ -1317,3 +1317,7 @@ and record an independent harsh verdict. The Wingspan blind comparison and compl
 FAIL unless this run obtains admissible evidence.
 
 (in progress)
+
+**Selected scope:** `visual-core` card-family coverage. I will add painted, text-free crisis and
+objective hero plates, wire them through the existing deterministic family-art path, and leave
+board geometry, motion, rules, and multiplayer behavior out of scope for this run.
