@@ -1349,3 +1349,22 @@ kept the clean blind Wingspan comparison FAIL/BLOCKED because no clean game-only
 **Handoff:** visual-core remains the first queue item. Next run should pursue painted item treatment or
 a bounded board-depth pass, then obtain admissible 200% and five-player/full-density evidence. Motion,
 UX, N5/N8 multiplayer proof, and the Wingspan gate remain outstanding. No completion marker was written.
+
+---
+
+## 2026-09-10 — nightly run 31
+
+**Intent:** continue the authoritative `visual-core` workstream. The baseline is green after restoring
+the Windows-only optional Rollup binary and using the repository-local single-thread Vitest fallback.
+This run will take one bounded visual unit toward the AAA bar: improve the remaining item-card treatment
+and its smallest icon scale while preserving the existing card interaction, face-down, and hidden-
+information branches. I will compile the affected Sass/TypeScript, run the full regression checks,
+capture fresh running-game evidence where the Windows UI path permits, and record an independent harsh
+visual verdict. Board depth, motion, UX, multiplayer proof, and the clean Wingspan comparison remain
+outstanding unless fresh admissible evidence closes them.
+
+**Selected scope:** `visual-core` item-card illustration treatment and compact icon legibility. I will
+edit only the item-card visual modules plus the run handoff files; no rules, interaction, layout,
+motion, or multiplayer behavior changes are in scope.
+
+(in progress)
