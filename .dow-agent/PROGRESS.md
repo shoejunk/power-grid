@@ -354,6 +354,22 @@ the Windows npm shim points to a missing user-prefix CLI; the installed npm equi
 
 ---
 
+## 2026-09-11 — nightly run 32
+
+**Intent:** continue the authoritative `visual-core` workstream from the preserved run-31
+item-card edits. This run will validate and, if green, land the bounded item-family illustration
+and compact-icon treatment, then obtain the strongest admissible live evidence available on
+Windows. Board depth, motion, UX, multiplayer proof, and the clean Wingspan comparison remain
+outstanding unless fresh evidence closes them.
+
+**Selected scope:** item-card visual modules and their authored item-family plates only, plus the
+run handoff files. Preserve all interaction, face-down, hidden-information, layout, rules, and
+multiplayer behavior. No unrelated worktree files will be staged.
+
+(in progress)
+
+---
+
 ## 2026-09-08 — nightly run 29
 
 **Intent:** continue the authoritative `visual-core` workstream. This run will first re-establish the
@@ -1368,3 +1384,130 @@ edit only the item-card visual modules plus the run handoff files; no rules, int
 motion, or multiplayer behavior changes are in scope.
 
 (in progress)
+
+---
+
+## 2026-09-11 — nightly run 32 final
+
+**Implemented locally, not pushed:** the preserved item-card unit now imports seven authored
+1536×1024 text-free plates (`education`, `food`, `fuel`, `medicine`, `survivor`, `tool`, and
+`weapon`) and selects them deterministically by `ItemSymbol`, retaining the existing vector
+fallback when no symbol is known. `card-art.scss` adds the item-specific window bevel, raster
+contrast, gradient backing and raised pips. A QA critic caught that the later hand-dock selector
+forced item windows to `4 / 1`; I added the narrow `.dow-cardart--item` override in
+`dead-of-winter.scss` so item plates retain `3 / 2` in the wide hand as well as the rail.
+
+**Verification:** all five TypeScript builds passed; both Dead of Winter Sass entries compiled;
+`git diff --check` passed; `npm run build` passed and bundled all seven PNGs; Power Grid passed
+231/231, Dead of Winter 338/338, and server 58/58 using repository-local workspace Vitest
+executables in elevated single-thread mode. Exact `npm install` failed with Windows `spawn EPERM`;
+the no-lockfile optional-binary repair was attempted but npm then reported its uncached
+`puppeteer-core` response. No dependency file changed.
+
+**Runtime evidence:** a fresh local Edge audit drove real four-player matches at 1280×720,
+1366×768, 1920×1080, 2560×1440 and 3840×2160. Every report had no visible setup dialog, no
+document overflow, zero page errors and zero failed localhost requests. All visible item windows
+computed to `3 / 2`; the rail was about 75×50px through 2560, and the 3840 wide hand reached
+750×500px. The 1920 and 2560 board captures were read directly. This proves the selector fix and
+responsive safety, but the compact rail remains below the Wingspan bar and the full-density,
+five-player worst-case and clean blind Wingspan comparison remain unclosed.
+
+The local server startup separately logged five pre-existing persisted Dead of Winter rows as
+unreadable by the current plugin and left them offline. Fresh tables created and started normally;
+this persistence-compatibility debt was outside the item-art scope and no database rows were changed.
+
+**Critics:** the QA critic PASSed asset resolution, hidden-information redaction, keyboard and
+accessibility hooks, interaction preservation, Sass parsing and TypeScript after the selector fix.
+The independent harsh visual critic PASSed scoped V8 elevation, but formal V2 remains FAIL because
+distinct item definitions sharing a symbol reuse one plate; V11/V13 remain FAIL/unproven at compact
+and 200% scale. V3/V14/V15, motion, UX, N5/N8 and the clean Wingspan gate remain open. No completion
+marker was written.
+
+**Handoff/blocker:** the run checkpoint and verified source/assets could not be committed or pushed;
+the sandbox lacked Git index/proxy access and the elevated safety reviewer rejected a shared-`master`
+commit/push without action-time authorization. Existing unrelated `NUL` and `NUL.map` files remain
+untouched and unstaged. Next run must preserve this working tree, obtain authorization to push the
+validated paths, then continue `visual-core` with per-item art uniqueness and a readable compact-hand
+redesign. Do not declare the queue item or visual section PASS.
+
+---
+
+## 2026-09-11 — nightly run 33 intent (2026-09-12 UTC)
+
+**Selected scope:** continue `visual-core` after preserving and checkpointing run 32's seven item
+plates and ratio fix. Establish a fresh green baseline, then improve compact-hand readability and
+constrain excessive wide-screen card scaling, with independent harsh review and fresh running-game
+captures. Per-definition illustration uniqueness, board depth, full-density proof, motion and the
+Wingspan comparison remain open unless supported by new evidence. No completion claim is intended.
+
+Initial checkout succeeded using elevated Git; `git pull --no-rebase --ff-only` reports already up
+to date while preserving all existing changes and unrelated `NUL`/`NUL.map`. Exact `npm install`
+failed with Windows spawn EPERM and the suites could not start without the Windows Rollup binary.
+Repairing that local baseline is the first task before the required checkpoint push.
+
+---
+
+## Nightly run 34 intent - 2026-09-11 21:25:26 -07:00
+
+Continue the first non-PASS queue item, visual-core. Preserve and freshly validate the uncommitted run-32 item plates and styles, then checkpoint them before delegation. If the baseline and checkpoint succeed, improve compact hand readability and cap excessive wide-screen scaling, with one bounded visual worker and an independent harsh critic. Keep privacy and interaction semantics intact. Master fast-forward synchronization succeeded with existing edits preserved. No visual, multiplayer, or completion gate is claimed by this intent.
+
+## Nightly run 34 final - 2026-09-11 21:30:08 -07:00
+
+**Baseline repaired and verified:** synchronized master with a preserving fast-forward pull.
+Exact npm install hit Windows spawn EPERM; the elevated Windows optional-dependency repair
+succeeded with package-lock=false and ignore-scripts. All five TypeScript checks passed after
+installation completed, both DoW Sass entrypoints compiled, the production build passed, and
+Power Grid 231/231, DoW 338/338, and server 58/58 passed using elevated repository-local
+single-thread Vitest. Exact test commands hit the known Windows process/npx restrictions.
+No tracked dependency manifest or lockfile changed.
+
+**Checkpoint blocked:** automatic approval review rejected the scoped progress commit/push to
+shared master because it requires action-time authorization. No staging, commit or push occurred;
+HEAD and origin/master remain c577cb973db71c8c250efacd9dbcba2a08cce5fc. The existing seven
+item plates, three visual source files, prior handoff edits and unrelated NUL/NUL.map remain
+preserved. The required successful early push therefore prevented delegation and new code work.
+
+**Critics and evidence:** no agents spawned, no new critic verdict, no fresh screenshots, and no
+browser multiplayer run. Baseline recovery is complete; all visual/motion/UX and outstanding
+multiplayer/Wingspan gates retain their previous status. No completion marker was written.
+
+**Next:** approve the scoped shared-master checkpoint, push the freshly validated retained item
+unit, then continue visual-core compact-hand readability and wide-screen scaling. STATE.md now
+records this handoff; the handoff itself remains uncommitted because of the same approval block.
+
+## Nightly run 33 resumed final
+
+**Verified:** preserving fast-forward sync, Windows optional-dependency repair without lockfile
+changes, all five TypeScript checks, Power Grid 231/231, DoW 338/338, server 58/58, production
+build and diff check. Reviewed the retained seven item plates' mapping, item styling and 3:2
+wide-hand override; no new game source changes were made.
+
+**Blocked:** automatic approval review rejected the progress-only commit/push to shared master,
+stating missing authorization for that consequential shared-history mutation. No staging,
+commit or push occurred. The early-push requirement prevented agent work; no new critic verdict.
+
+**Runtime:** isolated QA server and client started, but Puppeteer with installed Edge failed
+before capture (browser process Code: 0). After execution resumed, servers were no longer
+listening and the in-app fallback returned ERR_CONNECTION_REFUSED. No fresh screenshots,
+60fps measurement or browser multiplayer proof. All visual/completion gates remain unchanged.
+
+**Handoff:** a newer run-34 handoff appeared while this execution was suspended and was preserved.
+STATE.md adds this supplementary note. Keep the uncommitted source/assets and unrelated NUL files.
+Next needs scoped shared-master approval before visual-core compact-hand/scaling development.
+
+Recorded: 2026-09-11 21:32:18 -07:00
+
+## User-authorized master checkpoint
+
+The user explicitly requested: "go ahead and push all local changes to master". Fresh fetch found
+master aligned with origin/master at c577cb9. This checkpoint includes all seven item PNGs, three
+visual-source edits and accumulated nightly STATE/PROGRESS changes. Source is unchanged from the
+passing five TypeScript checks, production build and 627 regression tests; diff check passed.
+
+Inspected NUL and NUL.map: both are generated board-visuals Sass outputs. Preserved them in the
+ignored .shots/preserved-sass-20260911/ folder as compiled-board.css and compiled-board.css.map.
+No generated files, dependency changes, database rows, or new quality claims are included.
+
+The prior push authorization blocker is resolved for this checkpoint. Next nightly work remains
+visual-core compact-hand readability and wide-screen scaling; no completion marker was created.
+Recorded: 2026-09-11 21:49 -07:00

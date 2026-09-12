@@ -232,6 +232,12 @@
   aspect-ratio: 4 / 1;
 }
 
+/* Painted item plates need their authored 3:2 window in the wide hand too;
+   keep the panoramic treatment for the non-item family cards. */
+.dow-match__hand-dock .dow-card.dow-cardart.dow-cardart--item .dow-cardart__art {
+  aspect-ratio: 3 / 2;
+}
+
 /* ------------------------------------------------------------------ *
  * Board
  * ------------------------------------------------------------------ */

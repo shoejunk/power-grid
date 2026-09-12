@@ -3,7 +3,61 @@
 This file is the routine's handoff. **Read it first, update it last, push it with the work it
 describes.** It records what is true right now; `PROGRESS.md` records how we got here.
 
-Last updated: **2026-09-09** (nightly run 30: crisis/objective raster art verified; visual gates remain FAIL)
+Last updated: **2026-09-11 21:49 -07:00** (user-authorized master checkpoint: retained item artwork and nightly handoff)
+
+## Current checkpoint - user-authorized master push
+
+The user explicitly authorized committing and pushing all local changes to master. This checkpoint
+retains all seven item plates, deterministic symbol mapping, item elevation styling, the 3:2 hand
+ratio fix, and the accumulated run-31/32/33/34 handoffs. The prior authorization blocker is resolved
+for this push. The code is unchanged from the green five TypeScript checks, production build,
+Power Grid 231/231, DoW 338/338 and server 58/58 verification; diff check is clean.
+
+The root NUL and NUL.map files were inspected and identified as generated board-visuals Sass CSS
+and its source map. Their bytes are preserved under .shots/preserved-sass-20260911/ (gitignored)
+as compiled-board.css and compiled-board.css.map rather than tracked as Windows-reserved paths.
+
+Next run: continue visual-core compact-hand readability and wide-screen scaling. No new runtime
+or critic evidence was obtained with this checkpoint; all outstanding quality gates remain open.
+The older run notes below describe their historical blocked state.
+
+## Run 33 resumed verification note
+
+Run 33 resumed after the newer run-34 handoff was already present; that handoff is preserved.
+Run 33 independently passed all five TypeScript checks, Power Grid 231/231, DoW 338/338,
+server 58/58 and the production build after the Windows optional-dependency repair. No tracked
+dependency files changed. Automatic approval review rejected its progress-only checkpoint
+commit/push before execution; no staging, commit, push or agent work occurred.
+
+The isolated QA server and Vite client started successfully. The existing Puppeteer harness,
+using TT_CHROMIUM for installed Edge, failed before capture with "Failed to launch the browser
+process: Code: 0". After execution resumed, neither local server was listening and the in-app
+browser fallback returned ERR_CONNECTION_REFUSED. No fresh screenshot or multiplayer evidence
+was obtained. Verification therefore rests on source review, builds and tests; visual gates
+remain FAIL/unproven. No completion or stop marker was created. Resume with scoped master-push
+approval, preserving all prior source/assets and the run-34 handoff.
+
+## Latest handoff - run 34
+
+- Neither stop marker exists. `master` was synchronized with a preserving fast-forward pull;
+  `HEAD` and `origin/master` both remain `c577cb973db71c8c250efacd9dbcba2a08cce5fc`.
+- Restored local Windows dependencies using
+  `npm install --include=optional --os=win32 --cpu=x64 --package-lock=false --ignore-scripts`.
+  The exact initial `npm install` failed with Windows spawn EPERM. TypeScript ran during the
+  repair and initially reported missing dependency types; all five checks passed after install
+  completed. No tracked dependency manifest or lockfile changed.
+- Fresh checks passed: all five TypeScript checks, both DoW Sass entrypoints, production build,
+  Power Grid 231/231, Dead of Winter 338/338, and server 58/58. Exact test commands hit Windows
+  spawn/npx restrictions; elevated repository-local single-thread Vitest completed all suites.
+- Automatic approval review rejected the required progress checkpoint commit/push to shared
+  `master`, stating that action-time authorization is required. No files were staged, committed,
+  or pushed. The run-32 art/style unit and all unrelated `NUL`/`NUL.map` files remain preserved.
+- No new visual code, screenshots, browser multiplayer proof, or critic verdict was produced.
+  No agents were spawned because the standing workflow requires a successful checkpoint push
+  first. All visual, motion, UX, N5/N8 and Wingspan gaps retain their previous status.
+- Next action: obtain approval for the scoped shared-master checkpoint, then retain/push the
+  freshly validated item-art unit and resume compact-hand readability and wide-screen scaling.
+  Do not repeat dependency repair if the local baseline is already green.
 
 ---
 
@@ -67,7 +121,7 @@ Scored against `docs/QUALITY-BAR-DOW.md`. `—` means not yet assessed, not "pas
 | DoW engine — tested | **PASS for A1–A15 coverage** | 338 tests (run 24: +8 chooser, +6 vote secrecy). Every §23 criterion has a named suite; run 22 closed the last public §18.4 crossroads tranche. Two honest boundaries remain, recorded under Known debts |
 | DoW content pack | **PASS** | Authored `dow-base` v0.5.0-dev at the §2.0 counts. Original development content, not reproduced licensed retail text |
 | DoW client UI — exists | **PASS** | Match screen at `packages/client/src/games/dead-of-winter/` |
-| Visual (V1–V15) | **FAIL** | Run 30 added local painted crisis/objective hero plates and verified them in a live 1280×720 match; the card critic still fails V2/V11, the board critic still fails V3/V8, and V13/V14/V15 plus the clean Wingspan comparison remain unproven/FAIL. |
+| Visual (V1–V15) | **FAIL** | Run 32 added seven symbol-family item plates and fixed the hand-dock selector so they retain 3:2 geometry; independent review still fails V2 on per-card uniqueness, V11/V13 on compact readability/evidence, V3/V8 on board treatment, and V14/V15 plus the clean Wingspan comparison remain FAIL/unproven. |
 | Motion (M1–M9) | **FAIL** | **Zero animation code in the entire match screen.** No `motion.` element, no `AnimatePresence`, in any of the 11 match components. Not a judgement call |
 | UX (U1–U13) | — | Still unassessed. No critic pass has ever completed. Run 24 added one visible U5 gain (a "Only you can see these cards" label on the hand) as a side effect, unscored |
 | Multiplayer N1/N3/N6 | **PASS** | Proven run 22 against two real browsers, 8/8 checks — see `tools/screenshot/multiplayer.mjs` |
@@ -120,10 +174,41 @@ Passing, with evidence: the document itself never scrolls at any of the five res
 console is **clean** — zero page errors and zero failed requests at all five. The production build
 (`npm run build`) is clean.
 
+### Run 32 runtime handoff — 2026-09-11
+
+- The preserved item-card unit now maps all seven `ItemSymbol` values to authored 1536×1024 PNG
+  plates and keeps the deterministic vector fallback when no symbol is available. The narrow CSS
+  fix in `dead-of-winter.scss` restores `3 / 2` after the later wide-hand `4 / 1` rule, so item
+  windows are no longer cropped by the primary hand selector.
+- Independent QA PASSed the asset paths, TypeScript/Sass parsing, face-down privacy branch,
+  keyboard/accessibility hooks, and interaction contract after the selector fix. The harsh visual
+  critic PASSed scoped V8 elevation but kept formal V2 FAIL because the same symbol plate is reused
+  across distinct item definitions; V11/V13 remain FAIL without 200%/smallest-scale proof.
+- Fresh local Edge captures drove real 4-player matches at 1280×720, 1366×768, 1920×1080,
+  2560×1440 and 3840×2160. Every size had no visible setup dialog, no document overflow, zero
+  page errors, and zero failed localhost requests. Computed item art was `3 / 2` at all sizes;
+  visible rail cards were about 75×50px through 2560, while the 3840 wide hand reached 750×500px.
+  This proves the selector fix and responsive safety, not the AAA visual gate.
+- Starting the local server also logged five pre-existing persisted Dead of Winter rows as
+  unreadable by the current plugin and left them offline. Fresh tables created and started normally;
+  this persistence-compatibility debt was outside the item-art scope and no database rows were
+  changed.
+- Verification is green: all five TypeScript builds, both DoW Sass entries, `git diff --check`,
+  production build, Power Grid 231/231, DoW 338/338, and server 58/58. Exact `npm install`
+  failed on Windows `spawn EPERM`; the optional-binary repair hit npm's cache restriction, but
+  the repository-local workspace binaries plus elevated single-thread Vitest supplied the checks.
+- The run checkpoint and source/assets remain uncommitted because the environment's Git safety
+  reviewer rejected the required shared-`master` commit/push without action-time authorization.
+  Existing unrelated `NUL` and `NUL.map` files were preserved and not staged. Next run must first
+  obtain that authorization (or a human must push the validated working tree), then continue
+  `visual-core` with per-item art uniqueness and a readable compact-hand redesign. Do not mark
+  visual-core, V2, V11, V13, V14, V15, motion, UX, N5/N8, or the Wingspan gate PASS.
+
 ## Build and test status
 
-Verify the baseline yourself every run; do not trust this table. Measured on **Linux** on
-2026-09-03. `npm install` was clean in 12 seconds and no dependency file needed hand-editing.
+Verify the baseline yourself every run; do not trust this table. Reverified on **Windows** on
+2026-09-11 (run 34). The Windows dependency repair succeeded after `npm install` hit
+`spawn EPERM`; no dependency manifest or lockfile changed.
 
 | Check | Command | Status |
 | --- | --- | --- |
@@ -178,6 +263,13 @@ spawn/npx restrictions. A fresh live 1280×720 screenshot showed crisis/objectiv
 showed no document overflow; the all-resolution harness stalled after its first image without a report.
 No dependency files changed.
 
+Run 32 reverified all five TypeScript checks, both Dead of Winter Sass entrypoints, `git diff --check`,
+and the elevated production build. Power Grid **231/231**, Dead of Winter **338/338**, and server
+**58/58** passed with repository-local workspace Vitest binaries in elevated single-thread mode.
+The exact `npm install` failed with Windows `spawn EPERM`; the no-lockfile optional-binary repair
+was attempted but npm reported an uncached `puppeteer-core` response. The production bundle still
+completed and included all seven item PNGs.
+
 ## Tooling you now have — use it, do not rebuild it
 
 `tools/screenshot/` (added run 22, with its own README):
@@ -196,15 +288,17 @@ Start both dev servers first (`npm run dev:server &`, `npm run dev:client &`).
 0. **`visual-core` art modules — validated for retention, not quality closure.**
    Run 29 added and wired `art/survivor-hero-v1.png` and `art/crossroads-hero-v1.png`; run 30 added
    `art/crisis-hero-v1.png` and `art/objective-hero-v1.png`. They are no longer dead code, but the
+   Run 32 added and wired seven symbol-family item plates and fixed their hand-dock ratio, but the
    independent critics still found the board/card treatment below the AAA bar. Keep the assets and
    continue the visual pass; do not call this item or the visual section PASS.
 
 1. **`visual-core`** — the board (V3), card art (V2), and the icon set (V11). This is the largest
    remaining gap between us and the benchmark and it is where the comparison is won or lost.
    Run 29 improved family coverage and proved no-overlap geometry across the five viewport sizes; run
-   30 completed painted crisis/objective coverage but compact icon scale, item-family art, measured
-   scene-depth, 200% and five-player evidence gaps remain. The next highest-value unit is painted item
-   treatment or a bounded board-depth pass, paired with admissible full-density evidence if possible.
+   30 completed painted crisis/objective coverage and run 32 completed symbol-family item coverage,
+   but compact icon scale, per-item uniqueness, measured scene-depth, 200% and five-player evidence
+   gaps remain. The next highest-value unit is item-definition-specific art plus a readable compact
+   hand, paired with admissible full-density evidence if possible.
 2. **`layout-density`** — V14/V15. Normal-state overflow is now measured clean at five sizes, but
    the full worst-case state and visual composition still need proof.
 3. **`motion`** — M1–M9, all currently FAIL with zero animation code. `@tt/ui` already ships motion
@@ -220,6 +314,9 @@ Start both dev servers first (`npm run dev:server &`, `npm run dev:client &`).
 
 - **Runs keep dying mid-night with unpushed work.** Push each unit the moment its tests are green.
   Do not batch. Run 22 pushed five times; run 24 pushed six.
+- **Run 32 retention checkpoint authorized.** The user explicitly approved the master push;
+  this checkpoint contains the validated source, seven item PNGs and accumulated handoffs.
+  Continue visual-core; the current item treatment does not close the visual quality gate.
 - **Sub-agents die too, and they die mid-edit.** Run 24's layout worker left an `@@RESPONSIVE@@`
   placeholder in `dead-of-winter.scss` that broke the stylesheet outright — the client would not
   render and the harness could not reach START GAME. Its work was reverted. **Always compile the
@@ -246,10 +343,11 @@ Start both dev servers first (`npm run dev:server &`, `npm run dev:client &`).
   content or RNG change may require re-finding seeds.
 - `testPack` remains a fixture for isolated engine tests only; the live `dow-base` pack no longer
   uses fixture-backed objective families.
-- Four local painted hero plates now cover survivor, crisis, crossroads and objective card families;
-  item, board, zombie and token art remain authored vector/CSS treatments and are not yet at the visual
-  bar. The run-30 critic still flags item-family coverage, per-card uniqueness, compact icon scale and
-  missing 200% evidence.
+- Four local painted hero plates cover survivor, crisis, crossroads and objective card families, and
+  run 32 adds seven symbol-family item plates. Item art still lacks per-definition uniqueness in the
+  current mapping; board, zombie and token art remain authored vector/CSS treatments and are not yet
+  at the visual bar. The run-32 critic flags compact icon scale, compact hand readability and missing
+  200% evidence.
 - **The Windows npm debt is Windows-only.** Earlier runs recorded the global `npm`/`npx` shims
   resolving a missing user-prefix CLI and the user npm config forcing `os=linux`. None of that
   applies in the Linux sandbox, where `npm install` is clean. Do not let that note stop you.

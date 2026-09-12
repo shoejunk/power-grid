@@ -7,10 +7,10 @@
  * V2 no matter how well the rest of the screen is laid out.
  *
  * The family heroes use local, text-free painted plates where they matter most
- * (survivor, crisis, crossroads and objective). Items retain authored vector
- * object studies with a back wall, floor plane, cold light, cast shadow, rim
- * light, texture and atmospheric vignette. Every branch stays deterministic
- * and the vector fallback remains sharp at 4K (V13).
+ * (survivor, crisis, crossroads and objective). Items use authored, text-free
+ * painted plates when their symbol is known, with the vector object studies
+ * retained as the no-symbol fallback. Every branch stays deterministic and
+ * the vector fallback remains sharp at 4K (V13).
  *
  * Three rules shape the implementation:
  *
@@ -31,6 +31,13 @@ import { useEffect, type ReactNode } from 'react';
 
 import crossroadsHeroUrl from '../art/crossroads-hero-v1.png';
 import crisisHeroUrl from '../art/crisis-hero-v1.png';
+import educationItemHeroUrl from '../art/item-education-v1.png';
+import foodItemHeroUrl from '../art/item-food-v1.png';
+import fuelItemHeroUrl from '../art/item-fuel-v1.png';
+import medicineItemHeroUrl from '../art/item-medicine-v1.png';
+import survivorItemHeroUrl from '../art/item-survivor-v1.png';
+import toolItemHeroUrl from '../art/item-tool-v1.png';
+import weaponItemHeroUrl from '../art/item-weapon-v1.png';
 import objectiveHeroUrl from '../art/objective-hero-v1.png';
 import survivorHeroUrl from '../art/survivor-hero-v1.png';
 import { DowIcon, type DowIconName } from './iconography';
@@ -899,6 +906,16 @@ const FAMILY_RASTER_ART: Partial<Record<CardArtFamily, string>> = {
   objective: objectiveHeroUrl,
 };
 
+const ITEM_RASTER_ART: Record<ItemSymbol, string> = {
+  weapon: weaponItemHeroUrl,
+  fuel: fuelItemHeroUrl,
+  education: educationItemHeroUrl,
+  food: foodItemHeroUrl,
+  medicine: medicineItemHeroUrl,
+  tool: toolItemHeroUrl,
+  survivor: survivorItemHeroUrl,
+};
+
 /** A small printed seal makes the family legible before the title is read. */
 const FAMILY_MARKS: Record<CardArtFamily, DowIconName> = {
   item: 'card',
@@ -931,7 +948,7 @@ export function CardVignette({ symbol, family = 'item', seedKey }: CardVignetteP
   const h = hash32(seedKey);
   const Scene = family === 'item' ? (symbol ? SCENES[symbol] : ToolScene) : FAMILY_SCENES[family];
   const variant = h % 3;
-  const rasterArt = FAMILY_RASTER_ART[family];
+  const rasterArt = family === 'item' && symbol ? ITEM_RASTER_ART[symbol] : FAMILY_RASTER_ART[family];
   return (
     <svg
       className="dow-cardart__svg"
