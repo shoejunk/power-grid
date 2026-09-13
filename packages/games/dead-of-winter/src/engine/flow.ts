@@ -27,6 +27,7 @@ import {
   survivorsOf,
   turnOrder,
   unshiftIntoCurrentFrame,
+  usesLegacyCrossroadsTiming,
   withRng,
 } from './state.js';
 import { locationOrder } from './policy.js';
@@ -153,9 +154,15 @@ export function beginTurnEffects(state: GameState, now: number, playerId: Player
  * §5.1: play passes left. When the last player has finished, the Colony Phase
  * begins.
  */
-export function endTurn(state: GameState): void {
+export function endTurn(state: GameState, now: number): void {
   const turn = state.turn;
   if (!turn) return;
+  // Historical audit streams predate end-of-turn Crossroads monitoring. Keep
+  // their exact transition shape so in-progress 0.5.0 matches remain replayable.
+  if (usesLegacyCrossroadsTiming(state)) {
+    finishTurn(state, now);
+    return;
+  }
   // The turn is not over until a Crossroads card that explicitly watches its
   // end has had a chance to fire. `advance` performs that final trigger check
   // and calls `finishTurn` after any resulting choice has resolved.

@@ -60,7 +60,7 @@ export function ChoiceDialog({ state, choice, open, onClose, onPreview }: Choice
   const isSurvivorSetup = choice.kind === 'setupKeepSurvivors';
   const sourceCrossroads =
     choice.data?.['source'] === 'crossroads'
-      ? crossroadsCard(choice.data?.['cardId'] as string | undefined ?? null)
+      ? crossroadsCard(state, choice.data?.['cardId'] as string | undefined ?? null)
       : undefined;
   const contextualItemIid =
     typeof choice.data?.['iid'] === 'string' && itemDef(state, choice.data['iid'])
@@ -137,7 +137,7 @@ export function ChoiceDialog({ state, choice, open, onClose, onPreview }: Choice
       >
         {choice.options.map((option) => {
           const selected = picked.includes(option.id);
-          const survivor = survivorCard(option.id) ?? survivorDef(state, option.id);
+          const survivor = survivorCard(state, option.id) ?? survivorDef(state, option.id);
           if (survivor) {
             return (
               <div className="dow-card-choice" key={option.id}>

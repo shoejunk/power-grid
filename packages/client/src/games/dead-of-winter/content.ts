@@ -15,8 +15,10 @@
 import {
   ACTIVE_PACK,
   ALL_LOCATIONS,
+  LEGACY_PACK,
   type CardId,
   type CardInstanceId,
+  type ContentIndex,
   type GameState,
   type ItemCardDefinition,
   type ItemSymbol,
@@ -31,6 +33,22 @@ import {
 export const isHidden = (id: string | null | undefined): boolean =>
   typeof id === 'string' && id.startsWith('hidden:');
 
+function packFor(state: GameState): ContentIndex | undefined {
+  if (
+    state.contentPackId === ACTIVE_PACK.pack.id &&
+    state.contentVersion === ACTIVE_PACK.pack.version
+  ) {
+    return ACTIVE_PACK;
+  }
+  if (
+    state.contentPackId === LEGACY_PACK.pack.id &&
+    state.contentVersion === LEGACY_PACK.pack.version
+  ) {
+    return LEGACY_PACK;
+  }
+  return undefined;
+}
+
 /**
  * The pack this match was created against.
  *
@@ -39,9 +57,7 @@ export const isHidden = (id: string | null | undefined): boolean =>
  * silence is the wrong answer to that.
  */
 export function packMatches(state: GameState): boolean {
-  return (
-    state.contentPackId === ACTIVE_PACK.pack.id && state.contentVersion === ACTIVE_PACK.pack.version
-  );
+  return packFor(state) !== undefined;
 }
 
 /* ------------------------------------------------------------------ *
@@ -50,7 +66,7 @@ export function packMatches(state: GameState): boolean {
 
 export function itemDef(state: GameState, iid: CardInstanceId): ItemCardDefinition | undefined {
   const instance = state.items[iid];
-  return instance ? ACTIVE_PACK.items.get(instance.cardId) : undefined;
+  return instance ? packFor(state)?.items.get(instance.cardId) : undefined;
 }
 
 export function itemName(state: GameState, iid: CardInstanceId): string {
@@ -80,15 +96,17 @@ export function survivorDef(
   survivorId: SurvivorInstanceId,
 ): SurvivorCardDefinition | undefined {
   const survivor = state.survivors[survivorId];
-  return survivor ? ACTIVE_PACK.survivors.get(survivor.cardId) : undefined;
+  return survivor ? packFor(state)?.survivors.get(survivor.cardId) : undefined;
 }
 
 export function survivorName(state: GameState, survivorId: SurvivorInstanceId): string {
   return survivorDef(state, survivorId)?.name ?? 'Survivor';
 }
 
-export const survivorCard = (cardId: CardId): SurvivorCardDefinition | undefined =>
-  ACTIVE_PACK.survivors.get(cardId);
+export const survivorCard = (
+  state: GameState,
+  cardId: CardId,
+): SurvivorCardDefinition | undefined => packFor(state)?.survivors.get(cardId);
 
 /** Public portrait asset for every survivor card in the active pack. */
 export function survivorArtPath(cardId: CardId): string {
@@ -171,25 +189,28 @@ export const locationIds: readonly LocationId[] = ALL_LOCATIONS;
  * ------------------------------------------------------------------ */
 
 export function mainObjectiveSide(state: GameState): MainObjectiveSide | undefined {
-  const card = ACTIVE_PACK.mainObjectives.get(state.mainObjective.cardId);
+  const card = packFor(state)?.mainObjectives.get(state.mainObjective.cardId);
   if (!card) return undefined;
   return state.mainObjective.side === 'hardcore' ? card.hardcore : card.standard;
 }
 
 export function mainObjectiveName(state: GameState): string {
-  return ACTIVE_PACK.mainObjectives.get(state.mainObjective.cardId)?.name ?? 'Main objective';
+  return packFor(state)?.mainObjectives.get(state.mainObjective.cardId)?.name ?? 'Main objective';
 }
 
 export function crisisCard(state: GameState) {
-  return state.crisis.cardId ? ACTIVE_PACK.crises.get(state.crisis.cardId) : undefined;
+  return state.crisis.cardId ? packFor(state)?.crises.get(state.crisis.cardId) : undefined;
 }
 
-export function crossroadsCard(cardId: CardId | null) {
+export function crossroadsCard(state: GameState, cardId: CardId | null) {
   if (!cardId || isHidden(cardId)) return undefined;
-  return ACTIVE_PACK.crossroads.get(cardId);
+  return packFor(state)?.crossroads.get(cardId);
 }
 
-export function secretObjective(cardId: CardId | null): SecretObjectiveDefinition | undefined {
+export function secretObjective(
+  state: GameState,
+  cardId: CardId | null,
+): SecretObjectiveDefinition | undefined {
   if (!cardId || isHidden(cardId)) return undefined;
-  return ACTIVE_PACK.secretObjectives.get(cardId);
+  return packFor(state)?.secretObjectives.get(cardId);
 }

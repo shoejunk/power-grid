@@ -33,7 +33,7 @@ export const BASE_PACK_STATUS = {
 
 export const BASE_PACK: ContentPack = {
   id: 'dow-base',
-  version: '0.5.0-dev',
+  version: '0.5.1-dev',
   name: 'Dead of Winter Development Pack',
   rulesVersion: TEST_PACK.rulesVersion,
   colony: TEST_PACK.colony,

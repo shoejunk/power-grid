@@ -80,6 +80,8 @@ export interface PrisonersDilemmaOptions {
 }
 
 export interface GameSettings {
+  /** Internal rules revision. Omitted by historical 0.5.0 audit streams. */
+  engineRevision?: 2;
   /** Replayable random stream (§2.5, §22). Empty means "use the platform seed". */
   seed: string;
   playerCount: number;

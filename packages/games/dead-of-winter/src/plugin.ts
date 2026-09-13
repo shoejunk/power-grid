@@ -26,6 +26,7 @@ import {
 
 import { descriptor, MAX_PLAYERS, MIN_PLAYERS } from './descriptor.js';
 import { BASE_PACK, BASE_PACK_STATUS } from './content/basePack/index.js';
+import { LEGACY_BASE_PACK } from './content/basePack/legacyPack.js';
 import type { ContentIndex } from './content/schema.js';
 import {
   applyHostChange as engineHostChange,
@@ -65,6 +66,7 @@ import {
  * because matching the §2.0 component counts does not make fixture-backed
  * families a licensed retail catalog.
  */
+const LEGACY_PACK: ContentIndex = registerContentPack(LEGACY_BASE_PACK);
 const ACTIVE_PACK: ContentIndex = registerContentPack(BASE_PACK);
 export const ACTIVE_PACK_STATUS = BASE_PACK_STATUS;
 
@@ -74,6 +76,7 @@ export const ACTIVE_PACK_STATUS = BASE_PACK_STATUS;
 
 function defaultSettings(): GameSettings {
   return {
+    engineRevision: 2,
     seed: '',
     playerCount: 4,
     mode: 'standard',
@@ -361,11 +364,15 @@ function parseAction(raw: unknown): GameAction | null {
  * ------------------------------------------------------------------ */
 
 function createGame(ctx: CreateGameContext, settings: GameSettings, seats: SeatSeed[]): GameState {
+  // Audit streams created before engineRevision existed must rebuild against
+  // their original catalog and timing. New tables always receive revision 2
+  // through defaultSettings.
+  const content = settings.engineRevision === 2 ? ACTIVE_PACK : LEGACY_PACK;
   return engineCreateGame(
     ctx,
     { ...settings, seed: settings.seed || ctx.seed, playerCount: seats.length },
     seats,
-    ACTIVE_PACK,
+    content,
   );
 }
 
@@ -502,5 +509,5 @@ export const deadOfWinter = Object.assign(
 
 export default deadOfWinter;
 
-export { ACTIVE_PACK };
+export { ACTIVE_PACK, LEGACY_PACK };
 export type { GameAction, GameSettings, GameState };

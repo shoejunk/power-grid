@@ -77,6 +77,11 @@ export function contentOf(state: GameState): ContentIndex {
   return getContentPack(state.contentPackId, state.contentVersion);
 }
 
+/** Exact historical ruleset retained for already-running production matches. */
+export function usesLegacyCrossroadsTiming(state: GameState): boolean {
+  return state.contentPackId === 'dow-base' && state.contentVersion === '0.5.0-dev';
+}
+
 /* ------------------------------------------------------------------ *
  * Cloning and identity
  * ------------------------------------------------------------------ */

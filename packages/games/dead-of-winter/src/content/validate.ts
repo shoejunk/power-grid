@@ -76,6 +76,10 @@ const warn = (path: string, message: string): ContentIssue => ({
  */
 export function validateContentPack(pack: ContentPack): ContentIssue[] {
   const issues: ContentIssue[] = [];
+  // This exact historical pack remains registered solely so existing audited
+  // matches can replay byte-for-byte. New packs may not author these off-turn
+  // Crossroads triggers.
+  const isHistoricalBasePack = pack.id === 'dow-base' && pack.version === '0.5.0-dev';
 
   const dupes = (path: string, ids: readonly string[]): void => {
     const seen = new Set<string>();
@@ -184,7 +188,10 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
         error(`crossroads[${x.id}].options`, '§10: a card with no legal result is a rules error'),
       );
     }
-    if (x.trigger.event === 'crisisResolved' || x.trigger.event === 'roundEnd') {
+    if (
+      !isHistoricalBasePack &&
+      (x.trigger.event === 'crisisResolved' || x.trigger.event === 'roundEnd')
+    ) {
       issues.push(
         error(
           `crossroads[${x.id}].trigger.event`,

@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import { COLONY } from '../../content/primitives.js';
 import { validateContentPack, validateManifest } from '../../content/validate.js';
-import { ACTIVE_PACK, deadOfWinter } from '../../plugin.js';
+import { ACTIVE_PACK, LEGACY_PACK, deadOfWinter } from '../../plugin.js';
 import type { GameAction, GameSettings, GameState, PlayerId } from '../../types.js';
 
 const NOW = 1_000;
@@ -140,6 +140,22 @@ describe('A14 §18 through the active Dead of Winter GamePlugin boundary', () =>
     expect(state.contentPackId).toBe(ACTIVE_PACK.pack.id);
     expect(state.contentVersion).toBe(ACTIVE_PACK.pack.version);
     expect(setupStart?.contentPack).toBe(`${ACTIVE_PACK.pack.id}@${ACTIVE_PACK.pack.version}`);
+  });
+
+  it('replays pre-revision setup against the historical content pack without adding new turn fields', () => {
+    const settings = deadOfWinter.defaultSettings();
+    delete settings.engineRevision;
+
+    let state = deadOfWinter.createGame(context('A14-LEGACY-REPLAY'), settings, seats(4));
+    for (let guard = 0; state.phase === 'setup' && guard < 100; guard++) {
+      state = answerPublicChoice(state);
+    }
+
+    expect(state.contentVersion).toBe(LEGACY_PACK.pack.version);
+    expect(state.settings.engineRevision).toBeUndefined();
+    expect(state.turn?.crossroadsEventCursor).toBeUndefined();
+    expect(LEGACY_PACK.crossroads.get('xr-f67')?.trigger.event).toBe('roundEnd');
+    expect(ACTIVE_PACK.crossroads.get('xr-f67')?.trigger.event).toBe('turnEnd');
   });
 
   it('§18.1 Attract and betrayal-omission errata run through parse/validate/apply/redact paths', () => {

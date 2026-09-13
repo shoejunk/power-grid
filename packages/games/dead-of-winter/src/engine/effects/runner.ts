@@ -170,7 +170,7 @@ function executeInternal(state: GameState, now: number, effect: InternalEffect):
       beginTurnEffects(state, now, effect.playerId);
       return;
     case 'i.endTurn':
-      endTurn(state);
+      endTurn(state, now);
       return;
     case 'i.colonyStep':
       runColonyStep(state, now, effect.step);

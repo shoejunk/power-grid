@@ -37,7 +37,9 @@ export function Seats({
           const isMe = id === me;
           const acting = state.turn?.playerId === id;
           const tint = SEAT_COLOR_HEX[player.color as SeatColorId];
-          const secret = isMe ? secretObjective(player.secretObjectiveIds[0] ?? null) : undefined;
+          const secret = isMe
+            ? secretObjective(state, player.secretObjectiveIds[0] ?? null)
+            : undefined;
 
           return (
             <div
@@ -104,7 +106,7 @@ export function Seats({
                 <div className="dow-seat__secret">
                   Revealed:{' '}
                   {player.revealedObjectiveIds
-                    .map((cardId) => secretObjective(cardId))
+                    .map((cardId) => secretObjective(state, cardId))
                     .map((card, index) =>
                       card ? (
                         <button

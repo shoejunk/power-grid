@@ -64,7 +64,7 @@ export function GameOverPanel({
                 <span className="dow-over__objectives">
                   {result.secretObjectiveIds.length === 0 ? 'no secret objective' : null}
                   {result.secretObjectiveIds.map((cardId) => {
-                    const card = secretObjective(cardId);
+                    const card = secretObjective(state, cardId);
                     return card ? (
                       <button
                         type="button"
@@ -79,7 +79,7 @@ export function GameOverPanel({
                   })}
                   {result.exiledObjectiveId ? ' · exiled: ' : null}
                   {result.exiledObjectiveId ? (() => {
-                    const card = secretObjective(result.exiledObjectiveId);
+                    const card = secretObjective(state, result.exiledObjectiveId);
                     return card ? (
                       <button
                         type="button"

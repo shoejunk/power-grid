@@ -32,7 +32,7 @@ export function TopBar({
   const holder = state.turn ? state.players[state.turn.crossroadsHolderId] : undefined;
   const visibleCrossroads =
     state.turn && (me === state.turn.crossroadsHolderId || state.turn.crossroadsTriggered)
-      ? crossroadsCard(state.turn.crossroadsCardId)
+      ? crossroadsCard(state, state.turn.crossroadsCardId)
       : undefined;
 
   return (

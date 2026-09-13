@@ -95,6 +95,7 @@ export function extendPack(
 export function settingsFor(opts: GameOpts = {}): GameSettings {
   const playerCount = opts.playerCount ?? 4;
   return {
+    engineRevision: 2,
     seed: opts.seed ?? 'SEED-ALPHA',
     playerCount,
     mode: 'standard',
