@@ -13,7 +13,7 @@ import { Callout, PhaseShell, Stat, type RuleLine } from './shell';
 
 const END_RULES: readonly RuleLine[] = [
   { text: 'The game ends immediately after Phase 4 once a player reaches the city threshold.', rule: '§11' },
-  { text: 'The Phase 5 that follows is a winner evaluation, not a payout — no income is paid.', rule: '§11, §14' },
+  { text: 'Final evaluation replaces production payouts — no income is paid.', rule: '§11, §14' },
   { text: 'Each player is scored on how many cities they could supply with the plants and fuel they hold.', rule: '§11' },
   { text: 'The most suppliable cities wins, even if someone else triggered the end. Money breaks ties.', rule: '§11' },
 ];
@@ -46,8 +46,8 @@ export function EndgamePanel(): JSX.Element {
       }
     >
       <Callout tone="warning" title="This phase pays nothing">
-        Reaching {threshold} connected cities ended the game after Phase 4. The Phase 5 that follows is a
-        winner evaluation only — no income, no payment summary, no bank. <em>§11, §14</em>
+        Reaching {threshold} connected cities ended the game after everyone locked in the combined phase.
+        Final evaluation pays no income: no payment summary, no bank. <em>§11, §14</em>
       </Callout>
 
       {standings.length === 0 ? (

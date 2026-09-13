@@ -43,7 +43,7 @@ export function TurnOrderRail(): JSX.Element {
           placement="right"
           title="Player order"
           rule="§4 Player order"
-          content="At the start of every round players are ranked by connected cities, highest first, with the highest-numbered owned plant breaking ties. Phase 2 and Phase 5 run in that order; Phases 3 and 4 run in reverse, starting with the last player."
+          content="At the start of every round players are ranked by connected cities, highest first, with the highest-numbered owned plant breaking ties. Phase 2 runs in that order; Phases 3 and the combined build-and-power phase run in reverse, starting with the last player."
         />
       }
     >

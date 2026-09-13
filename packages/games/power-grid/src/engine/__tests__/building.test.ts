@@ -2,7 +2,7 @@
  * §8 Phase 4 — Build Houses, on the shipped Germany map. Acceptance 4.
  *
  * Zone: West + Southwest + East. Relevant printed costs used below:
- *   essen–duisburg 0, essen–duesseldorf 2, essen–dortmund 4, muenster–essen 6,
+ *   essen–duisburg 0, essen–duesseldorf 3, essen–dortmund 5, muenster–essen 7,
  *   duesseldorf–koeln 4, duesseldorf–aachen 9, aachen–koeln 7,
  *   wiesbaden–frankfurt-m 0, halle–leipzig 0.
  */
@@ -66,41 +66,37 @@ describe('§8 starting a network', () => {
     expect(buildCost(state, actor, 'hannover')).toBeNull();
   });
 
-  it('requires different first-city regions and keeps a network in its region during Step 1', () => {
+  it('allows every player to start and expand across regions from Step 1', () => {
     const { state, actor } = builder();
     let t = act(state, actor, build('essen'));
 
     expect(validateAction(t, actor, build('duisburg')).ok).toBe(true);
-    expect(validateAction(t, actor, build('aachen'))).toEqual({
-      ok: false,
-      reason: 'During Step 1, you may only build in your starting region',
-    });
+    expect(validateAction(t, actor, build('aachen')).ok).toBe(true);
 
     const next = deepClone(t);
     const nextPlayer = next.playerOrder[0]!;
     next.activePlayerId = nextPlayer;
     next.players[nextPlayer]!.phaseStatus = 'acting';
-    expect(validateAction(next, nextPlayer, build('duisburg'))).toEqual({
-      ok: false,
-      reason: "Your first city must be in a different region from every other player's first city",
-    });
+    expect(validateAction(next, nextPlayer, build('duisburg')).ok).toBe(true);
     expect(validateAction(next, nextPlayer, build('aachen')).ok).toBe(true);
-
-    next.step = 2;
-    next.step2Triggered = true;
-    expect(validateAction(next, nextPlayer, build('duisburg'))).toEqual({
-      ok: false,
-      reason: "Your first city must be in a different region from every other player's first city",
-    });
-
-    t = deepClone(t);
-    t.step = 2;
-    t.step2Triggered = true;
-    expect(validateAction(t, actor, build('aachen')).ok).toBe(true);
   });
 });
 
 describe('§8 connection costs', () => {
+  it('uses the increased Ruhr and Münster connection costs', () => {
+    const { state } = builder();
+    const connections = stateMap(state).connections;
+    const cost = (a: string, b: string) =>
+      connections.find((edge) =>
+        (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a))?.cost;
+
+    expect(cost('essen', 'duesseldorf')).toBe(3);
+    expect(cost('essen', 'dortmund')).toBe(5);
+    expect(cost('essen', 'muenster')).toBe(7);
+    expect(cost('dortmund', 'muenster')).toBe(3);
+    expect(cost('muenster', 'osnabrueck')).toBe(8);
+  });
+
   it('honours zero-cost connections', () => {
     const { state, actor } = builder((s, a) => placeHouse(s, a, 'essen'));
     expect(buildCost(state, actor, 'duisburg')!.routeCost).toBe(0);
@@ -115,15 +111,15 @@ describe('§8 connection costs', () => {
       s.step2Triggered = true;
       placeHouse(s, a, 'essen');
     });
-    // The rulebook's own example: Aachen for 10 + 9 + 2 via Düsseldorf.
+    // Aachen: 10 + 9 + 3 via Düsseldorf after the requested edge increase.
     expect(buildCost(state, actor, 'aachen')).toEqual({
-      routeCost: 11,
+      routeCost: 12,
       slot: 0,
       slotCost: 10,
-      total: 21,
+      total: 22,
     });
     const t = act(state, actor, build('aachen'));
-    expect(t.players[actor]!.money).toBe(29);
+    expect(t.players[actor]!.money).toBe(28);
     // Düsseldorf was only traversed, not occupied.
     expect(t.citySlots.duesseldorf).toEqual([null, null, null]);
     expect(t.players[actor]!.cities).toEqual(['essen', 'aachen']);
@@ -134,8 +130,8 @@ describe('§8 connection costs', () => {
       placeHouse(s, a, 'essen');
       placeHouse(s, a, 'aachen');
     });
-    // Köln: 6 via Essen→Düsseldorf→Köln beats 7 direct from Aachen.
-    expect(buildCost(state, actor, 'koeln')!.routeCost).toBe(6);
+    // Köln: both Essen→Düsseldorf→Köln and the direct Aachen edge cost 7.
+    expect(buildCost(state, actor, 'koeln')!.routeCost).toBe(7);
   });
 
   it('cities connected earlier in the same turn become new route origins', () => {
@@ -144,9 +140,9 @@ describe('§8 connection costs', () => {
       s.step2Triggered = true;
     });
     let t = act(state, actor, build('essen')); // 10
-    expect(buildCost(t, actor, 'aachen')!.total).toBe(21);
-    t = act(t, actor, build('duesseldorf')); // 2 + 10 = 12
-    // Düsseldorf is now an origin, so Aachen costs 9 + 10 instead of 11 + 10.
+    expect(buildCost(t, actor, 'aachen')!.total).toBe(22);
+    t = act(t, actor, build('duesseldorf')); // 3 + 10 = 13
+    // Düsseldorf is now an origin, so Aachen costs 9 + 10 instead of 12 + 10.
     expect(buildCost(t, actor, 'aachen')).toEqual({
       routeCost: 9,
       slot: 0,
@@ -154,7 +150,7 @@ describe('§8 connection costs', () => {
       total: 19,
     });
     t = act(t, actor, build('aachen'));
-    expect(t.players[actor]!.money).toBe(50 - 10 - 12 - 19);
+    expect(t.players[actor]!.money).toBe(50 - 10 - 13 - 19);
   });
 
   it('§8 pays the route again in full even when an edge was already traversed', () => {
@@ -163,10 +159,10 @@ describe('§8 connection costs', () => {
       s.step2Triggered = true;
       placeHouse(s, a, 'essen');
     });
-    let t = act(state, actor, build('aachen')); // 11 + 10, traverses Essen–Düsseldorf
-    expect(t.players[actor]!.money).toBe(29);
-    t = act(t, actor, build('duesseldorf')); // pays the same edge again: 2 + 10
-    expect(t.players[actor]!.money).toBe(17);
+    let t = act(state, actor, build('aachen')); // 12 + 10, traverses Essen–Düsseldorf
+    expect(t.players[actor]!.money).toBe(28);
+    t = act(t, actor, build('duesseldorf')); // pays the same edge again: 3 + 10
+    expect(t.players[actor]!.money).toBe(15);
   });
 
   it('refuses a city the player cannot pay for', () => {
@@ -178,7 +174,7 @@ describe('§8 connection costs', () => {
     });
     expect(validateAction(state, actor, build('aachen'))).toEqual({
       ok: false,
-      reason: 'Connecting aachen costs 21 Elektro; you have 20',
+      reason: 'Connecting aachen costs 22 Elektro; you have 20',
     });
     expect(legalActions(state, actor).buildableCities.find((c) => c.cityId === 'aachen')!.affordable)
       .toBe(false);
@@ -267,7 +263,7 @@ describe('§8/§10 slot costs and Step capacity', () => {
 });
 
 describe('§8 turn flow and undo', () => {
-  it('a player builds any number of cities, then the next player acts', () => {
+  it('a player builds any number of cities, then powers before the next player acts', () => {
     const base = start({ playerCount: 3, seed: 'BUILD-FLOW', zone: ZONE });
     const s = enterPhase(deepClone(base), 'building', base.playerOrder[2]!);
     const first = s.activePlayerId!;
@@ -275,7 +271,15 @@ describe('§8 turn flow and undo', () => {
     t = act(t, first, build('duisburg'));
     expect(t.activePlayerId).toBe(first);
     t = act(t, first, { type: 'passBuilding' });
-    expect(t.phase).toBe('bureaucracy');
+    expect(t.phase).toBe('building');
+    expect(t.activePlayerId).toBe(first);
+    expect(legalActions(t, first).buildableCities).toEqual([]);
+    expect(legalActions(t, first).powerOptions.length).toBeGreaterThan(0);
+    t = act(t, first, {
+      type: 'powerCities',
+      decision: { operatePlantIds: [], citiesSupplied: 0 },
+    });
+    expect(t.phase).toBe('auction');
     expect(t.players[first]!.cities).toEqual(['essen', 'duisburg']);
   });
 
@@ -286,7 +290,7 @@ describe('§8 turn flow and undo', () => {
     });
     let t = act(state, actor, build('essen'));
     t = act(t, actor, build('aachen'));
-    expect(t.players[actor]!.money).toBe(19);
+    expect(t.players[actor]!.money).toBe(18);
     t = act(t, actor, { type: 'undoLastBuild' });
     expect(t.players[actor]!.money).toBe(40);
     expect(t.players[actor]!.cities).toEqual(['essen']);

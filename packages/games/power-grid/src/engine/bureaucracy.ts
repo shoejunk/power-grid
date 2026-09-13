@@ -71,7 +71,11 @@ export function validatePowerCities(
   playerId: PlayerId,
   decision: PowerDecision,
 ): ValidationResult {
-  if (state.phase !== 'bureaucracy') return fail('Electricity is produced during Phase 5');
+  const combinedTurn =
+    state.phase === 'building' && getPlayer(state, playerId).phaseStatus === 'passed';
+  if (state.phase !== 'bureaucracy' && !combinedTurn) {
+    return fail('Electricity is produced after finishing your building turn');
+  }
   if (state.activePlayerId !== playerId) return fail('It is not your turn to produce electricity');
   const player = getPlayer(state, playerId);
   if (player.isTrust) return fail('The Trust does not produce for payment');
@@ -297,5 +301,6 @@ export function finishBureaucracy(state: GameState, now: number): void {
   state.acquiredThisRound = [];
   state.passedThisPhase = [];
   state.buildHistory = [];
+  state.pendingPowerDecisions = {};
   setAllPhaseStatus(state, 'eligible');
 }

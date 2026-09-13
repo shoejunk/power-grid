@@ -10,7 +10,7 @@ import {
   stateMap,
   zoneCities,
 } from '../index.js';
-import { act, enterPhase, lastLog, start } from './helpers.js';
+import { act, enterPhase, finishCombinedTurn, lastLog, start } from './helpers.js';
 
 const ZONE = ['west', 'southwest', 'east'];
 
@@ -70,11 +70,17 @@ describe('§11 trigger timing', () => {
     for (const id of t0.playerOrder) t0.players[id]!.phaseStatus = 'eligible';
     const reverse = t0.playerOrder.slice().reverse();
     t0.activePlayerId = reverse[0]!;
+    t0.players[reverse[0]!]!.phaseStatus = 'acting';
     expect(reverse[0]).toBe(trigger);
 
     // The trigger player already has 17 cities; ending their turn must not end
     // the game while other players still have a Phase 4 turn.
-    const t1 = act(t0, trigger, { type: 'passBuilding' });
+    const choosing = act(t0, trigger, { type: 'passBuilding' });
+    expect(choosing.activePlayerId).toBe(trigger);
+    const t1 = act(choosing, trigger, {
+      type: 'powerCities',
+      decision: { operatePlantIds: [], citiesSupplied: 0 },
+    });
     expect(t1.phase).toBe('building');
     expect(t1.endGameTriggered).toBe(false);
     expect(t1.activePlayerId).toBe(reverse[1]);
@@ -82,7 +88,7 @@ describe('§11 trigger timing', () => {
 
   it('fires immediately after Phase 4 completes', () => {
     const { s, trigger } = endgameBoard('TRIGGER-FIRE');
-    const t = act(enterPhase(s, 'building', trigger), trigger, { type: 'passBuilding' });
+    const t = finishCombinedTurn(enterPhase(s, 'building', trigger), trigger);
     expect(t.endGameTriggered).toBe(true);
     expect(lastLog(t, 'endGameTriggered')!.data).toMatchObject({
       threshold: 17,
@@ -94,7 +100,7 @@ describe('§11 trigger timing', () => {
 describe('§11 winner evaluation', () => {
   it('picks the player who can supply the most cities, not the trigger player', () => {
     const { s, strong, trigger } = endgameBoard('WINNER');
-    const t = act(enterPhase(s, 'building', trigger), trigger, { type: 'passBuilding' });
+    const t = finishCombinedTurn(enterPhase(s, 'building', trigger), trigger);
 
     expect(t.phase).toBe('gameOver');
     expect(t.winnerId).toBe(strong);
@@ -110,7 +116,7 @@ describe('§11 winner evaluation', () => {
   it('§14 pays no cash during the evaluation phase', () => {
     const { s, trigger } = endgameBoard('NO-CASH');
     const before = Object.fromEntries(s.playerOrder.map((id) => [id, s.players[id]!.money]));
-    const t = act(enterPhase(s, 'building', trigger), trigger, { type: 'passBuilding' });
+    const t = finishCombinedTurn(enterPhase(s, 'building', trigger), trigger);
     for (const id of t.playerOrder) {
       expect(t.players[id]!.money).toBe(before[id]);
     }
@@ -132,7 +138,7 @@ describe('§11 winner evaluation', () => {
     t0.players[strong]!.money = 40;
     t0.players[weak]!.money = 41;
 
-    const t = act(enterPhase(t0, 'building', trigger), trigger, { type: 'passBuilding' });
+    const t = finishCombinedTurn(enterPhase(t0, 'building', trigger), trigger);
     const rows = finalStandings(t);
     expect(rows[0]!.citiesSupplied).toBe(5);
     expect(rows[1]!.citiesSupplied).toBe(5);
@@ -145,7 +151,7 @@ describe('§11 winner evaluation', () => {
     t0.players[strong]!.plants = [
       { plantId: 36, stored: { coal: 2, oil: 0, garbage: 0, uranium: 0 } }, // needs 3
     ];
-    const t = act(enterPhase(t0, 'building', trigger), trigger, { type: 'passBuilding' });
+    const t = finishCombinedTurn(enterPhase(t0, 'building', trigger), trigger);
     expect(finalStandings(t).find((r) => r.playerId === strong)!.citiesSupplied).toBe(0);
     // The trigger player, supplying 1, now wins.
     expect(t.winnerId).toBe(trigger);
@@ -153,7 +159,7 @@ describe('§11 winner evaluation', () => {
 
   it('logs a structured explanation for every player', () => {
     const { s, trigger } = endgameBoard('LOGGED');
-    const t = act(enterPhase(s, 'building', trigger), trigger, { type: 'passBuilding' });
+    const t = finishCombinedTurn(enterPhase(s, 'building', trigger), trigger);
     const rows = t.log.filter(
       (l) => (l.data as { event?: string } | undefined)?.event === 'winnerEvaluation',
     );
@@ -163,7 +169,7 @@ describe('§11 winner evaluation', () => {
 
   it('no further actions are accepted once the game is over', () => {
     const { s, trigger } = endgameBoard('OVER');
-    const t = act(enterPhase(s, 'building', trigger), trigger, { type: 'passBuilding' });
+    const t = finishCombinedTurn(enterPhase(s, 'building', trigger), trigger);
     expect(() => act(t, trigger, { type: 'passBuilding' })).toThrow(/game is over/);
     expect(t.activePlayerId).toBeNull();
   });

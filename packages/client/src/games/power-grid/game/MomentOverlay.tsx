@@ -131,7 +131,7 @@ function build(
         id: entry.id,
         kind: 'end',
         headline: 'Final round',
-        detail: `${data.threshold} cities connected. The next Phase 5 evaluates the winner and pays nothing.`,
+        detail: `${data.threshold} cities connected. Final evaluation now determines the winner and pays nothing.`,
         color: null,
       };
     case 'gameOver':

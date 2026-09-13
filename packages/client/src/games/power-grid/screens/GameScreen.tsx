@@ -79,7 +79,7 @@ export function HudMount({ children }: MountProps): JSX.Element {
  * The match screen
  * ==================================================================== */
 
-const PHASE_KEYS = ['order', 'auction', 'resources', 'building', 'bureaucracy'] as const;
+const PHASE_KEYS = ['order', 'auction', 'resources', 'building'] as const;
 
 /**
  * Match screen.
@@ -189,7 +189,8 @@ export function GameScreen(): JSX.Element {
           <div className="pg-game__phaserail" role="list" aria-label="Round phases">
             {PHASE_KEYS.map((key) => {
               const meta = PHASE_META[key];
-              const active = key === gameState.phase;
+              const active = key === gameState.phase ||
+                (key === 'building' && gameState.phase === 'bureaucracy');
               return (
                 <div
                   key={key}

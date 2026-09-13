@@ -120,13 +120,18 @@ After initial player order and zone selection, let players choose future startin
 
 ## 3. Round and phase state machine
 
-The game consists of rounds. Every round uses these phases in order:
+The game consists of rounds. This digital edition uses these phases in order:
 
 1. Determine Player Order
 2. Auction Power Plants
 3. Buy Resources
-4. Build Houses
-5. Bureaucracy
+4. Build Houses and Power Them
+
+Phase 4 combines the player decisions from physical-game Phases 4 and 5: in reverse player order,
+each player builds any number of houses and then immediately chooses which plants to operate and how
+many houses to supply before the next player begins. After every player locks that combined turn, the
+engine resupplies resources and updates the plant market once for the round. This product rule takes
+precedence over later references to a separate player-action queue in Phase 5.
 
 Within each phase, players act in the phase-specific order. The game begins in Step 1. Step transitions change city capacity, building costs, refill values, and plant-market behavior.
 
@@ -140,7 +145,7 @@ The implementation must not advance to the next phase until every required playe
 - Use random order only for initial setup.
 - Phase 2 normally proceeds in player order, starting with the first player.
 - Phases 3 and 4 proceed in reverse player order, starting with the last player.
-- Phase 5 cash payment starts with the first player.
+- During Phase 4, each player completes building and production before the next player acts.
 - The digital player-order state should expose both the computed order and each player's phase status, such as eligible, purchased, passed, or acted.
 
 ## 5. Phase 1: Determine Player Order
@@ -211,7 +216,7 @@ Resolve players in reverse player order. Each player may connect any number of c
 
 ### Starting network
 
-- A player with no network may choose any empty city in the selected zone and place a house in its lowest available slot for 10 Elektro, but their first city must be in an area not used for another human player's first city.
+- A player with no network may choose any empty city in the selected zone and place a house in its lowest available slot for 10 Elektro. Multiple players may start in the same area.
 - The player pays the building cost to the bank.
 - A player may defer starting their network until a later round.
 - In the optional experienced-player mode, a player with no network may choose any unoccupied marked starting city as described in Setup.
@@ -225,7 +230,7 @@ Resolve players in reverse player order. Each player may connect any number of c
 - A player must pay the connection cost again for the route chosen to each new city, even if an earlier connection traversed or bypassed the same edge or city.
 - A player may not connect the same city twice.
 - A player may connect only cities and edges inside the selected zone.
-- Until Step 2, a player may connect only cities in the area of their first city.
+- A player may cross area boundaries from the beginning of Step 1; only the selected playing zone limits cities and routes.
 - A player cannot place a second house in a metropolis city if that would put two houses from the same player in the two cities of the metropolis.
 - A player places their house in the lowest empty city slot: 10, then 15, then 20 Elektro.
 - A player's network count updates immediately after each new city is connected.
@@ -239,11 +244,14 @@ Resolve players in reverse player order. Each player may connect any number of c
 | 2 | 2 | 10, 15 |
 | 3 | 3 | 10, 15, 20 |
 
-After Phase 4, reset phase-status markers.
+After building, the same player chooses production. Once every player has completed both decisions,
+reset phase-status markers and resolve the automatic end-of-round market work.
 
 ## 9. Phase 5: Bureaucracy
 
-Phase 5 has three subphases: earning cash, resupplying resources, and updating the plant market.
+The former Phase 5 work is folded into Phase 4. Each player makes the earning-cash/production choice
+immediately after building; resupply and plant-market updates remain automatic once per round after all
+players have completed the combined phase.
 
 ### 9.1 Earning cash and producing electricity
 

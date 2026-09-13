@@ -71,7 +71,7 @@ import {
   validatePowerCities,
 } from './bureaucracy.js';
 import { checkEndGameTrigger } from './endgame.js';
-import { activateStep3 } from './steps.js';
+import { activateStep3, beginStep2, step2ThresholdReached } from './steps.js';
 import { trustAuctionTurn, trustBuyResources } from './trust.js';
 
 /* ------------------------------------------------------------------ *
@@ -128,6 +128,9 @@ export function validateAction(
     case 'passBuilding':
       if (state.phase !== 'building') return fail('Nothing to pass on outside Phase 4');
       if (state.activePlayerId !== playerId) return fail('It is not your turn');
+      if (getPlayer(state, playerId).phaseStatus !== 'acting') {
+        return fail('You have already finished building');
+      }
       return ok;
     case 'undoLastBuild':
       return validateUndoLastBuild(state, playerId);
@@ -217,11 +220,14 @@ function reduce(state: GameState, now: number, playerId: PlayerId, action: GameA
       return;
     case 'passBuilding': {
       const p = getPlayer(state, playerId);
-      p.phaseStatus = 'acted';
+      // `passed` is the combined phase's hand-off point: this player is done
+      // placing houses and now owes one production decision before play moves
+      // to the next seat.
+      p.phaseStatus = 'passed';
       pushLog(state, now, {
         category: 'build',
         playerId,
-        message: `${p.name} finishes building.`,
+        message: `${p.name} finishes building and chooses production.`,
         data: { event: 'buildingDone', playerId, networkSize: p.cities.length },
       });
       return;
@@ -231,7 +237,32 @@ function reduce(state: GameState, now: number, playerId: PlayerId, action: GameA
       return;
 
     case 'powerCities':
-      applyPowerCities(state, now, playerId, action.decision);
+      if (state.phase === 'building') {
+        const p = getPlayer(state, playerId);
+        state.pendingPowerDecisions = {
+          ...(state.pendingPowerDecisions ?? {}),
+          [playerId]: {
+            operatePlantIds: [...action.decision.operatePlantIds],
+            citiesSupplied: action.decision.citiesSupplied,
+          },
+        };
+        p.phaseStatus = 'acted';
+        pushLog(state, now, {
+          category: 'power',
+          playerId,
+          message: `${p.name} locks in production for ${action.decision.citiesSupplied} cities.`,
+          data: {
+            event: 'productionChosen',
+            playerId,
+            operatePlantIds: [...action.decision.operatePlantIds].sort((a, b) => a - b),
+            citiesSupplied: action.decision.citiesSupplied,
+          },
+        });
+      } else {
+        // Compatibility path for persisted games saved in the old separate
+        // bureaucracy phase.
+        applyPowerCities(state, now, playerId, action.decision);
+      }
       return;
 
     /* istanbul ignore next — guarded by validateAction */
@@ -365,28 +396,53 @@ function advanceResources(state: GameState, now: number): boolean {
 function beginBuildingPhase(state: GameState, now: number): void {
   state.phase = 'building';
   state.buildHistory = [];
+  state.pendingPowerDecisions = {};
   // §13: the Trust never builds on its own turn; its houses arrive reactively.
   setAllPhaseStatus(state, 'eligible', { trust: 'ineligible' });
   pushLog(state, now, {
     category: 'build',
-    message: 'Phase 4 — Build Houses, in reverse player order.',
+    message: 'Phase 4 — Build Houses and Power Them, in reverse player order.',
     data: { event: 'phaseStart', phase: 'building', order: reverseOrder(state), step: state.step },
   });
 }
 
-/** Phase 4 — reverse player order. §4, §8. */
+/** Combined Phase 4/5 player turns — reverse player order. */
 function advanceBuilding(state: GameState, now: number): boolean {
   for (const id of reverseOrder(state)) {
     const player = getPlayer(state, id);
     if (player.isTrust) continue;
-    if (player.phaseStatus === 'acted' || player.phaseStatus === 'passed') continue;
+    if (player.phaseStatus === 'acted') continue;
     state.activePlayerId = id;
-    player.phaseStatus = 'acting';
+    // `passed` means building is complete and the same player is now choosing
+    // which plants to operate/how many houses to supply. Keep that marker so
+    // legalActions can expose production without reopening construction.
+    if (player.phaseStatus !== 'passed') player.phaseStatus = 'acting';
     return false;
   }
-  // §11: the game ends immediately after Phase 4 once the threshold is reached.
+  // All players have built and powered. Resolve the once-per-round automatic
+  // bureaucracy work without opening a second table-wide player queue.
   checkEndGameTrigger(state, now);
-  beginBureaucracyPhase(state, now);
+  if (state.endGameTriggered) {
+    state.pendingPowerDecisions = {};
+    beginBureaucracyPhase(state, now);
+    return true;
+  }
+  if (!state.step2Triggered && step2ThresholdReached(state)) {
+    beginStep2(state, now, 'cityThreshold');
+  }
+  for (const id of reverseOrder(state)) {
+    const player = getPlayer(state, id);
+    if (player.isTrust) continue;
+    // A missing entry is possible only in a legacy persisted/injected state
+    // where the seat was already marked acted before this field existed.
+    const decision = state.pendingPowerDecisions?.[id] ?? {
+      operatePlantIds: [],
+      citiesSupplied: 0,
+    };
+    applyPowerCities(state, now, id, decision);
+  }
+  state.pendingPowerDecisions = {};
+  finishBureaucracy(state, now);
   return true;
 }
 

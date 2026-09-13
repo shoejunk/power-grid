@@ -54,6 +54,8 @@ declare module '../types.js' {
     finalEvaluation?: FinalEvaluationRow[] | null;
     /** True once the Step 2 changes have been applied. §10. */
     step2Triggered?: boolean;
+    /** Production choices locked during the combined build-and-power phase. */
+    pendingPowerDecisions?: Partial<Record<PlayerId, import('../types.js').PowerDecision>>;
   }
 }
 

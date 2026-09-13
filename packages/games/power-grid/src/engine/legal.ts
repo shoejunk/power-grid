@@ -213,11 +213,24 @@ export function legalActions(state: GameState, playerId: PlayerId): LegalActions
 
   if (state.phase === 'building') {
     if (isActive) {
-      out.buildableCities = buildTargets(state, playerId);
-      out.canPassBuilding = true;
-      const history = state.buildHistory ?? [];
-      const last = history[history.length - 1];
-      out.canUndoBuild = !!last && last.playerId === playerId;
+      if (player.phaseStatus === 'passed') {
+        const network = player.cities.length;
+        out.powerOptions = operableCombinations(state, playerId).map((opt) => {
+          const maxCities = Math.min(opt.capacity, network);
+          return {
+            plantIds: opt.plantIds.slice(),
+            capacity: opt.capacity,
+            maxCities,
+            payoutAtMax: payoutFor(maxCities),
+          };
+        });
+      } else {
+        out.buildableCities = buildTargets(state, playerId);
+        out.canPassBuilding = true;
+        const history = state.buildHistory ?? [];
+        const last = history[history.length - 1];
+        out.canUndoBuild = !!last && last.playerId === playerId;
+      }
     }
     return out;
   }

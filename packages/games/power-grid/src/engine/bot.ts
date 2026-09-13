@@ -575,7 +575,9 @@ export function botActionFor(
     case 'resources':
       return resourcesAction(ctx);
     case 'building':
-      return buildingAction(ctx, legal);
+      return getPlayer(state, playerId).phaseStatus === 'passed'
+        ? bureaucracyAction(ctx, legal)
+        : buildingAction(ctx, legal);
     case 'bureaucracy':
       return bureaucracyAction(ctx, legal);
     default:

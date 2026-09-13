@@ -51,10 +51,16 @@ function autoBuilding(state: GameState): GameState {
     const legal = legalActions(s, actor);
     const builtThisTurn = (s.buildHistory ?? []).filter((b) => b.playerId === actor).length;
     const target = legal.buildableCities.find((c) => c.affordable);
-    if (target && builtThisTurn < 3) {
+    if (legal.canPassBuilding && target && builtThisTurn < 3) {
       s = act(s, actor, { type: 'buildCity', cityId: target.cityId });
-    } else {
+    } else if (legal.canPassBuilding) {
       s = act(s, actor, { type: 'passBuilding' });
+    } else {
+      const best = legal.powerOptions[0] ?? { plantIds: [], maxCities: 0 };
+      s = act(s, actor, {
+        type: 'powerCities',
+        decision: { operatePlantIds: best.plantIds, citiesSupplied: best.maxCities },
+      });
     }
   }
   return s;
@@ -162,7 +168,15 @@ describe('§14 determinism', () => {
       } else if (s.phase === 'resources') {
         s = applyAction(s, actor, { type: 'passResources' });
       } else if (s.phase === 'building') {
-        s = applyAction(s, actor, { type: 'passBuilding' });
+        if (legal.canPassBuilding) {
+          s = applyAction(s, actor, { type: 'passBuilding' });
+        } else {
+          const best = legal.powerOptions[0] ?? { plantIds: [], maxCities: 0 };
+          s = applyAction(s, actor, {
+            type: 'powerCities',
+            decision: { operatePlantIds: best.plantIds, citiesSupplied: best.maxCities },
+          });
+        }
       } else if (s.phase === 'bureaucracy') {
         const best = legal.powerOptions[0] ?? { plantIds: [], maxCities: 0 };
         s = applyAction(s, actor, {

@@ -46,7 +46,7 @@ export function ResourceMarket({ draft = null }: ResourceMarketProps): JSX.Eleme
             placement="left"
             title="Resource market"
             rule="§1, §7, §9.2"
-            content="Every space has a printed price and holds up to three tokens (uranium holds one). You pay the price of the space each token is taken from, always starting with the cheapest. Resupply during Phase 5 fills the most expensive empty spaces first."
+            content="Every space has a printed price and holds up to three tokens (uranium holds one). You pay the price of the space each token is taken from, always starting with the cheapest. Resupply after the combined build-and-power phase fills the most expensive empty spaces first."
           />
         </div>
       }
@@ -93,7 +93,7 @@ function ResupplySummaryButton(): JSX.Element {
           open
           onClose={() => setOpen(false)}
           title="Resource resupply table"
-          description={`${state.settings.playerCount}-player game - tokens added during Phase 5.`}
+          description={`${state.settings.playerCount}-player game - tokens added after everyone builds and powers.`}
           width="560px"
         >
           <div className="pg-grefill">
@@ -182,7 +182,7 @@ function TrackRow({
         rule="§1 Resources, §7"
         content={`${onMarket} on the market, ${supply} left in the supply. ${
           onMarket === 0
-            ? 'Sold out — nothing of this type can be bought until the next Phase 5 resupply.'
+            ? 'Sold out — nothing of this type can be bought until the next end-of-round resupply.'
             : 'Tokens are always taken from the cheapest occupied space.'
         }`}
       >

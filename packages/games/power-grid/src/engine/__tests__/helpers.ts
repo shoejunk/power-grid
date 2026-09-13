@@ -112,10 +112,33 @@ export function skipResources(state: GameState): GameState {
 export function skipBuilding(state: GameState): GameState {
   let s = state;
   let guard = 0;
-  while (s.phase === 'building' && guard++ < 40) {
-    s = act(s, s.activePlayerId!, { type: 'passBuilding' });
+  while (s.phase === 'building' && guard++ < 80) {
+    const actor = s.activePlayerId!;
+    const legal = legalActions(s, actor);
+    if (legal.canPassBuilding) {
+      s = act(s, actor, { type: 'passBuilding' });
+    } else {
+      const best = legal.powerOptions[0] ?? { plantIds: [], maxCities: 0 };
+      s = act(s, actor, {
+        type: 'powerCities',
+        decision: { operatePlantIds: best.plantIds, citiesSupplied: best.maxCities },
+      });
+    }
   }
   return s;
+}
+
+/** Finish one combined build-and-power turn with a chosen production decision. */
+export function finishCombinedTurn(
+  state: GameState,
+  playerId: PlayerId,
+  decision: { operatePlantIds: number[]; citiesSupplied: number } = {
+    operatePlantIds: [],
+    citiesSupplied: 0,
+  },
+): GameState {
+  const choosing = act(state, playerId, { type: 'passBuilding' });
+  return act(choosing, playerId, { type: 'powerCities', decision });
 }
 
 /** Everyone powers as many cities as they can. */

@@ -11,7 +11,7 @@ import {
   updatePlantMarket,
   zoneCities,
 } from '../index.js';
-import { act, enterPhase, findLog, lastLog, placeHouse, start } from './helpers.js';
+import { act, enterPhase, findLog, finishCombinedTurn, lastLog, placeHouse, start } from './helpers.js';
 
 const ZONE = ['west', 'southwest', 'east'];
 
@@ -44,8 +44,13 @@ describe('§10 Step 2', () => {
     expect(t.phase).toBe('building');
     expect(t.step).toBe(1);
 
-    // Ending Phase 4 starts Phase 5, which starts Step 2.
+    // Locking production ends the combined phase and starts Step 2.
     t = act(t, actor, { type: 'passBuilding' });
+    expect(t.step).toBe(1);
+    t = act(t, actor, {
+      type: 'powerCities',
+      decision: { operatePlantIds: [], citiesSupplied: 0 },
+    });
     expect(t.step).toBe(2);
     expect(t.step2Triggered).toBe(true);
     expect(lastLog(t, 'stepChange')!.data).toMatchObject({ step: 2, reason: 'cityThreshold' });
@@ -59,11 +64,13 @@ describe('§10 Step 2', () => {
     const cities = zoneCities(stateMap(s), s.zone);
     for (let i = 0; i < 7; i++) placeHouse(s, actor, cities[i]!);
 
-    const t = act(enterPhase(s, 'building', actor), actor, { type: 'passBuilding' });
+    const t = finishCombinedTurn(enterPhase(s, 'building', actor), actor);
     expect(t.plantMarket.removed).toContain(3);
-    // 8 plants before, 8 after: one removed, one drawn.
+    // The combined phase also performs the ordinary end-of-round market age:
+    // Step 2 draws 20, then that highest future plant is buried and 21 enters.
     expect([...t.plantMarket.current, ...t.plantMarket.future]).toHaveLength(8);
-    expect([...t.plantMarket.current, ...t.plantMarket.future]).toContain(20);
+    expect([...t.plantMarket.current, ...t.plantMarket.future]).toContain(21);
+    expect(t.plantMarket.stack).toContain(20);
   });
 
   it('the 6-player threshold is 6 cities', () => {
@@ -73,7 +80,7 @@ describe('§10 Step 2', () => {
     const actor = s.playerOrder[5]!;
     const cities = zoneCities(stateMap(s), s.zone);
     for (let i = 0; i < 6; i++) placeHouse(s, actor, cities[i]!);
-    const t = act(enterPhase(s, 'building', actor), actor, { type: 'passBuilding' });
+    const t = finishCombinedTurn(enterPhase(s, 'building', actor), actor);
     expect(t.step).toBe(2);
   });
 });

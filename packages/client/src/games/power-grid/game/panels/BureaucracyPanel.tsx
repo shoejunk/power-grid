@@ -34,7 +34,7 @@ const POWER_RULES: readonly RuleLine[] = [
   { text: 'Supplying zero cities still pays the guaranteed minimum of 10₤.', rule: '§9.1' },
 ];
 
-export function BureaucracyPanel(): JSX.Element {
+export function BureaucracyPanel({ combined = false }: { combined?: boolean }): JSX.Element {
   const { state, me, meId, legal } = useMatch();
   const options = legal.powerOptions;
   const network = me?.cities.length ?? 0;
@@ -55,7 +55,11 @@ export function BureaucracyPanel(): JSX.Element {
 
   if (!legal.isActive || !me || !meId) {
     return (
-      <PhaseShell title="Bureaucracy" subtitle="Phase 5 · player order" rules={POWER_RULES}>
+      <PhaseShell
+        title={combined ? 'Build & power' : 'Bureaucracy'}
+        subtitle={combined ? 'Phase 4 · production choice' : 'Phase 5 · player order'}
+        rules={POWER_RULES}
+      >
         <Waiting note="Choosing which plants to operate and how many cities to supply (§9.1)." />
         <PaymentTable highlight={null} />
       </PhaseShell>
@@ -73,7 +77,7 @@ export function BureaucracyPanel(): JSX.Element {
   return (
     <PhaseShell
       title="Produce electricity"
-      subtitle="Phase 5 · your turn"
+      subtitle={combined ? 'Phase 4 · finish your turn' : 'Phase 5 · your turn'}
       tone="live"
       rules={POWER_RULES}
       actions={

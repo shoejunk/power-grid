@@ -95,7 +95,7 @@ export const HOUSES_PER_PLAYER = 22;
 export const MAX_PLANTS_PER_PLAYER = 3;
 
 /**
- * The five phases of every round, in order, with the one-line description the
+ * The four phases of every round, in order, with the one-line description the
  * UI shows in the phase rail and in the how-to-play sheet. §3.
  */
 export const PHASES: { key: string; index: number; name: string; summary: string }[] = [
@@ -120,13 +120,7 @@ export const PHASES: { key: string; index: number; name: string; summary: string
   {
     key: 'building',
     index: 4,
-    name: 'Build Houses',
-    summary: 'Reverse order. Pay the cheapest route plus the city slot.',
-  },
-  {
-    key: 'bureaucracy',
-    index: 5,
-    name: 'Bureaucracy',
-    summary: 'Power cities for income, refill the market, age the plants.',
+    name: 'Build & Power',
+    summary: 'Reverse order. Build, then choose production before the next player.',
   },
 ];

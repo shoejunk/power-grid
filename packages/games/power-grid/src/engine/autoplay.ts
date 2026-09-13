@@ -134,8 +134,8 @@ export function safeActionFor(state: GameState, legal: LegalActions): GameAction
       /* Buying nothing is always legal — a player may decline to buy. §7. */
       return legal.canPassResources ? { type: 'passResources' } : null;
     case 'building':
-      /* Building nothing is always legal — a player may defer their network. §8. */
-      return legal.canPassBuilding ? { type: 'passBuilding' } : null;
+      /* A combined turn first closes construction, then resolves production. */
+      return legal.canPassBuilding ? { type: 'passBuilding' } : bureaucracyDefault(legal);
     case 'bureaucracy':
       return bureaucracyDefault(legal);
     default:

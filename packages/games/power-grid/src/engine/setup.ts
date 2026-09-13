@@ -257,6 +257,7 @@ export function createGame(
     buildHistory: [],
     finalEvaluation: null,
     step2Triggered: false,
+    pendingPowerDecisions: {},
   };
 
   syncOrderIndices(state);

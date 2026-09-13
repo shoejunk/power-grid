@@ -181,13 +181,13 @@ export const GERMANY_MAP: GameMap = {
     { a: 'frankfurt-o', b: 'dresden', cost: 16 },
 
     // West
-    { a: 'osnabrueck', b: 'muenster', cost: 7 },
+    { a: 'osnabrueck', b: 'muenster', cost: 8 },
     { a: 'osnabrueck', b: 'kassel', cost: 20 },
-    { a: 'muenster', b: 'essen', cost: 6 },
-    { a: 'muenster', b: 'dortmund', cost: 2 },
+    { a: 'muenster', b: 'essen', cost: 7 },
+    { a: 'muenster', b: 'dortmund', cost: 3 },
     { a: 'essen', b: 'duisburg', cost: 0 },
-    { a: 'essen', b: 'duesseldorf', cost: 2 },
-    { a: 'essen', b: 'dortmund', cost: 4 },
+    { a: 'essen', b: 'duesseldorf', cost: 3 },
+    { a: 'essen', b: 'dortmund', cost: 5 },
     { a: 'duesseldorf', b: 'aachen', cost: 9 },
     { a: 'duesseldorf', b: 'koeln', cost: 4 },
     { a: 'dortmund', b: 'koeln', cost: 10 },

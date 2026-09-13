@@ -14,7 +14,7 @@ import { PHASES } from '../data/rules';
 export function PowerGridDetail(): JSX.Element {
   return (
     <>
-      <Panel tone="glass" title="The round" subtitle="Five phases, in strict order" ticks>
+      <Panel tone="glass" title="The round" subtitle="Four phases, in strict order" ticks>
         <ol className="pg-phaselist">
           {PHASES.map((phase) => (
             <li key={phase.key} className="pg-phaselist__item">

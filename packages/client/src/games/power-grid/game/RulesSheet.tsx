@@ -53,7 +53,7 @@ export function RulesSheet(): JSX.Element {
           <section>
             <h3 className="pg-gsheet__h">The round</h3>
             <ol className="pg-gsheet__phases">
-              {(['order', 'auction', 'resources', 'building', 'bureaucracy'] as const).map((phase) => {
+              {(['order', 'auction', 'resources', 'building'] as const).map((phase) => {
                 const meta = PHASE_META[phase];
                 return (
                   <li key={phase} data-active={state.phase === phase}>
@@ -100,7 +100,7 @@ export function RulesSheet(): JSX.Element {
               ))}
             </div>
             <p className="tt-caption">
-              Added during Phase 5, filling the most expensive empty space first. If the supply runs short,
+              Added after everyone finishes the combined build-and-power phase, filling the most expensive empty space first. If the supply runs short,
               the market simply stays partly empty. <em>§9.2</em>
             </p>
           </section>

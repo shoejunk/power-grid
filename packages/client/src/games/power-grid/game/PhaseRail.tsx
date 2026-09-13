@@ -86,7 +86,9 @@ function PhaseBody({
     case 'resources':
       return <ResourcePanel draft={draft} setDraft={setDraft} />;
     case 'building':
-      return <BuildPanel />;
+      return state.activePlayerId && state.players[state.activePlayerId]?.phaseStatus === 'passed'
+        ? <BureaucracyPanel combined />
+        : <BuildPanel />;
     case 'bureaucracy':
       return <BureaucracyPanel />;
     case 'gameOver':

@@ -239,11 +239,11 @@ export type Phase =
   | 'order'        // Phase 1 — Determine Player Order
   | 'auction'      // Phase 2 — Auction Power Plants
   | 'resources'    // Phase 3 — Buy Resources
-  | 'building'     // Phase 4 — Build Houses
-  | 'bureaucracy'  // Phase 5 — Bureaucracy
+  | 'building'     // Phase 4 — combined Build Houses and production
+  | 'bureaucracy'  // Legacy persisted Phase 5 states only
   | 'gameOver';
 
-export const PHASE_ORDER: readonly Phase[] = ['order', 'auction', 'resources', 'building', 'bureaucracy'] as const;
+export const PHASE_ORDER: readonly Phase[] = ['order', 'auction', 'resources', 'building'] as const;
 
 /** Sub-state of setup, so hosts can drive zone/starting-city flows. §2. */
 export type SetupStage =
@@ -415,10 +415,10 @@ export type GameAction =
   | { type: 'buyResources'; purchases: { resource: ResourceType; count: number }[] }
   | { type: 'redistributeResources'; assignment: { plantId: number; stored: ResourceBundle }[] }
   | { type: 'passResources' }
-  /* phase 4 — building */
+  /* combined phase 4 — building then production */
   | { type: 'buildCity'; cityId: CityId }
   | { type: 'passBuilding' }
-  /* phase 5 — bureaucracy */
+  /* production choice (or legacy phase 5) */
   | { type: 'powerCities'; decision: PowerDecision }
   /* meta */
   | { type: 'undoLastBuild' };

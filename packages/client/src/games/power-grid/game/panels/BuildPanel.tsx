@@ -24,7 +24,7 @@ import { useMatch } from '../model';
 import { Callout, PhaseShell, Stat, Waiting, type RuleLine } from './shell';
 
 const BUILD_RULES: readonly RuleLine[] = [
-  { text: 'Players build in reverse player order; each connects as many cities as they like, then the next player acts.', rule: '§4, §8' },
+  { text: 'Players act in reverse order; each builds, then immediately chooses production before the next player acts.', rule: 'House rule' },
   { text: 'Your first house may go in any empty city in the zone, for 10₤ and no connection cost.', rule: '§8' },
   { text: 'Every later city costs the cheapest route from your network plus the lowest empty slot in that city.', rule: '§8' },
   { text: 'The route cost is paid again in full for each new city, even when it reuses the same edges.', rule: '§8' },
@@ -50,7 +50,7 @@ export function BuildPanel(): JSX.Element {
   if (!legal.isActive || !me) {
     return (
       <PhaseShell
-        title="Build Houses"
+        title="Build & power"
         subtitle="Phase 4 · reverse player order"
         actions={<PaymentSummaryButton />}
         rules={BUILD_RULES}
@@ -71,7 +71,7 @@ export function BuildPanel(): JSX.Element {
 
   return (
     <PhaseShell
-      title="Build Houses"
+      title="Build & power"
       subtitle="Phase 4 · your turn"
       tone="live"
       rules={BUILD_RULES}
@@ -106,7 +106,7 @@ export function BuildPanel(): JSX.Element {
             </span>
           </Tooltip>
           <Button variant="primary" onClick={() => net.action({ type: 'passBuilding' })}>
-            End building
+            Choose production
           </Button>
         </div>
       }
@@ -135,7 +135,7 @@ export function BuildPanel(): JSX.Element {
       {targets.length === 0 ? (
         <Callout tone="warning" title="Nothing you can connect">
           Every city in the zone is either already yours, full at the current Step, or beyond what you can
-          pay for. End building to pass the turn along. <em>§8, §14</em>
+          pay for. Choose production to finish the turn. <em>§8, §14</em>
         </Callout>
       ) : (
         <>
@@ -187,7 +187,7 @@ function PaymentSummaryButton(): JSX.Element {
           open
           onClose={() => setOpen(false)}
           title="Payment summary card"
-          description="Elektro income for the number of cities supplied during Phase 5."
+          description="Elektro income for the number of cities supplied after building."
           width="720px"
         >
           <div className="pg-gpay">

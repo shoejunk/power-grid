@@ -19,7 +19,15 @@ import {
   validateAction,
   zoneCities,
 } from '../index.js';
-import { act, enterPhase, findLog, lastLog, placeHouse, start } from './helpers.js';
+import {
+  act,
+  enterPhase,
+  findLog,
+  finishCombinedTurn,
+  lastLog,
+  placeHouse,
+  start,
+} from './helpers.js';
 
 function trustGame(seed = 'TRUST'): GameState {
   return start({ playerCount: 2, againstTheTrust: true, seed });
@@ -346,10 +354,18 @@ describe('§13 Phase 4 — Trust houses', () => {
     for (const id of t.playerOrder) t.players[id]!.phaseStatus = 'eligible';
     t.players[TRUST_PLAYER_ID]!.phaseStatus = 'ineligible';
     t.activePlayerId = t.playerOrder[2]!;
+    t.players[t.activePlayerId]!.phaseStatus = 'acting';
     let guard = 0;
     while (t.phase === 'building' && guard++ < 10) {
       seen.push(t.activePlayerId!);
-      t = act(t, t.activePlayerId!, { type: 'passBuilding' });
+      const actor = t.activePlayerId!;
+      const legal = legalActions(t, actor);
+      t = legal.canPassBuilding
+        ? act(t, actor, { type: 'passBuilding' })
+        : act(t, actor, {
+            type: 'powerCities',
+            decision: { operatePlantIds: [], citiesSupplied: 0 },
+          });
     }
     expect(seen).not.toContain(TRUST_PLAYER_ID);
   });
@@ -383,7 +399,7 @@ describe('§13 Phase 5 and the end condition', () => {
     s.citySlots[cities[0]!]![0] = b; // b keeps a tiny network
     s.players[b]!.cities.push(cities[0]!);
 
-    const t = act(enterPhase(s, 'building', a), a, { type: 'passBuilding' });
+    const t = finishCombinedTurn(enterPhase(s, 'building', a), a);
     expect(t.phase).toBe('gameOver');
     expect(t.winnerId).not.toBe(TRUST_PLAYER_ID);
     expect(finalStandings(t).map((r) => r.playerId)).not.toContain(TRUST_PLAYER_ID);
@@ -400,13 +416,13 @@ describe('§13 Phase 5 and the end condition', () => {
       s.citySlots[cities[i]!]![2] = human;
       s.players[human]!.cities.push(cities[i]!);
     }
-    const seventeen = act(enterPhase(s, 'building', human), human, { type: 'passBuilding' });
+    const seventeen = finishCombinedTurn(enterPhase(s, 'building', human), human);
     expect(seventeen.endGameTriggered).toBe(false);
 
     const s18 = deepClone(s);
     s18.citySlots[cities[threshold - 1]!]![2] = human;
     s18.players[human]!.cities.push(cities[threshold - 1]!);
-    const eighteen = act(enterPhase(s18, 'building', human), human, { type: 'passBuilding' });
+    const eighteen = finishCombinedTurn(enterPhase(s18, 'building', human), human);
     expect(eighteen.endGameTriggered).toBe(true);
   });
 

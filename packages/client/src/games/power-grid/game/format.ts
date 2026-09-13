@@ -137,10 +137,10 @@ export const PHASE_META: Record<Phase, PhaseMeta> = {
   },
   building: {
     index: 4,
-    name: 'Build Houses',
+    name: 'Build & Power',
     order: 'Reverse order',
-    rule: '§8 Build Houses',
-    summary: 'Pay the cheapest route from your network plus the lowest empty city slot.',
+    rule: '§8 Build Houses · §9 Bureaucracy',
+    summary: 'Build houses, then immediately operate plants and collect income.',
   },
   bureaucracy: {
     index: 5,

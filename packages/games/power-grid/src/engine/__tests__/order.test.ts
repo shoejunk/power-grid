@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { GameState, PlayerId } from '../../types.js';
-import { computePlayerOrder, deepClone, largestPlant, rankPlayers } from '../index.js';
+import { computePlayerOrder, deepClone, largestPlant, legalActions, rankPlayers } from '../index.js';
 import { act, grantPlant, placeHouse, start } from './helpers.js';
 
 /** Records who the engine asks, in order, while every actor passes. */
@@ -62,7 +62,7 @@ describe('§4 ranking rules', () => {
 });
 
 describe('§4 per-phase turn order', () => {
-  it('Phase 2 runs in player order, Phases 3-4 in reverse, Phase 5 forward', () => {
+  it('Phase 2 runs in player order and Phases 3 plus combined build-and-power run in reverse', () => {
     // Round 1 with a rigged market: each player buys in turn, uncontested.
     const base = start({ playerCount: 3, seed: 'ORDER-FLOW' });
     const s = deepClone(base);
@@ -95,16 +95,24 @@ describe('§4 per-phase turn order', () => {
     const resources = collectActors(t, (st, id) => act(st, id, { type: 'passResources' }));
     expect(resources.actors).toEqual(recomputed.slice().reverse());
 
-    const building = collectActors(resources.state, (st, id) =>
-      act(st, id, { type: 'passBuilding' }),
-    );
-    expect(building.actors).toEqual(recomputed.slice().reverse());
-
-    // §4: "Phase 5 cash payment starts with the first player."
-    const bureaucracy = collectActors(building.state, (st, id) =>
-      act(st, id, { type: 'powerCities', decision: { operatePlantIds: [], citiesSupplied: 0 } }),
-    );
-    expect(bureaucracy.actors).toEqual(recomputed);
+    const combinedActors: PlayerId[] = [];
+    let combined = resources.state;
+    let guard = 0;
+    while (combined.phase === 'building' && guard++ < 20) {
+      const actor = combined.activePlayerId!;
+      const legal = legalActions(combined, actor);
+      if (legal.canPassBuilding) {
+        combinedActors.push(actor);
+        combined = act(combined, actor, { type: 'passBuilding' });
+      } else {
+        combined = act(combined, actor, {
+          type: 'powerCities',
+          decision: { operatePlantIds: [], citiesSupplied: 0 },
+        });
+      }
+    }
+    expect(combinedActors).toEqual(recomputed.slice().reverse());
+    expect(combined.phase).toBe('auction');
   });
 
   it('§5 round 1 uses the random setup order for the auctions', () => {

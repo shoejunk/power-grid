@@ -1417,16 +1417,16 @@
   }
 }
 
-/* The compact desktop is a full page, not a clipped viewport. Let its board,
-   hand rail and public table flow vertically so no state is painted underneath
-   another section. The internal board/rail scroll affordances remain available
-   for genuinely crowded matches. */
+/* The compact desktop is a full document, not a viewport-sized inner scroller.
+   Let the browser own vertical scrolling so keyboard/page navigation and the
+   visible scrollbar describe the whole table instead of hiding half the match
+   inside a nested 100vh region. */
 @media (min-width: 1181px) and (max-width: 1500px) and (max-height: 1200px) {
   .dow-match {
-    height: 100vh;
-    min-height: 0;
+    height: auto;
+    min-height: 100vh;
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: visible;
     grid-template-rows: auto auto max-content max-content max-content;
   }
 
@@ -1444,41 +1444,55 @@
   }
 }
 
-/* At very wide desktop the hand has room to be the visual hero. The 1920px
-   layout keeps it beside the rail so the board and hand do not compete for
-   the same vertical track. */
+/* Keep the private hand attached to the action rail at very wide desktop.
+   A centered, full-width dock looked like a detached second game board and
+   left a large dead band between the map and the table/log row. */
 @media (min-width: 3001px) {
+  .dow-match {
+    --dow-rail-w: clamp(620px, 22vw, 820px);
+  }
+
   .dow-match .dow-board.dow-winter-board {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .dow-match__hand-dock {
-    display: block;
-    width: 100%;
-    max-width: 1680px;
-    justify-self: center;
-  }
-
-  .dow-match__hand-dock .dow-hand {
-    width: 100%;
-    max-width: 1680px;
-    margin-inline: auto;
-  }
-
-  .dow-match__hand-dock .dow-card.dow-cardart {
-    width: 100%;
-    max-width: 320px;
-    justify-self: center;
-  }
-
-  .dow-match__rail-hand {
     display: none;
   }
 
+  .dow-match__rail-hand {
+    display: block;
+    grid-column: 2;
+    min-width: 0;
+  }
+
   .dow-match__rail {
-    display: flex;
-    flex-direction: column;
-    gap: var(--dow-gap);
+    display: grid;
+    grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.7fr);
+    grid-auto-rows: max-content;
+    align-content: start;
+    row-gap: 6px;
+    column-gap: 8px;
+    overflow: visible;
+  }
+
+  .dow-match__rail > .tt-panel.dow-panel--acting {
+    grid-column: 1;
+  }
+
+  .dow-match__rail > .tt-panel.dow-panel--public,
+  .dow-match__rail > .dow-vote {
+    grid-column: 1 / -1;
+  }
+
+  .dow-match__rail-hand .dow-hand {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, auto));
+    gap: 8px;
+  }
+
+  .dow-match__rail-hand .dow-card.dow-cardart {
+    min-height: 180px;
   }
 }
 
