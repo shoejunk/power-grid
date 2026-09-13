@@ -52,7 +52,7 @@ describe('Google account game identity', () => {
     await client.close();
   });
 
-  it('recovers a seat on a new machine from the account cookie', async () => {
+  it('lists saved games on a new machine and resumes only the selected one', async () => {
     const dataDir = makeDataDir();
     dataDirs.push(dataDir);
     const seedStore = new SqliteGameStore(path.join(dataDir, 'test.db'));
@@ -82,8 +82,8 @@ describe('Google account game identity', () => {
       expect.objectContaining({ accountId: ACCOUNT.accountId, playerId: created.playerId }),
     ]);
 
-    // No session token is sent by this new machine. The HttpOnly account
-    // cookie is enough to locate the same persisted seat.
+    // A signed-in browser lands on its game list rather than being forced into
+    // whichever table happened to update most recently.
     await server.close();
     const restarted = await boot({
       dataDir,
@@ -94,10 +94,7 @@ describe('Google account game identity', () => {
     servers.push(restarted);
     const thirdMachine = await TestClient.connect(restarted.wsUrl, cookieOptions);
     thirdMachine.send({ t: 'hello' });
-    const resumed = await thirdMachine.wait('welcome');
-    expect(resumed.playerId).toBe(created.playerId);
-    expect(resumed.accountId).toBe(ACCOUNT.accountId);
-    expect((await thirdMachine.wait('lobby')).lobby.gameId).toBe(lobby.lobby.gameId);
+    expect((await thirdMachine.wait('error')).code).toBe('noSession');
 
     const me = await fetch(`${restarted.url}/api/auth/me`, {
       headers: { Cookie: `tt.auth=${AUTH_TOKEN}` },
@@ -108,6 +105,12 @@ describe('Google account game identity', () => {
       account: { id: ACCOUNT.accountId, email: ACCOUNT.email },
       games: [{ gameId: lobby.lobby.gameId, playerName: 'Ada' }],
     });
+
+    thirdMachine.send({ t: 'resumeGame', gameId: lobby.lobby.gameId });
+    const resumed = await thirdMachine.wait('welcome');
+    expect(resumed.playerId).toBe(created.playerId);
+    expect(resumed.accountId).toBe(ACCOUNT.accountId);
+    expect((await thirdMachine.wait('lobby')).lobby.gameId).toBe(lobby.lobby.gameId);
 
     await closeAll(firstMachine, thirdMachine);
   });
@@ -142,5 +145,50 @@ describe('Google account game identity', () => {
     grace.send({ t: 'hello' });
     expect((await grace.wait('error')).code).toBe('noSession');
     await closeAll(ada, grace);
+  });
+
+  it('keeps one account seated in multiple games and lets it switch from the game list', async () => {
+    const store = new MemoryGameStore();
+    store.saveAccount(ACCOUNT);
+    store.saveAuthSession(AUTH_SESSION);
+    const server = await boot({
+      store,
+      googleClientId: 'client-id',
+      googleClientSecret: 'client-secret',
+      googleAuthRequired: true,
+    });
+    servers.push(server);
+
+    const ada = await TestClient.connect(server.wsUrl, cookieOptions);
+    ada.send({ t: 'createGame', gameKey: 'stub', name: 'Ada', settings: { tableSize: 2 } });
+    const firstWelcome = await ada.wait('welcome');
+    const firstLobby = await ada.wait('lobby');
+
+    ada.send({ t: 'createGame', gameKey: 'stub', name: 'Ada', settings: { tableSize: 2 } });
+    const secondWelcome = await ada.wait('welcome');
+    const secondLobby = await ada.wait('lobby');
+
+    expect(secondLobby.lobby.gameId).not.toBe(firstLobby.lobby.gameId);
+    expect(server.hub.roomById(firstLobby.lobby.gameId)?.seat(firstWelcome.playerId)).toBeDefined();
+    expect(server.hub.roomById(firstLobby.lobby.gameId)?.isConnected(firstWelcome.playerId)).toBe(false);
+    expect(server.hub.roomById(secondLobby.lobby.gameId)?.isConnected(secondWelcome.playerId)).toBe(true);
+
+    const me = await fetch(`${server.url}/api/auth/me`, cookieOptions);
+    const payload = (await me.json()) as { games: Array<{ gameId: string }> };
+    expect(payload.games.map((game) => game.gameId).sort()).toEqual(
+      [firstLobby.lobby.gameId, secondLobby.lobby.gameId].sort(),
+    );
+
+    ada.send({ t: 'viewGames' });
+    expect(await ada.wait('viewingGames')).toMatchObject({
+      gameId: secondLobby.lobby.gameId,
+      quit: false,
+    });
+
+    ada.send({ t: 'resumeGame', gameId: firstLobby.lobby.gameId });
+    expect((await ada.wait('welcome')).playerId).toBe(firstWelcome.playerId);
+    expect((await ada.wait('lobby')).lobby.gameId).toBe(firstLobby.lobby.gameId);
+
+    await closeAll(ada);
   });
 });

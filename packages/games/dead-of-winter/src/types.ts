@@ -491,6 +491,10 @@ export interface TurnState {
   /** §3: known only to the holder until it triggers. */
   crossroadsCardId: CardId | null;
   crossroadsTriggered: boolean;
+  /** Events before this cursor have already failed this card's trigger test. */
+  crossroadsEventCursor?: number;
+  /** The player pressed End Turn; finish only after the final trigger check. */
+  ending?: boolean;
   events: TurnEvent[];
 }
 

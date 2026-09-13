@@ -168,9 +168,7 @@ describe('dow-base crossroads catalog', () => {
       'zombieKilled',
       'survivorKilled',
       'searchPerformed',
-      'crisisResolved',
       'moraleChanged',
-      'roundEnd',
     ]);
     const actions = new Set([
       'attackZombie',
@@ -196,10 +194,16 @@ describe('dow-base crossroads catalog', () => {
     expect(new Set(publicCopy).size).toBe(publicCopy.length);
     expect(publicCopy.every((text) => text.trim().length > 0)).toBe(true);
     expect(publicCopy.join('\n')).not.toMatch(/placeholder|fixture|nothing happens|quiet moment|carry on|do the impossible/i);
-    expect(new Set(BASE_CROSSROADS.map((card) => card.trigger.event)).size).toBeGreaterThanOrEqual(9);
+    expect(new Set(BASE_CROSSROADS.map((card) => card.trigger.event)).size).toBeGreaterThanOrEqual(8);
 
     for (const card of BASE_CROSSROADS) {
       expect(triggerEvents.has(card.trigger.event), `${card.id}.trigger.event`).toBe(true);
+      expect(card.trigger.event, `${card.id} must be monitorable during a player turn`).not.toBe(
+        'crisisResolved',
+      );
+      expect(card.trigger.event, `${card.id} must be monitorable during a player turn`).not.toBe(
+        'roundEnd',
+      );
       if (card.trigger.action) expect(actions.has(card.trigger.action), `${card.id}.trigger.action`).toBe(true);
       expect(card.trigger.event).not.toBe('never');
       expect(card.options.length).toBeGreaterThan(0);

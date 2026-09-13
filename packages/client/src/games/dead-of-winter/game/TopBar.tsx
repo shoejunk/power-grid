@@ -13,16 +13,25 @@ import type { PlayerId } from '@tt/core';
 
 import { crisisCard, crossroadsCard, mainObjectiveName, mainObjectiveSide } from '../content';
 import { foodDue, phaseLabel } from './model';
+import type { CardPreview } from './CardPreviewDialog';
 import { CrisisCard, CrossroadsCard, ObjectiveCard, Stat } from './parts';
 
-export function TopBar({ state, me }: { state: GameState; me: PlayerId | null }): JSX.Element {
+export function TopBar({
+  state,
+  me,
+  onPreview,
+}: {
+  state: GameState;
+  me: PlayerId | null;
+  onPreview: (preview: CardPreview) => void;
+}): JSX.Element {
   const objective = mainObjectiveSide(state);
   const objectiveCard = ACTIVE_PACK.mainObjectives.get(state.mainObjective.cardId);
   const crisis = crisisCard(state);
   const due = foodDue(state);
   const holder = state.turn ? state.players[state.turn.crossroadsHolderId] : undefined;
-  const heldCrossroads =
-    state.turn && me === state.turn.crossroadsHolderId
+  const visibleCrossroads =
+    state.turn && (me === state.turn.crossroadsHolderId || state.turn.crossroadsTriggered)
       ? crossroadsCard(state.turn.crossroadsCardId)
       : undefined;
 
@@ -68,12 +77,15 @@ export function TopBar({ state, me }: { state: GameState; me: PlayerId | null })
               Crossroads: {holder.name}
             </Badge>
           ) : null}
-          {heldCrossroads ? (
+          {visibleCrossroads ? (
             <div className="dow-top__private-card">
-              <Badge tone="warning" title={heldCrossroads.story}>
-                Private crossroads
+              <Badge tone="warning" title={visibleCrossroads.story}>
+                {state.turn?.crossroadsTriggered ? 'Revealed crossroads' : 'Private crossroads'}
               </Badge>
-              <CrossroadsCard card={heldCrossroads} />
+              <CrossroadsCard
+                card={visibleCrossroads}
+                onClick={() => onPreview({ kind: 'crossroads', card: visibleCrossroads })}
+              />
             </div>
           ) : null}
         </div>
@@ -105,6 +117,15 @@ export function TopBar({ state, me }: { state: GameState; me: PlayerId | null })
               card={objectiveCard}
               side={objective}
               sideLabel={state.mainObjective.side === 'hardcore' ? 'Hardcore side' : 'Standard side'}
+              onClick={() =>
+                onPreview({
+                  kind: 'mainObjective',
+                  card: objectiveCard,
+                  side: objective,
+                  sideLabel:
+                    state.mainObjective.side === 'hardcore' ? 'Hardcore side' : 'Standard side',
+                })
+              }
             />
           ) : null}
         </div>
@@ -130,7 +151,12 @@ export function TopBar({ state, me }: { state: GameState; me: PlayerId | null })
               </p>
             ) : null}
           </div>
-          {crisis ? <CrisisCard card={crisis} /> : null}
+          {crisis ? (
+            <CrisisCard
+              card={crisis}
+              onClick={() => onPreview({ kind: 'crisis', card: crisis })}
+            />
+          ) : null}
         </div>
       </Panel>
     </div>

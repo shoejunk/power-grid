@@ -25,6 +25,7 @@ import { contentOf, deepClone, getPlayer, pushLog, unshiftIntoCurrentFrame } fro
 import { applyValidatedAction, validateAction } from './actions.js';
 import { stepEffects } from './effects/runner.js';
 import { checkCrossroadsTrigger, returnCrossroads } from './crossroads.js';
+import { finishTurn } from './flow.js';
 import { checkMoraleZero, endGame } from './endgame.js';
 import {
   assignFirstPlayer,
@@ -177,6 +178,13 @@ export function advance(
         }
         // §10: the trigger test happens here and nowhere else.
         if (runAutomatic('crossroads-trigger', () => checkCrossroadsTrigger(state, now))) continue;
+        if (state.turn.ending) {
+          runAutomatic('turn-end', () => {
+            finishTurn(state, now);
+            return true;
+          });
+          continue;
+        }
         state.activePlayerId = state.turn.playerId;
         flushAutomatic('turn-ready');
         return;

@@ -84,3 +84,5 @@ export type {
   SecretObjectiveDefinition,
   SurvivorCardDefinition,
 } from './content/schema.js';
+
+export type { TriggerSpec } from './content/effects.js';

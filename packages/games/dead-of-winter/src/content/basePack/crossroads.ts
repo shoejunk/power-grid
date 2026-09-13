@@ -842,9 +842,9 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
   },
   {
     id: 'xr-f53',
-    name: 'After the Count',
-    story: 'The crisis count is finished, but one contributor keeps a hand on the table.',
-    trigger: { event: 'crisisResolved', crisisOutcome: 'any' },
+    name: 'Before the Count',
+    story: 'A crisis contribution lands face down, but one contributor keeps a hand on the table.',
+    trigger: { event: 'actionPerformed', action: 'contributeCrisis' },
     options: [
       { id: 'thank-contributors', text: 'Thank the contributors and raise morale by one.', outcome: { kind: 'adjustMorale', amount: 1 } },
       { id: 'secure-table', text: 'Secure the table and add one colony barricade.', outcome: { kind: 'addBarricade', count: 1, location: { kind: 'colony' } } },
@@ -854,9 +854,9 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
   },
   {
     id: 'xr-f54',
-    name: 'The Failed Alarm',
-    story: 'The crisis alarm fails after the resolution, leaving the colony to choose its own warning.',
-    trigger: { event: 'crisisResolved', crisisOutcome: 'failed' },
+    name: 'The Broken Alarm',
+    story: 'As a crisis contribution is made, the broken alarm leaves the colony to choose its own warning.',
+    trigger: { event: 'actionPerformed', action: 'contributeCrisis' },
     options: [
       { id: 'sound-warning', text: 'Sound a warning and add one colony noise.', outcome: { kind: 'addNoise', count: 1, location: { kind: 'colony' } } },
       { id: 'save-breath', text: 'Save everyone’s breath and lower morale by one.', outcome: { kind: 'adjustMorale', amount: -1 } },
@@ -866,9 +866,9 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
   },
   {
     id: 'xr-f55',
-    name: 'A Narrow Success',
-    story: 'The crisis is prevented by one card, and the colony argues about whether that was enough.',
-    trigger: { event: 'crisisResolved', crisisOutcome: 'prevented' },
+    name: 'A Narrow Margin',
+    story: 'A card slides into the crisis pile, and the colony argues about whether it will be enough.',
+    trigger: { event: 'actionPerformed', action: 'contributeCrisis' },
     options: [
       { id: 'celebrate', text: 'Celebrate the narrow success and raise morale by one.', outcome: { kind: 'adjustMorale', amount: 1 } },
       { id: 'recheck-gates', text: 'Recheck the gates and add one barricade at the colony.', outcome: { kind: 'addBarricade', count: 1, location: { kind: 'colony' } } },
@@ -879,8 +879,8 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
   {
     id: 'xr-f56',
     name: 'Cards on the Floor',
-    story: 'The resolved crisis leaves a scatter of cards on the floor and a draft under the door.',
-    trigger: { event: 'crisisResolved', crisisOutcome: 'any' },
+    story: 'A crisis contribution leaves a loose card on the floor and reveals a draft under the door.',
+    trigger: { event: 'actionPerformed', action: 'contributeCrisis' },
     options: [
       { id: 'gather-cards', text: 'Gather the cards and remove one colony noise, if able.', outcome: { kind: 'ifAble', effect: { kind: 'removeNoise', count: 1, location: { kind: 'colony' } } } },
       { id: 'follow-draft', text: 'Follow the draft and add one colony noise.', outcome: { kind: 'addNoise', count: 1, location: { kind: 'colony' } } },
@@ -891,8 +891,8 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
   {
     id: 'xr-f57',
     name: 'The Cost of Relief',
-    story: 'The crisis relief arrives with a cost written in a language nobody can translate.',
-    trigger: { event: 'crisisResolved', crisisOutcome: 'failed' },
+    story: 'A crisis contribution arrives with a cost written in a language nobody can translate.',
+    trigger: { event: 'actionPerformed', action: 'contributeCrisis' },
     options: [
       { id: 'pay-cost', text: 'Pay the cost and spend one food, if able.', requires: { kind: 'food', atLeast: 1 }, outcome: { kind: 'adjustFood', amount: -1 } },
       { id: 'refuse-cost', text: 'Refuse the cost and add one starvation token.', outcome: { kind: 'addStarvation', amount: 1 } },
@@ -903,8 +903,8 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
   {
     id: 'xr-f58',
     name: 'The Uneven Share',
-    story: 'The crisis stores are divided, and one player quietly receives a larger share than the others.',
-    trigger: { event: 'crisisResolved', crisisOutcome: 'prevented' },
+    story: 'While a crisis contribution is made, one player quietly receives a larger share than the others.',
+    trigger: { event: 'actionPerformed', action: 'contributeCrisis' },
     options: [
       { id: 'accept-share', text: 'Accept the uneven share and raise morale by one.', outcome: { kind: 'adjustMorale', amount: 1 } },
       { id: 'even-share', text: 'Even the share and add one food to the colony stores.', outcome: { kind: 'adjustFood', amount: 1 } },
@@ -915,8 +915,8 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
   {
     id: 'xr-f59',
     name: 'The Quiet Ledger',
-    story: 'The crisis ledger closes with no signature, only a thumbprint in the margin.',
-    trigger: { event: 'crisisResolved', crisisOutcome: 'any' },
+    story: 'The crisis ledger takes a new entry with no signature, only a thumbprint in the margin.',
+    trigger: { event: 'actionPerformed', action: 'contributeCrisis' },
     options: [
       { id: 'seal-ledger', text: 'Seal the ledger and place one colony barricade.', outcome: { kind: 'addBarricade', count: 1, location: { kind: 'colony' } } },
       { id: 'leave-ledger', text: 'Leave it open and lower morale by one.', outcome: { kind: 'adjustMorale', amount: -1 } },
@@ -1010,9 +1010,9 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
   },
   {
     id: 'xr-f67',
-    name: 'Round-End Frost',
-    story: 'At the end of the round, frost closes the outside latch before anyone reaches it.',
-    trigger: { event: 'roundEnd' },
+    name: 'Evening Frost',
+    story: 'As the active player ends their turn, frost closes the outside latch before anyone reaches it.',
+    trigger: { event: 'turnEnd' },
     options: [
       { id: 'thaw-latch', text: 'Thaw the latch and add one colony barricade.', outcome: { kind: 'addBarricade', count: 1, location: { kind: 'colony' } } },
       { id: 'wait-thaw', text: 'Wait for daylight and add one starvation token.', outcome: { kind: 'addStarvation', amount: 1 } },
@@ -1022,9 +1022,9 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
   },
   {
     id: 'xr-f68',
-    name: 'The Round-End Inventory',
-    story: 'The round-end inventory finds one crate listed twice and another crate not listed at all.',
-    trigger: { event: 'roundEnd' },
+    name: 'The Evening Inventory',
+    story: 'The end-of-turn inventory finds one crate listed twice and another crate not listed at all.',
+    trigger: { event: 'turnEnd' },
     options: [
       { id: 'correct-inventory', text: 'Correct the inventory and add one food to the stores.', outcome: { kind: 'adjustFood', amount: 1 } },
       { id: 'lock-crates', text: 'Lock the crates and lower morale by one.', outcome: { kind: 'adjustMorale', amount: -1 } },
@@ -1035,8 +1035,8 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
   {
     id: 'xr-f69',
     name: 'Footprints at Midnight',
-    story: 'The round ends with footprints around the colony, but none cross the threshold.',
-    trigger: { event: 'roundEnd' },
+    story: 'A turn ends with footprints around the colony, but none cross the threshold.',
+    trigger: { event: 'turnEnd' },
     options: [
       { id: 'salt-threshold', text: 'Salt the threshold and add one colony noise.', outcome: { kind: 'addNoise', count: 1, location: { kind: 'colony' } } },
       { id: 'guard-threshold', text: 'Guard the threshold and place one colony barricade.', outcome: { kind: 'addBarricade', count: 1, location: { kind: 'colony' } } },
@@ -1047,8 +1047,8 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
   {
     id: 'xr-f70',
     name: 'The Long Dawn',
-    story: 'Dawn refuses to arrive at the end of the round, leaving the colony lit by blue snow.',
-    trigger: { event: 'roundEnd' },
+    story: 'The active player tries to end their turn, but dawn refuses to arrive and leaves the colony lit by blue snow.',
+    trigger: { event: 'turnEnd' },
     options: [
       { id: 'keep-lights', text: 'Keep the lights burning and spend one food, if able.', requires: { kind: 'food', atLeast: 1 }, outcome: { kind: 'adjustFood', amount: -1 } },
       { id: 'save-lights', text: 'Save the fuel and add one starvation token.', outcome: { kind: 'addStarvation', amount: 1 } },
@@ -1059,8 +1059,8 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
   {
     id: 'xr-f71',
     name: 'The Empty Snowbank',
-    story: 'The snowbank beside the colony collapses at round end, revealing a path that was not there before.',
-    trigger: { event: 'roundEnd' },
+    story: 'The snowbank beside the colony collapses at the end of the turn, revealing a path that was not there before.',
+    trigger: { event: 'turnEnd' },
     options: [
       { id: 'mark-path', text: 'Mark the path and raise morale by one.', outcome: { kind: 'adjustMorale', amount: 1 } },
       { id: 'cover-path', text: 'Cover the path and add one colony barricade.', outcome: { kind: 'addBarricade', count: 1, location: { kind: 'colony' } } },
@@ -1071,8 +1071,8 @@ export const BASE_CROSSROADS: CrossroadsCardDefinition[] = [
   {
     id: 'xr-f72',
     name: 'The Unsent Letter',
-    story: 'An unsent letter is found in the round-end post box, addressed to someone beyond the fence.',
-    trigger: { event: 'roundEnd' },
+    story: 'An unsent letter is found as the turn ends, addressed to someone beyond the fence.',
+    trigger: { event: 'turnEnd' },
     options: [
       { id: 'send-letter', text: 'Send the letter and add one noise at the colony.', outcome: { kind: 'addNoise', count: 1, location: { kind: 'colony' } } },
       { id: 'keep-letter', text: 'Keep the letter and lower morale by one.', outcome: { kind: 'adjustMorale', amount: -1 } },

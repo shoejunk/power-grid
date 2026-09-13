@@ -70,12 +70,20 @@
   }
 }
 
+.tt-topbar__left,
 .tt-topbar__right {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
   gap: var(--tt-space-3);
   min-width: 0;
+}
+
+.tt-topbar__left {
+  justify-content: flex-start;
+}
+
+.tt-topbar__right {
+  justify-content: flex-end;
 }
 
 .tt-account-control {

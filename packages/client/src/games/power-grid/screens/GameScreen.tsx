@@ -21,6 +21,7 @@ import {
   ConfirmDialog,
   IconBolt,
   IconLogout,
+  IconUsers,
   LoadingSpinner,
   springSoft,
   Tooltip,
@@ -97,7 +98,7 @@ const PHASE_KEYS = ['order', 'auction', 'resources', 'building'] as const;
 export function GameScreen(): JSX.Element {
   const gameState = usePowerGridState();
   const myPlayerId = useGameStore((s) => s.myPlayerId);
-  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [quitDialogOpen, setQuitDialogOpen] = useState(false);
 
   const match = useMemo<MatchValue | null>(() => {
     if (!gameState) return null;
@@ -213,12 +214,20 @@ export function GameScreen(): JSX.Element {
             <RulesSheet />
             <ConnectionPill />
             <Button
-              variant="ghost"
+              variant="secondary"
+              size="sm"
+              icon={<IconUsers />}
+              onClick={() => net.viewGames()}
+            >
+              My games
+            </Button>
+            <Button
+              variant="danger"
               size="sm"
               icon={<IconLogout />}
-              onClick={() => setLeaveDialogOpen(true)}
+              onClick={() => setQuitDialogOpen(true)}
             >
-              Leave
+              Quit game
             </Button>
           </div>
         </header>
@@ -249,15 +258,15 @@ export function GameScreen(): JSX.Element {
         <MomentOverlay />
 
         <ConfirmDialog
-          open={leaveDialogOpen}
-          onCancel={() => setLeaveDialogOpen(false)}
+          open={quitDialogOpen}
+          onCancel={() => setQuitDialogOpen(false)}
           onConfirm={() => {
-            setLeaveDialogOpen(false);
+            setQuitDialogOpen(false);
             net.leaveGame();
           }}
-          title="Leave this game?"
-          description="You will be disconnected from the table. Your seat remains in an active game, but you will stop receiving updates here."
-          confirmLabel="Leave game"
+          title="Quit this game?"
+          description="A bot will permanently take over your position. If you are the last human player, the game will end."
+          confirmLabel="Quit game"
           confirmVariant="danger"
         />
       </div>

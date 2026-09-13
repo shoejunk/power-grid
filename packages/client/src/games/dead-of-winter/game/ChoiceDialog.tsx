@@ -19,14 +19,16 @@ import { useEffect, useState } from 'react';
 
 import { net } from '@/net';
 
-import { survivorArtPath, survivorCard } from '../content';
-import { DowIcon } from './iconography';
+import { crossroadsCard, itemDef, survivorCard, survivorDef } from '../content';
+import type { CardPreview } from './CardPreviewDialog';
+import { ItemCard, SurvivorCard } from './parts';
 
 export interface ChoiceDialogProps {
   state: GameState;
   choice: PendingChoice;
   open: boolean;
   onClose: () => void;
+  onPreview: (preview: CardPreview) => void;
 }
 
 const KIND_LABEL: Partial<Record<PendingChoice['kind'], string>> = {
@@ -46,7 +48,7 @@ const KIND_LABEL: Partial<Record<PendingChoice['kind'], string>> = {
   vote: 'Vote',
 };
 
-export function ChoiceDialog({ state, choice, open, onClose }: ChoiceDialogProps): JSX.Element {
+export function ChoiceDialog({ state, choice, open, onClose, onPreview }: ChoiceDialogProps): JSX.Element {
   const [picked, setPicked] = useState<string[]>([]);
 
   // A new decision must never inherit the previous one's selection.
@@ -55,6 +57,15 @@ export function ChoiceDialog({ state, choice, open, onClose }: ChoiceDialogProps
   const min = choice.minPicks ?? 1;
   const max = choice.maxPicks ?? 1;
   const exact = min === max;
+  const isSurvivorSetup = choice.kind === 'setupKeepSurvivors';
+  const sourceCrossroads =
+    choice.data?.['source'] === 'crossroads'
+      ? crossroadsCard(choice.data?.['cardId'] as string | undefined ?? null)
+      : undefined;
+  const contextualItemIid =
+    typeof choice.data?.['iid'] === 'string' && itemDef(state, choice.data['iid'])
+      ? choice.data['iid']
+      : null;
 
   const toggle = (id: string): void => {
     setPicked((current) => {
@@ -78,7 +89,7 @@ export function ChoiceDialog({ state, choice, open, onClose }: ChoiceDialogProps
       onClose={onClose}
       title={KIND_LABEL[choice.kind] ?? 'Decide'}
       description={choice.prompt}
-      width="620px"
+      width={isSurvivorSetup ? '1000px' : '620px'}
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -97,10 +108,79 @@ export function ChoiceDialog({ state, choice, open, onClose }: ChoiceDialogProps
         {choice.private ? ' Only you can see these.' : null}
       </p>
 
-      <div className="dow-choice__options">
+      {sourceCrossroads ? (
+        <div className="dow-choice__source-card">
+          <p className="tt-caption">The full Crossroads story and every option are public now.</p>
+          <Button
+            variant="secondary"
+            onClick={() => onPreview({ kind: 'crossroads', card: sourceCrossroads })}
+          >
+            View full Crossroads card
+          </Button>
+        </div>
+      ) : null}
+
+      {contextualItemIid ? (
+        <div className="dow-choice__source-card">
+          <ItemCard state={state} iid={contextualItemIid} />
+          <Button
+            variant="secondary"
+            onClick={() => onPreview({ kind: 'item', iid: contextualItemIid })}
+          >
+            Preview offered card
+          </Button>
+        </div>
+      ) : null}
+
+      <div
+        className={`dow-choice__options${isSurvivorSetup ? ' dow-choice__options--survivors' : ''}`}
+      >
         {choice.options.map((option) => {
           const selected = picked.includes(option.id);
-          const setupSurvivor = choice.kind === 'setupKeepSurvivors' ? survivorCard(option.id) : undefined;
+          const survivor = survivorCard(option.id) ?? survivorDef(state, option.id);
+          if (survivor) {
+            return (
+              <div className="dow-card-choice" key={option.id}>
+                <SurvivorCard
+                  card={survivor}
+                  selected={selected}
+                  disabled={!option.legal}
+                  onClick={() => (max === 1 && exact ? commit([option.id]) : toggle(option.id))}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onPreview({ kind: 'survivor', card: survivor })}
+                >
+                  Preview
+                </Button>
+              </div>
+            );
+          }
+          const itemIid = option.id.startsWith('keep:') ? option.id.slice('keep:'.length) : option.id;
+          if (itemDef(state, itemIid)) {
+            return (
+              <div className="dow-card-choice" key={option.id}>
+                <ItemCard
+                  state={state}
+                  iid={itemIid}
+                  selected={selected}
+                  disabled={!option.legal}
+                  onClick={() => (max === 1 && exact ? commit([option.id]) : toggle(option.id))}
+                />
+                {option.legal ? null : (
+                  <Badge tone="warning">{option.reason ?? 'Not available'}</Badge>
+                )}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onPreview({ kind: 'item', iid: itemIid })}
+                >
+                  Preview
+                </Button>
+              </div>
+            );
+          }
           return (
             <button
               key={option.id}
@@ -116,25 +196,7 @@ export function ChoiceDialog({ state, choice, open, onClose }: ChoiceDialogProps
               aria-pressed={selected}
               onClick={() => (max === 1 && exact ? commit([option.id]) : toggle(option.id))}
             >
-              {setupSurvivor ? (
-                <>
-                  <img
-                    className="dow-choice__survivor-art"
-                    src={survivorArtPath(setupSurvivor.id)}
-                    alt=""
-                    aria-hidden="true"
-                  />
-                  <span className="dow-choice__survivor-copy">
-                    <span className="dow-choice__label">{setupSurvivor.name}</span>
-                    <span className="dow-choice__survivor-meta">
-                      {setupSurvivor.occupation} · <DowIcon name="attack" size={12} />{setupSurvivor.attackThreshold}+ · <DowIcon name="search" size={12} />
-                      {setupSurvivor.searchThreshold}+ · <DowIcon name="influence" size={12} />{setupSurvivor.influence}
-                    </span>
-                  </span>
-                </>
-              ) : (
-                <span className="dow-choice__label">{option.label}</span>
-              )}
+              <span className="dow-choice__label">{option.label}</span>
               {option.legal ? null : (
                 <Badge tone="warning">{option.reason ?? 'Not available'}</Badge>
               )}

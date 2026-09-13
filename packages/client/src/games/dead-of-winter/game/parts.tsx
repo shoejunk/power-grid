@@ -17,6 +17,7 @@ import {
   type SeatColorId,
   type SurvivorCardDefinition,
   type SurvivorInstance,
+  type TriggerSpec,
 } from '@game/dead-of-winter';
 import { Badge, Tooltip } from '@tt/ui';
 import type { ReactNode } from 'react';
@@ -348,16 +349,57 @@ export interface CrossroadsCardProps extends PrintedCardInteractionProps {
   card: CrossroadsCardDefinition;
 }
 
+export function crossroadsTriggerLabel(trigger: TriggerSpec): string {
+  switch (trigger.event) {
+    case 'turnStart':
+      return "At the start of the active player's turn";
+    case 'turnEnd':
+      return 'When the active player ends their turn';
+    case 'actionPerformed':
+      return trigger.action && trigger.action !== 'any'
+        ? `After the active player performs ${trigger.action}`
+        : 'After the active player performs an action';
+    case 'moveCompleted':
+      return trigger.destination && trigger.destination !== 'any'
+        ? `After an active-player survivor moves to ${trigger.destination === 'colony' ? 'the colony' : 'a location'}`
+        : 'After an active-player survivor completes a move';
+    case 'zombieKilled':
+      return 'After the active player kills a zombie';
+    case 'survivorKilled':
+      return 'After a survivor is killed during the active turn';
+    case 'searchPerformed':
+      return 'After the active player completes a search';
+    case 'moraleChanged':
+      return trigger.moraleDirection && trigger.moraleDirection !== 'any'
+        ? `After morale goes ${trigger.moraleDirection}`
+        : 'After morale changes during the active turn';
+    case 'crisisResolved':
+      return 'After a crisis resolves';
+    case 'roundEnd':
+      return 'At the end of the round';
+    case 'never':
+      return 'This card never triggers';
+    default:
+      return 'When its printed condition is met';
+  }
+}
+
 /** Printed crossroads face; story text is public once this definition is supplied. */
 export function CrossroadsCard({ card, ...interaction }: CrossroadsCardProps): JSX.Element {
   const chooser = card.chooser === 'firstPlayer' ? 'First player chooses' : 'Active player chooses';
+  const text = [
+    `TRIGGER — ${crossroadsTriggerLabel(card.trigger)}.`,
+    card.story,
+    'OPTIONS',
+    ...card.options.map((option, index) => `${index + 1}. ${option.text}`),
+  ].join('\n\n');
   return (
     <PrintedCardShell kind="crossroads" {...interaction}>
       <CardFace
         kind="crossroads"
         family="crossroads"
         name={card.name}
-        text={card.story}
+        text={text}
         symbols={['card', 'survivor']}
         symbolsLabel="Crossroads story and survivor marks"
         tag="Crossroads"

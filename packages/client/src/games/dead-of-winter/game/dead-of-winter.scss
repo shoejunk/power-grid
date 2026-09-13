@@ -591,6 +591,29 @@
   background: var(--tt-surface-raised);
 }
 
+.dow-survivor-detail__equipment button,
+.dow-seat__secret button,
+.dow-over__objectives button,
+.dow-seat__secret--button {
+  padding: 0;
+  font: inherit;
+  color: var(--tt-cyan);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 2px;
+}
+
+.dow-survivor-detail__equipment button:hover,
+.dow-seat__secret button:hover,
+.dow-over__objectives button:hover,
+.dow-seat__secret--button:hover {
+  text-decoration-color: currentColor;
+}
+
 /* ------------------------------------------------------------------ *
  * Dice
  * ------------------------------------------------------------------ */
@@ -802,6 +825,40 @@
   color: var(--tt-text-faint);
 }
 
+.dow-card-choice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tt-space-2);
+  min-width: 0;
+}
+
+.dow-card-choice > .tt-button {
+  align-self: stretch;
+}
+
+.dow-card-preview {
+  display: flex;
+  justify-content: center;
+  padding: var(--tt-space-2);
+}
+
+.dow-card-preview > .dow-card {
+  width: min(360px, 100%);
+  min-height: 500px;
+}
+
+.dow-card-preview .dow-card__text,
+.dow-card-preview .dow-cardart__text {
+  display: block;
+  overflow: visible;
+  white-space: pre-line;
+  -webkit-line-clamp: unset;
+}
+
+.dow-card.dow-cardart--crossroads .dow-card__text {
+  white-space: pre-line;
+}
+
 .dow-card__name {
   font-family: var(--tt-font-display);
   font-size: 13px;
@@ -856,12 +913,49 @@
   margin-bottom: var(--tt-space-2);
 }
 
+.dow-choice__source-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tt-space-3);
+  margin-bottom: var(--tt-space-3);
+  padding: var(--tt-space-2);
+  background: var(--tt-surface-sunken);
+  border: 1px solid var(--tt-line-subtle);
+  border-radius: var(--tt-radius-md);
+}
+
+.dow-choice__source-card > .dow-card {
+  width: 160px;
+  flex: 0 0 160px;
+}
+
 .dow-choice__options {
   display: flex;
   flex-direction: column;
   gap: var(--tt-space-2);
   max-height: 46vh;
   overflow-y: auto;
+}
+
+.dow-choice__options--survivors {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  align-items: stretch;
+  max-height: none;
+  overflow: visible;
+
+  .dow-card.dow-cardart--survivor {
+    min-height: 350px;
+  }
+
+  /* Setup is a reading decision, not a hand preview. Never truncate the
+     ability the player is deciding whether to keep. */
+  .dow-card.dow-cardart--survivor .dow-card__text {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+  }
 }
 
 .dow-choice__option {
@@ -880,28 +974,6 @@
   cursor: pointer;
 }
 
-.dow-choice__survivor-art {
-  width: 48px;
-  height: 60px;
-  flex: none;
-  object-fit: cover;
-  object-position: center top;
-  border-radius: var(--tt-radius-sm);
-  border: 1px solid var(--tt-line-subtle);
-}
-
-.dow-choice__survivor-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.dow-choice__survivor-meta {
-  font-size: 10px;
-  color: var(--tt-text-muted);
-}
-
 .dow-choice__option:hover:not(:disabled) {
   border-color: var(--tt-line-accent);
   background: var(--tt-surface-elevated);
@@ -915,6 +987,12 @@
 .dow-choice__option--illegal {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .dow-choice__options--survivors {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -1015,6 +1093,20 @@
   margin-top: 4px;
   font-size: 10.5px;
   color: var(--tt-text-muted);
+}
+
+.dow-seat__secret--button {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  color: var(--tt-text-muted);
+}
+
+.dow-seat__secret > button + button::before,
+.dow-over__objectives > button + button::before {
+  content: ', ';
+  color: var(--tt-text-muted);
+  text-decoration: none;
 }
 
 .dow-log__list {
@@ -1263,9 +1355,12 @@
     overflow-x: hidden;
   }
 
+  /* The rail itself is the compact viewport's scroll container. Giving Ask
+     the table a second 128px scroller hid later player rows and made the panel
+     look cut off. Let the panel take its full content height. */
   .dow-match__rail > .tt-panel.dow-panel--public {
-    max-height: 128px;
-    overflow-y: auto;
+    max-height: none;
+    overflow: visible;
   }
 
   .dow-match__rail > *,
@@ -1417,16 +1512,15 @@
   }
 }
 
-/* The compact desktop is a full document, not a viewport-sized inner scroller.
-   Let the browser own vertical scrolling so keyboard/page navigation and the
-   visible scrollbar describe the whole table instead of hiding half the match
-   inside a nested 100vh region. */
+/* The application root intentionally does not scroll. Compact desktop must
+   therefore give the match itself the single visible scrollbar; `overflow:
+   visible` here used to strand the bottom of Ask the table below a 720p frame. */
 @media (min-width: 1181px) and (max-width: 1500px) and (max-height: 1200px) {
   .dow-match {
-    height: auto;
-    min-height: 100vh;
+    height: 100vh;
+    min-height: 0;
     overflow-x: hidden;
-    overflow-y: visible;
+    overflow-y: auto;
     grid-template-rows: auto auto max-content max-content max-content;
   }
 
@@ -1553,8 +1647,8 @@
 
   .dow-match__rail > .tt-panel.dow-panel--public {
     grid-column: 1 / -1;
-    max-height: 128px;
-    overflow-y: auto;
+    max-height: none;
+    overflow: visible;
   }
 }
 

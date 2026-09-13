@@ -127,9 +127,9 @@ describe('strict Dead of Winter A15 audit granularity', () => {
       for (const seat of seated) await answerSetupChoice(seat, kind);
     }
 
-    const before = first.store.loadGames().find((record) => record.code === host.code);
-    if (!before) throw new Error(`Missing persisted game ${host.code}`);
-    const beforeState = before.state as GameState;
+    const initial = first.store.loadGames().find((record) => record.code === host.code);
+    if (!initial) throw new Error(`Missing persisted game ${host.code}`);
+    const beforeState = initial.state as GameState;
     const actorId = beforeState.activePlayerId;
     if (!actorId) throw new Error('Setup did not leave an active player for the automatic-transition probe');
     const actor = seated.find((seat) => seat.playerId === actorId);
@@ -138,12 +138,39 @@ describe('strict Dead of Winter A15 audit granularity', () => {
 
     actor.client.clear();
     actor.client.send({ t: 'action', action: { type: 'endTurn' } });
-    await actor.client.waitState<GameState>((state) => state.log.length > priorLogLength);
+    const interrupted = (
+      await actor.client.waitState<GameState>(
+        (state) =>
+          state.log.length > priorLogLength &&
+          state.pendingChoices.some(
+            (choice) => choice.playerId === actorId && choice.kind === 'effectOption' && choice.data?.source === 'crossroads',
+          ),
+      )
+    ).state;
+    const crossroadsChoice = interrupted.pendingChoices.find(
+      (choice) => choice.playerId === actorId && choice.kind === 'effectOption' && choice.data?.source === 'crossroads',
+    );
+    if (!crossroadsChoice) throw new Error('Seeded endTurn did not expose the expected Crossroads interruption');
 
-    const after = first.store.loadGames().find((record) => record.gameId === before.gameId);
-    if (!after) throw new Error(`Game disappeared after action ${before.gameId}`);
-    const events = first.store.loadAuditEvents(before.gameId);
-    const actionIndex = events.findIndex((event) => event.type === 'action' && actionType(event) === 'endTurn');
+    const before = first.store.loadGames().find((record) => record.code === host.code);
+    if (!before) throw new Error(`Missing persisted game ${host.code} after Crossroads interruption`);
+    const probeStartSequence = before.auditSequence ?? 0;
+    actor.client.clear();
+    actor.client.send({
+      t: 'action',
+      action: { type: 'resolveChoice', choiceId: crossroadsChoice.id, optionIds: firstLegalPicks(crossroadsChoice) },
+    });
+    await actor.client.waitState<GameState>(
+      (state) => state.activePlayerId !== actorId && !state.pendingChoices.some((choice) => choice.id === crossroadsChoice.id),
+    );
+
+    const after = first.store.loadGames().find((record) => record.gameId === initial.gameId);
+    if (!after) throw new Error(`Game disappeared after action ${initial.gameId}`);
+    const events = first.store.loadAuditEvents(initial.gameId);
+    const actionIndex = events.findIndex(
+      (event) =>
+        event.sequence > probeStartSequence && event.type === 'action' && actionType(event) === 'resolveChoice',
+    );
     const actionEvent = actionIndex >= 0 ? events[actionIndex] : undefined;
     const automatic = events
       .slice(actionIndex + 1)
@@ -151,7 +178,7 @@ describe('strict Dead of Winter A15 audit granularity', () => {
     const violations: string[] = [];
 
     if (actionIndex < 0 || actionEvent?.type !== 'action') {
-      violations.push('missing the persisted endTurn action event');
+      violations.push('missing the persisted Crossroads resolveChoice action event');
     }
 
     const sequenceGap = events.find((event, index) => event.sequence !== index + 1);

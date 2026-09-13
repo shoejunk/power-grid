@@ -184,6 +184,14 @@ export function validateContentPack(pack: ContentPack): ContentIssue[] {
         error(`crossroads[${x.id}].options`, '§10: a card with no legal result is a rules error'),
       );
     }
+    if (x.trigger.event === 'crisisResolved' || x.trigger.event === 'roundEnd') {
+      issues.push(
+        error(
+          `crossroads[${x.id}].trigger.event`,
+          `§10: '${x.trigger.event}' happens after player turns, when no crossroads card is held`,
+        ),
+      );
+    }
   }
 
   for (const o of pack.mainObjectives) {

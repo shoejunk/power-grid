@@ -7,6 +7,7 @@ import {
   saveLegacySessionToken,
 } from './socket';
 import type { ConnectionStatus, Toast, ToastInput } from './types';
+import { navigate } from '@/router';
 
 /* ------------------------------------------------------------------ *
  * Chat
@@ -251,6 +252,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
         break;
       }
 
+      case 'viewingGames': {
+        if (message.quit) clearLegacySessionToken();
+        set({
+          lobby: null,
+          gameKey: null,
+          state: null,
+          myPlayerId: null,
+          chat: [],
+          lastError: null,
+          pending: false,
+        });
+        navigate({ name: 'portal' });
+        // Membership is server-owned. Refresh after both paths so the portal
+        // immediately shows the preserved seat or removes the quit table.
+        void net.loadAuth();
+        break;
+      }
+
       case 'pong':
         break;
 
@@ -426,17 +445,14 @@ export const net = {
     socket.send({ t: 'resumeGame', gameId });
   },
 
+  viewGames(): void {
+    useGameStore.setState({ pending: true, lastError: null });
+    socket.send({ t: 'viewGames' });
+  },
+
   leaveGame(): void {
+    useGameStore.setState({ pending: true, lastError: null });
     socket.send({ t: 'leaveGame' });
-    socket.clearQueue();
-    clearLegacySessionToken();
-    useGameStore.setState({
-      lobby: null,
-      gameKey: null,
-      state: null,
-      chat: [],
-      lastError: null,
-    });
   },
 
   setReady(ready: boolean): void {

@@ -310,6 +310,9 @@ export class GameHub {
       case 'resumeGame':
         this.onResumeGame(conn, message.gameId);
         return;
+      case 'viewGames':
+        this.onViewGames(conn);
+        return;
       case 'createGame':
         this.onCreateGame(conn, message.gameKey, message.name, message.settings);
         return;
@@ -429,7 +432,6 @@ export class GameHub {
     if (token && conn.accountId && this.claimLegacySession(token, conn.accountId) && this.resume(conn, token)) {
       return;
     }
-    if (conn.accountId && this.resumeLatestForAccount(conn, conn.accountId)) return;
     if (token && !this.deps.auth.required && this.resume(conn, token)) return;
     if (this.deps.auth.required && !conn.accountId) {
       conn.error('authRequired', 'Sign in with Google before creating or joining a game.');
@@ -542,18 +544,6 @@ export class GameHub {
     return true;
   }
 
-  private resumeLatestForAccount(conn: Connection, accountId: string): boolean {
-    const candidates = [...this.sessions.values()]
-      .filter((session) => session.accountId === accountId && this.rooms.has(session.gameId))
-      .sort((a, b) => {
-        const aUpdated = this.rooms.get(a.gameId)?.updatedAt ?? 0;
-        const bUpdated = this.rooms.get(b.gameId)?.updatedAt ?? 0;
-        return bUpdated - aUpdated;
-      });
-    for (const session of candidates) if (this.resume(conn, session.token)) return true;
-    return false;
-  }
-
   private onCreateGame(
     conn: Connection,
     gameKey: GameKey,
@@ -579,7 +569,8 @@ export class GameHub {
     }
     const settings = { ...(plugin.defaultSettings() as object), ...(patch as object) };
 
-    // A socket can only be at one table; creating implies leaving.
+    // A socket can only watch one table at a time. The account keeps its seat
+    // at the previous table, so creating a new one does not quit the old one.
     this.detachFromCurrentRoom(conn, 'switched tables');
 
     let code: string;
@@ -707,14 +698,30 @@ export class GameHub {
     return true;
   }
 
+  /** Stops watching the current table while preserving the human seat. */
+  private onViewGames(conn: Connection): void {
+    const bound = this.boundRoom(conn);
+    if (!bound) return;
+    const { room, playerId } = bound;
+    room.detach(playerId, conn);
+    conn.playerId = null;
+    conn.gameId = null;
+    conn.sessionToken = null;
+    room.persist();
+    room.broadcast();
+    conn.send({ t: 'viewingGames', gameId: room.gameId, quit: false });
+  }
+
   /**
-   * Explicit "leave". In a lobby the seat is released; in a live game the seat
-   * is *kept* and the player simply goes offline.
+   * Explicit quit. Lobby seats are released. A live human seat becomes a bot
+   * so the match can continue; a table with no humans left is removed instead
+   * of spending server time playing itself.
    */
   private onLeaveGame(conn: Connection): void {
     const bound = this.boundRoom(conn);
     if (!bound) return;
     const { room, playerId } = bound;
+    const gameId = room.gameId;
 
     room.detach(playerId, conn);
     conn.playerId = null;
@@ -727,15 +734,25 @@ export class GameHub {
       room.promoteHostIfNeeded(playerId);
       if (room.humanSeats.length === 0) {
         this.destroyRoom(room, 'last player left the lobby');
+        conn.send({ t: 'viewingGames', gameId, quit: true });
         return;
       }
     } else {
+      const seat = room.seat(playerId);
+      if (seat) seat.isBot = true;
+      this.dropSession(room.gameId, playerId);
       room.promoteHostIfNeeded(playerId);
+      if (room.humanSeats.length === 0) {
+        this.destroyRoom(room, 'last human quit the game');
+        conn.send({ t: 'viewingGames', gameId, quit: true });
+        return;
+      }
     }
 
     room.persist();
     room.broadcast();
     room.rescheduleAutoAction();
+    conn.send({ t: 'viewingGames', gameId, quit: true });
   }
 
   /** Called when a socket dies for any reason. Seats and host ownership survive. */

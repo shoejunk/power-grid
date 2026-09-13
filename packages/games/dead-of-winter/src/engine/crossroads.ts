@@ -47,6 +47,8 @@ export function drawCrossroads(state: GameState, now: number, activePlayerId: Pl
     crossroadsHolderId: holderId,
     crossroadsCardId: cardId,
     crossroadsTriggered: false,
+    crossroadsEventCursor: 0,
+    ending: false,
     events: [],
   };
   if (!cardId) return;
@@ -131,7 +133,14 @@ export function checkCrossroadsTrigger(state: GameState, now: number): boolean {
     sourceSurvivorId: null,
   });
 
-  const hit = turn.events.some((e) => eventMatches(state, card.trigger, e));
+  // A trigger condition belongs to the event that just happened. Rechecking an
+  // old move/search against a later board position can make a card fire
+  // retroactively (for example, food acquired after an ineligible move). Keep
+  // the full event history for audit/replay, but test every event only once.
+  const cursor = turn.crossroadsEventCursor ?? 0;
+  const unchecked = turn.events.slice(cursor);
+  turn.crossroadsEventCursor = turn.events.length;
+  const hit = unchecked.some((e) => eventMatches(state, card.trigger, e));
   if (!hit) return false;
   if (card.trigger.requires && !evalCondition(state, card.trigger.requires, scope)) return false;
 

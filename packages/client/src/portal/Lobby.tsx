@@ -55,7 +55,7 @@ export function Lobby(): JSX.Element {
   const { module } = useGameUi(lobby?.gameKey ?? null);
 
   const [copied, setCopied] = useState(false);
-  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [quitDialogOpen, setQuitDialogOpen] = useState(false);
 
   const copyCode = useCallback(async () => {
     if (!lobby) return;
@@ -129,14 +129,24 @@ export function Lobby(): JSX.Element {
       <PortalBackdrop />
 
       <header className="tt-topbar">
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<IconLogout />}
-          onClick={() => setLeaveDialogOpen(true)}
-        >
-          Leave
-        </Button>
+        <span className="tt-topbar__left">
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<IconUsers />}
+            onClick={() => net.viewGames()}
+          >
+            My games
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            icon={<IconLogout />}
+            onClick={() => setQuitDialogOpen(true)}
+          >
+            Quit table
+          </Button>
+        </span>
         <PortalMark compact />
         <span className="tt-topbar__right">
           <AuthControls />
@@ -339,15 +349,15 @@ export function Lobby(): JSX.Element {
       </motion.main>
 
       <ConfirmDialog
-        open={leaveDialogOpen}
-        onCancel={() => setLeaveDialogOpen(false)}
+        open={quitDialogOpen}
+        onCancel={() => setQuitDialogOpen(false)}
         onConfirm={() => {
-          setLeaveDialogOpen(false);
+          setQuitDialogOpen(false);
           net.leaveGame();
         }}
-        title="Leave this table?"
-        description="You will leave the lobby and give up your seat at this table."
-        confirmLabel="Leave table"
+        title="Quit this table?"
+        description="You will give up your seat at this table. This cannot be undone."
+        confirmLabel="Quit table"
         confirmVariant="danger"
       />
     </div>

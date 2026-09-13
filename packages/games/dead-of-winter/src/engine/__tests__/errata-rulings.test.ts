@@ -282,6 +282,7 @@ describe('A14 §18.2 — objectives and named objective semantics', () => {
     state.turn!.crossroadsCardId = bevRussellRaidingCard.id;
     state.turn!.crossroadsTriggered = false;
     state.turn!.events = [];
+    state.turn!.crossroadsEventCursor = 0;
     state.decks.crossroads = state.decks.crossroads.filter((id) => id !== bevRussellRaidingCard.id);
     muteCrossroads(state);
     state.turn!.crossroadsTriggered = false;

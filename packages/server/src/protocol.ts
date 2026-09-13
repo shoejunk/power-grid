@@ -63,6 +63,9 @@ export function parseClientMessage(raw: string): ParseResult {
       return { ok: true, message: { t: 'resumeGame', gameId: parsed.gameId } };
     }
 
+    case 'viewGames':
+      return { ok: true, message: { t: 'viewGames' } };
+
     case 'createGame': {
       if (!isString(parsed.gameKey) || parsed.gameKey.length > MAX_GAME_KEY_LENGTH) {
         return bad('badMessage', 'createGame requires a gameKey.');

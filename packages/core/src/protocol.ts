@@ -20,6 +20,8 @@ export type ClientMessage =
   | { t: 'rejoin'; sessionToken: string }
   /** Selects one of the authenticated player's persisted tables. */
   | { t: 'resumeGame'; gameId: string }
+  /** Stops watching the current table without giving up its seat. */
+  | { t: 'viewGames' }
   /** `settings` is opaque here and parsed by the plugin named by `gameKey`. */
   | { t: 'createGame'; gameKey: GameKey; name: string; settings: unknown }
   | { t: 'joinGame'; code: string; name: string }
@@ -55,6 +57,8 @@ export type ServerMessage =
   | { t: 'error'; code: string; message: string }
   | { t: 'actionRejected'; nonce?: string; reason: string }
   | { t: 'chat'; from: PlayerId; name: string; text: string; at: number }
+  /** Acknowledges that this socket is no longer attached to a table. */
+  | { t: 'viewingGames'; gameId: string; quit: boolean }
   | { t: 'pong' };
 
 /* ------------------------------------------------------------------ *

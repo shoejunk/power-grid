@@ -484,7 +484,7 @@ describe('multiplayer server', () => {
       expect(server.hub.roomByCode(host.code)?.state?.hostId).toBe(host.playerId);
     });
 
-    it('promotes when the host explicitly leaves a game in progress', async () => {
+    it('promotes when the host quits and replaces their live-game seat with a bot', async () => {
       const host = track(await createGame(server, 'Ada'));
       const guest = track(await joinGame(server, host.code, 'Grace'));
       guest.client.send({ t: 'setReady', ready: true });
@@ -496,11 +496,59 @@ describe('multiplayer server', () => {
       host.client.send({ t: 'leaveGame' });
 
       const lobby = await guest.client.waitLobby((l) => l.hostId === guest.playerId);
-      // The departed host keeps their seat — requirement 5 beats host churn.
+      // The position stays intact, but it is no longer owned by the quitter.
       expect(lobby.lobby.players).toHaveLength(2);
-      expect(lobby.lobby.players.find((p) => p.id === host.playerId)?.connected).toBe(false);
+      expect(lobby.lobby.players.find((p) => p.id === host.playerId)).toMatchObject({
+        isBot: true,
+        connected: true,
+      });
       expect(server.hub.roomByCode(host.code)?.state?.players[host.playerId]).toBeDefined();
       expect(server.hub.roomByCode(host.code)?.state?.hostId).toBe(guest.playerId);
+    });
+
+    it('returns to the game list without giving up the human seat', async () => {
+      const host = track(await createGame(server, 'Ada'));
+      const guest = track(await joinGame(server, host.code, 'Grace'));
+
+      guest.client.clear();
+      host.client.send({ t: 'viewGames' });
+      expect(await host.client.wait('viewingGames')).toMatchObject({
+        gameId: host.lobby.gameId,
+        quit: false,
+      });
+
+      const lobby = await guest.client.waitLobby(
+        (next) => next.players.find((player) => player.id === host.playerId)?.connected === false,
+      );
+      expect(lobby.lobby.players.find((player) => player.id === host.playerId)?.isBot).toBe(false);
+      expect(server.store.loadSessions()).toEqual(
+        expect.arrayContaining([expect.objectContaining({ playerId: host.playerId })]),
+      );
+    });
+
+    it('removes an in-progress game when its last human quits', async () => {
+      const host = track(await createGame(server, 'Ada'));
+      const guest = track(await joinGame(server, host.code, 'Grace'));
+      guest.client.send({ t: 'setReady', ready: true });
+      await host.client.waitLobby((l) => l.players.every((p) => p.ready || p.isHost));
+      host.client.send({ t: 'startGame' });
+      await guest.client.wait('state');
+
+      guest.client.clear();
+      host.client.send({ t: 'leaveGame' });
+      await guest.client.waitLobby(
+        (next) => next.players.find((player) => player.id === host.playerId)?.isBot === true,
+      );
+
+      guest.client.send({ t: 'leaveGame' });
+      expect(await guest.client.wait('viewingGames')).toMatchObject({
+        gameId: host.lobby.gameId,
+        quit: true,
+      });
+      expect(server.hub.roomById(host.lobby.gameId)).toBeUndefined();
+      expect(server.store.loadGames()).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ gameId: host.lobby.gameId })]),
+      );
     });
   });
 

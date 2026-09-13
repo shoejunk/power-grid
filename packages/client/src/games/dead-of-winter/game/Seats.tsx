@@ -12,10 +12,19 @@ import type { PlayerId } from '@tt/core';
 import { Badge, Panel } from '@tt/ui';
 
 import { secretObjective } from '../content';
+import type { CardPreview } from './CardPreviewDialog';
 import { DowIcon } from './iconography';
 import { Die } from './parts';
 
-export function Seats({ state, me }: { state: GameState; me: PlayerId | null }): JSX.Element {
+export function Seats({
+  state,
+  me,
+  onPreview,
+}: {
+  state: GameState;
+  me: PlayerId | null;
+  onPreview: (preview: CardPreview) => void;
+}): JSX.Element {
   const contributionsBy = (id: PlayerId): number =>
     state.crisis.contributions.filter((c) => c.playerId === id).length;
 
@@ -82,17 +91,34 @@ export function Seats({ state, me }: { state: GameState; me: PlayerId | null }):
               </div>
 
               {secret ? (
-                <p className="dow-seat__secret" title={secret.text}>
+                <button
+                  type="button"
+                  className="dow-seat__secret dow-seat__secret--button"
+                  title={secret.text}
+                  onClick={() => onPreview({ kind: 'secretObjective', card: secret })}
+                >
                   Your objective: <strong>{secret.name}</strong> — {secret.text}
-                </p>
+                </button>
               ) : null}
               {player.revealedObjectiveIds.length > 0 ? (
-                <p className="dow-seat__secret">
+                <div className="dow-seat__secret">
                   Revealed:{' '}
                   {player.revealedObjectiveIds
-                    .map((cardId) => secretObjective(cardId)?.name ?? '???')
-                    .join(', ')}
-                </p>
+                    .map((cardId) => secretObjective(cardId))
+                    .map((card, index) =>
+                      card ? (
+                        <button
+                          type="button"
+                          key={card.id}
+                          onClick={() => onPreview({ kind: 'secretObjective', card })}
+                        >
+                          {card.name}
+                        </button>
+                      ) : (
+                        <span key={index}>???</span>
+                      ),
+                    )}
+                </div>
               ) : null}
             </div>
           );

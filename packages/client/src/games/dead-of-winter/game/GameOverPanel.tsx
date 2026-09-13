@@ -14,6 +14,7 @@ import { Badge, Button, Panel } from '@tt/ui';
 import { net } from '@/net';
 
 import { secretObjective } from '../content';
+import type { CardPreview } from './CardPreviewDialog';
 
 const REASON: Record<GameEndReason, string> = {
   morale: 'Morale hit zero. The colony fell apart.',
@@ -24,7 +25,15 @@ const REASON: Record<GameEndReason, string> = {
   effect: 'A card ended it.',
 };
 
-export function GameOverPanel({ state, me }: { state: GameState; me: PlayerId | null }): JSX.Element {
+export function GameOverPanel({
+  state,
+  me,
+  onPreview,
+}: {
+  state: GameState;
+  me: PlayerId | null;
+  onPreview: (preview: CardPreview) => void;
+}): JSX.Element {
   const outcome = state.outcome;
   const iWon = me !== null && (outcome?.winners.includes(me) ?? false);
 
@@ -53,12 +62,33 @@ export function GameOverPanel({ state, me }: { state: GameState; me: PlayerId | 
                   {result.won ? 'Won' : 'Lost'}
                 </Badge>
                 <span className="dow-over__objectives">
-                  {result.secretObjectiveIds
-                    .map((cardId) => secretObjective(cardId)?.name ?? '???')
-                    .join(', ') || 'no secret objective'}
-                  {result.exiledObjectiveId
-                    ? ` · exiled: ${secretObjective(result.exiledObjectiveId)?.name ?? '???'}`
-                    : ''}
+                  {result.secretObjectiveIds.length === 0 ? 'no secret objective' : null}
+                  {result.secretObjectiveIds.map((cardId) => {
+                    const card = secretObjective(cardId);
+                    return card ? (
+                      <button
+                        type="button"
+                        key={cardId}
+                        onClick={() => onPreview({ kind: 'secretObjective', card })}
+                      >
+                        {card.name}
+                      </button>
+                    ) : (
+                      <span key={cardId}>???</span>
+                    );
+                  })}
+                  {result.exiledObjectiveId ? ' · exiled: ' : null}
+                  {result.exiledObjectiveId ? (() => {
+                    const card = secretObjective(result.exiledObjectiveId);
+                    return card ? (
+                      <button
+                        type="button"
+                        onClick={() => onPreview({ kind: 'secretObjective', card })}
+                      >
+                        {card.name}
+                      </button>
+                    ) : '???';
+                  })() : null}
                 </span>
                 <Badge tone={result.objectiveComplete ? 'success' : 'warning'}>
                   {result.objectiveComplete ? 'Fulfilled' : 'Unfulfilled'}
@@ -69,8 +99,8 @@ export function GameOverPanel({ state, me }: { state: GameState; me: PlayerId | 
         </div>
 
         <div className="dow-over__actions">
-          <Button variant="primary" onClick={() => net.leaveGame()}>
-            Back to the portal
+          <Button variant="primary" onClick={() => net.viewGames()}>
+            Back to my games
           </Button>
         </div>
       </Panel>

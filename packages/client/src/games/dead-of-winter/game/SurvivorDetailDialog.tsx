@@ -13,6 +13,7 @@ export interface SurvivorDetailDialogProps {
   survivorId: string | null;
   open: boolean;
   onClose: () => void;
+  onPreviewItem: (iid: string) => void;
 }
 
 /** A public, card-like inspection view for every survivor on the board. */
@@ -21,6 +22,7 @@ export function SurvivorDetailDialog({
   survivorId,
   open,
   onClose,
+  onPreviewItem,
 }: SurvivorDetailDialogProps): JSX.Element | null {
   if (!survivorId) return null;
   const survivor = state.survivors[survivorId];
@@ -99,7 +101,11 @@ export function SurvivorDetailDialog({
           {survivor.equipped.length > 0 ? (
             <ul className="dow-survivor-detail__equipment">
               {survivor.equipped.map((iid) => (
-                <li key={iid}>{itemDef(state, iid)?.name ?? 'Face-down card'}</li>
+                <li key={iid}>
+                  <button type="button" onClick={() => onPreviewItem(iid)}>
+                    {itemDef(state, iid)?.name ?? 'Face-down card'} · View card
+                  </button>
+                </li>
               ))}
             </ul>
           ) : (

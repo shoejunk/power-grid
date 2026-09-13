@@ -106,6 +106,29 @@ const frostbiteMonitorCard: CrossroadsCardDefinition = {
   nonCooperative: false,
 };
 
+const gatedMoveCard: CrossroadsCardDefinition = {
+  id: "xr-a9-gated-move",
+  name: "The Empty Larder",
+  story: "A journey starts while the shelves are bare.",
+  trigger: {
+    event: "moveCompleted",
+    requires: { kind: "food", atLeast: 1 },
+  },
+  options: [{ id: "continue", text: "Continue.", outcome: { kind: "noop" } }],
+  matureContent: false,
+  nonCooperative: false,
+};
+
+const endTurnCard: CrossroadsCardDefinition = {
+  id: "xr-a9-end-turn",
+  name: "Last Call",
+  story: "The gatekeeper calls before the watch changes.",
+  trigger: { event: "turnEnd" },
+  options: [{ id: "answer", text: "Answer the call.", outcome: { kind: "noop" } }],
+  matureContent: false,
+  nonCooperative: false,
+};
+
 const A9_PACK = extendPack("acceptance-a9", {
   crossroads: [frostbiteMonitorCard],
 });
@@ -248,6 +271,51 @@ describe("A9 §23.9 — crossroads timing and ownership", () => {
 });
 
 describe("A9 §10 — post-resolution movement and option legality", () => {
+  it("does not retroactively trigger an old event after its condition later becomes true", () => {
+    let state = start({
+      playerCount: 4,
+      pack: extendPack("acceptance-a9-event-cursor", { crossroads: [gatedMoveCard] }),
+      settings: { mainObjectiveId: "mo-stockpile" },
+    });
+    const playerId = active(state);
+    const mover = survivorsOfPlayer(state, playerId).find((survivor) => !survivor.isLeader)!;
+    state.colony.food = 0;
+    holdCrossroads(state, gatedMoveCard.id);
+    nextRolls(state, [1]);
+
+    state = act(state, playerId, { type: "moveSurvivor", survivorId: mover.id, to: "school" });
+    expect(state.turn!.crossroadsTriggered).toBe(false);
+
+    // The move was already tested while the larder was empty. Acquiring food
+    // later cannot make that historical move satisfy the trigger.
+    state.colony.food = 1;
+    expect(checkCrossroadsTrigger(state, NOW)).toBe(false);
+    expect(state.turn!.crossroadsTriggered).toBe(false);
+  });
+
+  it("checks an end-of-turn trigger before passing play to the next player", () => {
+    let state = start({
+      playerCount: 4,
+      pack: extendPack("acceptance-a9-end-turn", { crossroads: [endTurnCard] }),
+      settings: { mainObjectiveId: "mo-stockpile" },
+    });
+    const playerId = active(state);
+    holdCrossroads(state, endTurnCard.id);
+
+    state = act(state, playerId, { type: "endTurn" });
+
+    expect(active(state)).toBe(playerId);
+    expect(state.turn!.ending).toBe(true);
+    expect(pending(state)).toMatchObject({
+      kind: "effectOption",
+      playerId,
+      data: { cardId: endTurnCard.id, source: "crossroads" },
+    });
+
+    state = choose(state, playerId, pending(state)!.id, ["answer"]);
+    expect(active(state)).not.toBe(playerId);
+  });
+
   it("resolves arrival exposure before a movement trigger and preserves every option outcome", () => {
     let state = start({
       playerCount: 4,

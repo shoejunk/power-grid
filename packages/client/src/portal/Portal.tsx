@@ -101,7 +101,7 @@ export function Portal(): JSX.Element {
 
           {auth.account && auth.games.length > 0 ? (
             <motion.div variants={staggerItem} className="tt-account-games">
-              <span className="tt-overline">Your tables</span>
+              <span className="tt-overline">Your games</span>
               {auth.games.map((game) => (
                 <button
                   key={game.gameId}
@@ -110,7 +110,7 @@ export function Portal(): JSX.Element {
                   onClick={() => net.resumeGame(game.gameId)}
                 >
                   <span>
-                    <strong>{game.gameKey}</strong>
+                    <strong>{games.find((entry) => entry.key === game.gameKey)?.name ?? game.gameKey}</strong>
                     <small>
                       {game.code} · {game.playerName}
                     </small>

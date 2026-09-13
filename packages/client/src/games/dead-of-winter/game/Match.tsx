@@ -13,7 +13,7 @@
  */
 
 import type { LocationId } from '@game/dead-of-winter';
-import { ConfirmDialog, Badge, Button, IconLogout, LoadingSpinner, Panel } from '@tt/ui';
+import { ConfirmDialog, Badge, Button, IconLogout, IconUsers, LoadingSpinner, Panel } from '@tt/ui';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ConnectionPill, net, useGameStore } from '@/net';
@@ -21,6 +21,7 @@ import { ConnectionPill, net, useGameStore } from '@/net';
 import { packMatches } from '../content';
 import { useDeadOfWinterState } from '../state';
 import { Board } from './Board';
+import { CardPreviewDialog, type CardPreview } from './CardPreviewDialog';
 import { ChoiceDialog } from './ChoiceDialog';
 import { GameOverPanel } from './GameOverPanel';
 import { LogPanel } from './LogPanel';
@@ -42,7 +43,8 @@ export function DeadOfWinterMatch(): JSX.Element {
   const [aim, setAim] = useState<Aim | null>(null);
   const [picked, setPicked] = useState<readonly string[]>([]);
   const [choiceOpen, setChoiceOpen] = useState(true);
-  const [leaving, setLeaving] = useState(false);
+  const [quitting, setQuitting] = useState(false);
+  const [cardPreview, setCardPreview] = useState<CardPreview | null>(null);
 
   const choice = state ? myChoice(state, me) : null;
   const waiting = state ? tableChoice(state) : null;
@@ -126,8 +128,11 @@ export function DeadOfWinterMatch(): JSX.Element {
             </Badge>
           )}
           <ConnectionPill />
-          <Button variant="ghost" size="sm" icon={<IconLogout />} onClick={() => setLeaving(true)}>
-            Leave
+          <Button variant="secondary" size="sm" icon={<IconUsers />} onClick={() => net.viewGames()}>
+            My games
+          </Button>
+          <Button variant="danger" size="sm" icon={<IconLogout />} onClick={() => setQuitting(true)}>
+            Quit game
           </Button>
         </span>
       </header>
@@ -141,7 +146,7 @@ export function DeadOfWinterMatch(): JSX.Element {
         </Panel>
       )}
 
-      <TopBar state={state} me={me} />
+      <TopBar state={state} me={me} onPreview={setCardPreview} />
 
       <main className="dow-match__main">
         <section className="dow-match__board">
@@ -169,6 +174,7 @@ export function DeadOfWinterMatch(): JSX.Element {
             picked={picked}
             onSelectSurvivor={setSurvivorId}
             onInspectSurvivor={setInspectSurvivorId}
+            onPreviewItem={(iid) => setCardPreview({ kind: 'item', iid })}
             onSelectDie={setDie}
             onAim={setAim}
             onPick={setPicked}
@@ -184,6 +190,7 @@ export function DeadOfWinterMatch(): JSX.Element {
               picked={picked}
               onSelectSurvivor={setSurvivorId}
               onInspectSurvivor={setInspectSurvivorId}
+              onPreviewItem={(iid) => setCardPreview({ kind: 'item', iid })}
               onSelectDie={setDie}
               onAim={setAim}
               onPick={setPicked}
@@ -199,6 +206,7 @@ export function DeadOfWinterMatch(): JSX.Element {
             picked={picked}
             onSelectSurvivor={setSurvivorId}
             onInspectSurvivor={setInspectSurvivorId}
+            onPreviewItem={(iid) => setCardPreview({ kind: 'item', iid })}
             onSelectDie={setDie}
             onAim={setAim}
             onPick={setPicked}
@@ -217,6 +225,7 @@ export function DeadOfWinterMatch(): JSX.Element {
           picked={picked}
           onSelectSurvivor={setSurvivorId}
           onInspectSurvivor={setInspectSurvivorId}
+          onPreviewItem={(iid) => setCardPreview({ kind: 'item', iid })}
           onSelectDie={setDie}
           onAim={setAim}
           onPick={setPicked}
@@ -224,7 +233,7 @@ export function DeadOfWinterMatch(): JSX.Element {
       </section>
 
       <footer className="dow-match__foot">
-        <Seats state={state} me={me} />
+        <Seats state={state} me={me} onPreview={setCardPreview} />
         <LogPanel state={state} />
       </footer>
 
@@ -234,28 +243,38 @@ export function DeadOfWinterMatch(): JSX.Element {
           choice={choice}
           open={choiceOpen}
           onClose={() => setChoiceOpen(false)}
+          onPreview={setCardPreview}
         />
       ) : null}
 
-      {state.phase === 'gameOver' ? <GameOverPanel state={state} me={me} /> : null}
+      {state.phase === 'gameOver' ? (
+        <GameOverPanel state={state} me={me} onPreview={setCardPreview} />
+      ) : null}
 
       <SurvivorDetailDialog
         state={state}
         survivorId={inspectSurvivorId}
         open={inspectSurvivorId !== null}
         onClose={() => setInspectSurvivorId(null)}
+        onPreviewItem={(iid) => setCardPreview({ kind: 'item', iid })}
+      />
+
+      <CardPreviewDialog
+        state={state}
+        preview={cardPreview}
+        onClose={() => setCardPreview(null)}
       />
 
       <ConfirmDialog
-        open={leaving}
-        onCancel={() => setLeaving(false)}
+        open={quitting}
+        onCancel={() => setQuitting(false)}
         onConfirm={() => {
-          setLeaving(false);
+          setQuitting(false);
           net.leaveGame();
         }}
-        title="Leave the colony?"
-        description="Your seat stays in the game, but this browser stops receiving it."
-        confirmLabel="Leave"
+        title="Quit the colony?"
+        description="A bot will permanently take over your survivors. If you are the last human player, the game will end."
+        confirmLabel="Quit game"
         confirmVariant="danger"
       />
     </div>

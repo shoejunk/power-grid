@@ -85,6 +85,7 @@ export interface TurnPanelProps {
   picked: readonly string[];
   onSelectSurvivor: (id: string | null) => void;
   onInspectSurvivor: (id: string) => void;
+  onPreviewItem: (iid: string) => void;
   onSelectDie: (die: number | null) => void;
   onAim: (aim: Aim | null) => void;
   onPick: (iids: readonly string[]) => void;
@@ -234,6 +235,7 @@ export function TurnPanel({
   picked,
   onSelectSurvivor,
   onInspectSurvivor,
+  onPreviewItem,
   onSelectDie,
   onAim,
   onPick,
@@ -690,13 +692,17 @@ export function TurnPanel({
       >
         {player.hand.length === 0 ? <span className="tt-caption">Empty.</span> : null}
         {player.hand.map((iid) => (
-          <ItemCard
-            key={iid}
-            state={state}
-            iid={iid}
-            selected={picked.includes(iid)}
-            onClick={() => toggle(iid)}
-          />
+          <div className="dow-card-choice" key={iid}>
+            <ItemCard
+              state={state}
+              iid={iid}
+              selected={picked.includes(iid)}
+              onClick={() => toggle(iid)}
+            />
+            <Button variant="secondary" size="sm" onClick={() => onPreviewItem(iid)}>
+              Preview
+            </Button>
+          </div>
         ))}
       </div>
 

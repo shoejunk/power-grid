@@ -153,7 +153,20 @@ export function beginTurnEffects(state: GameState, now: number, playerId: Player
  * §5.1: play passes left. When the last player has finished, the Colony Phase
  * begins.
  */
-export function endTurn(state: GameState, now: number): void {
+export function endTurn(state: GameState): void {
+  const turn = state.turn;
+  if (!turn) return;
+  // The turn is not over until a Crossroads card that explicitly watches its
+  // end has had a chance to fire. `advance` performs that final trigger check
+  // and calls `finishTurn` after any resulting choice has resolved.
+  if (!turn.ending) {
+    turn.ending = true;
+    turn.events.push({ event: 'turnEnd' });
+  }
+}
+
+/** Completes a turn after its final Crossroads trigger check. */
+export function finishTurn(state: GameState, now: number): void {
   const turn = state.turn;
   if (!turn) return;
   returnCrossroads(state);
