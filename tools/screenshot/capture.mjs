@@ -18,7 +18,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { launch, instrument, sleep, hostMatch, resolveSetup, describe, overflowReport, outDir } from './harness.mjs';
+import {
+  launch,
+  instrument,
+  sleep,
+  hostMatch,
+  hostMatchEvidence,
+  resolveSetup,
+  assertLiveMatch,
+  describe,
+  overflowReport,
+  outDir,
+} from './harness.mjs';
 
 /** The five resolutions `docs/QUALITY-BAR-DOW.md` V13 requires. */
 const RESOLUTIONS = [
@@ -45,14 +56,25 @@ const only = arg('--only', null);
 const dir = arg('--out', null) ?? outDir('match');
 fs.mkdirSync(dir, { recursive: true });
 
+if (!Number.isInteger(players) || players < 3 || players > 5) {
+  throw new Error(`--players must be an integer from 3 through 5 for the standard Dead of Winter setup (got ${players})`);
+}
+
 const targets = only ? RESOLUTIONS.filter((r) => r.name === only) : RESOLUTIONS;
-const report = { capturedAt: new Date().toISOString(), players, seed, resolutions: {} };
+const report = {
+  capturedAt: new Date().toISOString(),
+  requestedPlayerCount: players,
+  seed,
+  resolutions: {},
+};
+const failures = [];
 
 for (const res of targets) {
   console.log(`\n=== ${res.name} ===`);
   const browser = await launch(res);
+  let page = null;
   try {
-    const page = await browser.newPage();
+    page = await browser.newPage();
     const log = instrument(page);
 
     const code = await hostMatch(page, { players, seed });
@@ -62,8 +84,15 @@ for (const res of targets) {
     const setupSteps = await resolveSetup(page);
     console.log('setup steps:', setupSteps);
 
-    // Let any entry animation settle so the shot is of the resting state.
+    // Let any entry animation settle before proving the state that the
+    // screenshot and report will actually represent.
     await sleep(2500);
+
+    // Do not treat resolveSetup returning as proof: the server may still be in
+    // setup while another required seat is unresolved. Require the visible
+    // server-backed phase and all rendered seats before capturing evidence.
+    const setupLiveAssertion = await assertLiveMatch(page, { expectedPlayers: players });
+    console.log('setup/live assertion:', setupLiveAssertion);
 
     const file = path.join(dir, `match-${res.name}.png`);
     await page.screenshot({ path: file });
@@ -75,7 +104,12 @@ for (const res of targets) {
     report.resolutions[res.name] = {
       screenshot: path.basename(file),
       joinCode: code,
+      requestedPlayerCount: players,
+      ...hostMatchEvidence(page),
+      actualPlayerCount: setupLiveAssertion.actualPlayerCount,
+      actualSeats: setupLiveAssertion.seats,
       setupSteps,
+      setupLiveAssertion,
       url: shape.url,
       headings: shape.headings,
       controlCount: shape.controls.length,
@@ -89,7 +123,14 @@ for (const res of targets) {
     if (log.errors.length) console.log('!! page errors:', log.errors);
   } catch (err) {
     console.error(`FAILED at ${res.name}:`, err.message);
-    report.resolutions[res.name] = { error: err.message };
+    failures.push({ resolution: res.name, error: err.message });
+    const evidence = page ? hostMatchEvidence(page) : null;
+    report.resolutions[res.name] = {
+      requestedPlayerCount: players,
+      ...(evidence ?? {}),
+      setupLiveAssertion: { passed: false, error: err.message },
+      error: err.message,
+    };
   } finally {
     await browser.close();
   }
@@ -97,3 +138,9 @@ for (const res of targets) {
 
 fs.writeFileSync(path.join(dir, 'report.json'), JSON.stringify(report, null, 2));
 console.log('\nreport:', path.join(dir, 'report.json'));
+
+if (failures.length > 0) {
+  console.error(`\nCapture failed evidence gate for ${failures.length} resolution(s):`);
+  for (const failure of failures) console.error(`- ${failure.resolution}: ${failure.error}`);
+  process.exitCode = 1;
+}

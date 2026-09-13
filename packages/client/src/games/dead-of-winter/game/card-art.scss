@@ -632,6 +632,48 @@
   }
 }
 
+/* Compact private hands are still printed cards, not icon strips. The rail
+   has an explicit two-row layout in the match sheet; these floors keep the
+   title, rules copy, family mark and item symbols legible inside its bounded
+   card widths without changing the card's hit target or interaction states. */
+.dow-match__rail-hand .dow-card.dow-cardart .dow-cardart__plate {
+  padding: 5px 6px 4px;
+}
+
+.dow-match__rail-hand .dow-card.dow-cardart .dow-cardart__family-mark {
+  min-width: 16px;
+  min-height: 16px;
+}
+
+.dow-match__rail-hand .dow-card.dow-cardart .dow-card__name {
+  font-size: clamp(9px, 7.4cqw, 12px);
+  line-height: 1.12;
+}
+
+.dow-match__rail-hand .dow-card.dow-cardart .dow-cardart__meta {
+  font-size: clamp(7.5px, 5.6cqw, 10px);
+}
+
+.dow-match__rail-hand .dow-card.dow-cardart .dow-card__text {
+  font-size: clamp(8.5px, 6.4cqw, 10.5px);
+  line-height: 1.24;
+  -webkit-line-clamp: 4;
+}
+
+.dow-match__rail-hand .dow-card.dow-cardart .dow-card__kind {
+  font-size: clamp(7px, 5.2cqw, 9px);
+}
+
+.dow-match__rail-hand .dow-card.dow-cardart .dow-cardart__pip {
+  min-width: 15px;
+  min-height: 15px;
+}
+
+.dow-match__rail-hand .dow-card.dow-cardart .dow-cardart__pip svg {
+  min-width: 11px;
+  min-height: 11px;
+}
+
 /* Face down — a real card back, edge to edge, with a deck banner so the
    element still carries a visible name. Nothing here is derived from a
    card definition (§3). */

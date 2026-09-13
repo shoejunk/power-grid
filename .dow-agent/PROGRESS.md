@@ -1589,3 +1589,44 @@ server state, then take one bounded compact-hand/readability and wide-screen-sca
 implementation and an independent harsh review. Preserve private/public card semantics and existing
 interaction behavior. Push this intent checkpoint before delegation; do not claim five-player,
 full-round, 200%, clean-console, Wingspan, or AAA completion without fresh evidence.
+
+## Nightly run 36 final - 2026-09-13 07:08:48 -07:00
+
+**Checkpoint:** pushed `31e5c30` (`wip(dow): checkpoint nightly run 36 intent`) to `master` before
+delegation. The four-file source/harness unit remains to be committed after this truthful handoff;
+no unrelated changes were staged. No STOP or `.aaa-complete` marker exists.
+
+**Baseline:** exact `npm install` failed with Windows `spawn EPERM`; the documented optional-dependency
+repair succeeded without manifest/lockfile changes. Exact npm test commands hit Windows fork/npx
+limits. Five TypeScript checks, production build, Power Grid 231/231, Dead of Winter 338/338 and
+server 58/58 passed using the repository-local single-thread Vitest fallback.
+
+**Implementation:** two bounded workers changed only `packages/client/src/games/dead-of-winter/game/
+dead-of-winter.scss`, `card-art.scss`, `tools/screenshot/harness.mjs`, and `capture.mjs`. The visual
+unit adds compact card sizing floors, wraps compact location headers to prevent collisions, and caps
+the 4K hand dock at 1680px. The harness now reads the accessible Players stepper, asserts configured
+and lobby counts, rejects unresolved dialogs, requires a rendered live `PLAYER TURNS` phase with an
+acting seat, records requested/configured/actual values, and exits nonzero on failed evidence gates.
+Two runtime defects found during validation were fixed: case-sensitive phase matching and a catch-path
+page-scope crash.
+
+**Runtime evidence:** isolated `.shots/run36-data/` was used; no pre-existing user database changed.
+The repaired five-player rerun and complete five-resolution matrix passed the harness live-state gate
+with actual five seats at 1280x720, 1366x768, 1920x1080, 2560x1440 and 3840x2160. Images were read.
+The 1920 frame visibly contains the colony, all six locations, survivors, dice, hand, crisis, turn,
+table and log. The 1280/1366 frames still have 452/412px internal `.dow-match` overflow, so V13/V15
+remain FAIL. Every capture carries a WebSocket closed-before-established warning; console cleanliness
+is not claimed. 4K hand scaling is materially improved but the critic still found a detached/empty
+composition. No 200%, color-blind, contrast, 60fps, full-density worst-case or real multiplayer proof.
+
+**Critics:** independent visual critic fetched a current Wingspan Steam gameplay reference and failed
+the unit overall: V4/V14 were the only scoped PASSes; Wingspan won art, layout confidence, typography,
+icon clarity and overall polish. Independent evidence critic confirmed the count/live assertions but
+failed N1/N3/N6/N8 for this run because one browser plus bots is not multi-client/full-round proof;
+the DOM evidence is not authoritative seat-ID or private-state proof. Both critics' next action is
+recorded in STATE.md: responsive composition first, then three real clients with exact hidden-state
+recovery and a full incident-rich game.
+
+**Handoff:** commit and push the four reviewed files plus updated STATE/PROGRESS only after rerunning
+the full suite/build. Keep the first unfinished queue item `visual-core`; the next bounded fix must
+eliminate compact hidden scrolling and improve the 4K composition. Do not write `.aaa-complete`.

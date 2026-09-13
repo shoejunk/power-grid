@@ -48,6 +48,8 @@ export const CHROME_ARGS = [
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const HOST_MATCH_EVIDENCE = new WeakMap();
+
 export async function launch({ width = 1920, height = 1080, scale = 1 } = {}) {
   return puppeteer.launch({
     executablePath: CHROMIUM,
@@ -87,11 +89,33 @@ export async function clickText(page, text, { tags = 'button,a,[role=button]', n
   for (;;) {
     const ok = await page.evaluate(
       (tags, text, nth) => {
+        const accessibleText = (e) => {
+          const labelledBy = (e.getAttribute('aria-labelledby') || '')
+            .split(/\s+/)
+            .filter(Boolean)
+            .map((id) => document.getElementById(id)?.innerText || document.getElementById(id)?.textContent || '')
+            .join(' ');
+          return [
+            e.innerText,
+            e.textContent,
+            e.getAttribute('aria-label'),
+            labelledBy,
+            e.getAttribute('title'),
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .trim()
+            .replace(/\s+/g, ' ');
+        };
         const matches = [...document.querySelectorAll(tags)].filter(
           (e) =>
-            (e.innerText || e.textContent || '').trim().toLowerCase().includes(text.toLowerCase()) &&
+            accessibleText(e).toLowerCase().includes(text.toLowerCase()) &&
             !e.disabled &&
-            e.offsetParent !== null,
+            (() => {
+              const style = getComputedStyle(e);
+              const rect = e.getBoundingClientRect();
+              return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
+            })(),
         );
         const el = matches[nth];
         if (!el) return false;
@@ -212,6 +236,12 @@ export async function overflowReport(page) {
  * Returns the join code so a second browser can be pointed at the same table.
  */
 export async function hostMatch(page, { players = 4, seed = 'dow-shot-1', hostName = 'Ada' } = {}) {
+  if (!Number.isInteger(players) || players < 3 || players > 5) {
+    throw new Error(
+      `hostMatch: --players must be an integer from 3 through 5 for the standard Dead of Winter setup (got ${players})`,
+    );
+  }
+
   /*
    * Straight to the game's own setup route rather than clicking through the
    * catalogue. Once the server has games in it the portal home also lists
@@ -225,8 +255,14 @@ export async function hostMatch(page, { players = 4, seed = 'dow-shot-1', hostNa
   await clickTextIfPresent(page, 'Random'); // reveals the seed field if hidden
   await fillByPlaceholder(page, 'fresh shuffle', seed).catch(() => {});
 
-  // The form opens on the minimum player count; step it up to the target.
-  for (let i = 2; i < players; i++) await clickTextIfPresent(page, 'Increase Players');
+  // The host-facing control is an icon-only NumberStepper button. Set it from
+  // the rendered aria-valuenow and assert the result before creating the lobby.
+  const configuredPlayerCount = await setConfiguredPlayerCount(page, players);
+  HOST_MATCH_EVIDENCE.set(page, {
+    requestedPlayerCount: players,
+    configuredPlayerCount,
+    lobbySeatCount: null,
+  });
   await sleep(300);
 
   await clickText(page, 'CREATE LOBBY');
@@ -243,6 +279,24 @@ export async function hostMatch(page, { players = 4, seed = 'dow-shot-1', hostNa
      without also matching "Not ready". */
   await clickTextIfPresent(page, "m ready");
   await sleep(700);
+
+  const configuredInLobby = await readConfiguredPlayerCount(page);
+  if (configuredInLobby !== players) {
+    throw new Error(
+      `hostMatch: the lobby rendered ${configuredInLobby} configured players after requesting ${players}`,
+    );
+  }
+  const lobbySeatCount = await readLobbySeatCount(page, { expectedCount: players });
+  if (lobbySeatCount !== players) {
+    throw new Error(
+      `hostMatch: the server-backed lobby rendered ${lobbySeatCount} occupied seats; expected ${players}`,
+    );
+  }
+  HOST_MATCH_EVIDENCE.set(page, {
+    requestedPlayerCount: players,
+    configuredPlayerCount: configuredInLobby,
+    lobbySeatCount,
+  });
 
   const code = await readJoinCode(page);
 
@@ -267,6 +321,81 @@ export async function readJoinCode(page) {
   });
 }
 
+/** Reads the host's rendered player-count control, not the requested CLI value. */
+export async function readConfiguredPlayerCount(page, { timeout = 6000 } = {}) {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    const value = await page.evaluate(() => {
+      const control = [...document.querySelectorAll('[role="spinbutton"]')].find(
+        (e) => (e.getAttribute('aria-label') || '').trim().toLowerCase() === 'players',
+      );
+      if (!control) return null;
+      const value = Number(control.getAttribute('aria-valuenow'));
+      return Number.isFinite(value) ? value : null;
+    });
+    if (value !== null) return value;
+    if (Date.now() > deadline) {
+      throw new Error(`readConfiguredPlayerCount: visible Players spinbutton not found after ${timeout}ms`);
+    }
+    await sleep(250);
+  }
+}
+
+/** Sets the rendered Players stepper one click at a time and asserts every change. */
+export async function setConfiguredPlayerCount(page, players, { timeout = 6000 } = {}) {
+  let current = await readConfiguredPlayerCount(page, { timeout });
+  const direction = players >= current ? 1 : -1;
+  const label = direction > 0 ? 'Increase Players' : 'Decrease Players';
+  const steps = Math.abs(players - current);
+
+  for (let i = 0; i < steps; i++) {
+    const before = current;
+    await clickText(page, label, { timeout });
+    current = await readConfiguredPlayerCount(page, { timeout });
+    if (current !== before + direction) {
+      throw new Error(
+        `setConfiguredPlayerCount: ${label} did not move the rendered count from ${before} to ${before + direction} (got ${current})`,
+      );
+    }
+  }
+
+  if (current !== players) {
+    throw new Error(
+      `setConfiguredPlayerCount: requested ${players}, but the rendered Players control is ${current}`,
+    );
+  }
+  return current;
+}
+
+/** Counts the actual server-backed seats rendered by the live lobby roster. */
+export async function readLobbySeatCount(page, { timeout = 6000, expectedCount = null } = {}) {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    const count = await page.evaluate(() => {
+      const roster = document.querySelector('.tt-lobby__list');
+      if (!roster) return null;
+      const visible = (element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
+      };
+      return [...roster.querySelectorAll('.tt-seat:not(.tt-seat--empty)')].filter(visible).length;
+    });
+    if (count !== null && (expectedCount === null || count === expectedCount)) return count;
+    if (Date.now() > deadline) {
+      throw new Error(
+        `readLobbySeatCount: expected ${expectedCount ?? 'a visible roster'} seats after ${timeout}ms (got ${count ?? 'no roster'})`,
+      );
+    }
+    await sleep(250);
+  }
+}
+
+/** Returns the evidence captured while creating the current table. */
+export function hostMatchEvidence(page) {
+  return HOST_MATCH_EVIDENCE.get(page) ?? null;
+}
+
 /**
  * Clears whatever setup decision the game opens on.
  *
@@ -286,7 +415,9 @@ export async function resolveSetup(page, { maxSteps = 12 } = {}) {
     for (;;) {
       const title = await page.evaluate(() => {
         const dlg = document.querySelector('.tt-modal, [role=dialog]');
-        if (!dlg || dlg.offsetParent === null) return null;
+        const style = dlg ? getComputedStyle(dlg) : null;
+        const rect = dlg?.getBoundingClientRect();
+        if (!dlg || style?.display === 'none' || style?.visibility === 'hidden' || style?.opacity === '0' || !rect || rect.width === 0 || rect.height === 0) return null;
         return (dlg.innerText || '').split('\n')[0].trim().slice(0, 80);
       });
       if (title) return title;
@@ -298,13 +429,15 @@ export async function resolveSetup(page, { maxSteps = 12 } = {}) {
   const readDialog = () =>
     page.evaluate(() => {
       const dlg = document.querySelector('.tt-modal, [role=dialog]');
-      if (!dlg || dlg.offsetParent === null) return null;
+      const style = dlg ? getComputedStyle(dlg) : null;
+      const rect = dlg?.getBoundingClientRect();
+      if (!dlg || style?.display === 'none' || style?.visibility === 'hidden' || style?.opacity === '0' || !rect || rect.width === 0 || rect.height === 0) return null;
       const confirm = [...dlg.querySelectorAll('.tt-modal__footer button')].find((b) =>
         /^(confirm|done)\b/i.test((b.innerText || '').trim()),
       );
       const options = [
         ...dlg.querySelectorAll('.tt-modal__body .dow-choice__option, .tt-modal__body [role=option]'),
-      ].filter((e) => !e.disabled && e.offsetParent !== null);
+      ].filter((e) => !e.disabled && e.getBoundingClientRect().width > 0 && e.getBoundingClientRect().height > 0);
       return {
         title: (dlg.innerText || '').split('\n')[0].trim().slice(0, 80),
         options: options.length,
@@ -320,7 +453,7 @@ export async function resolveSetup(page, { maxSteps = 12 } = {}) {
       if (!dlg) return false;
       const options = [
         ...dlg.querySelectorAll('.tt-modal__body .dow-choice__option, .tt-modal__body [role=option]'),
-      ].filter((e) => !e.disabled && e.offsetParent !== null);
+      ].filter((e) => !e.disabled && e.getBoundingClientRect().width > 0 && e.getBoundingClientRect().height > 0);
       if (!options[i]) return false;
       options[i].click();
       return true;
@@ -379,10 +512,96 @@ export async function resolveSetup(page, { maxSteps = 12 } = {}) {
     }
 
     steps.push(`${title} — ${clicked}/${before.options} picked, ${outcome}`);
-    if (outcome === 'STUCK') break;
+    if (outcome === 'STUCK') {
+      throw new Error(`resolveSetup: setup dialog ${JSON.stringify(title)} remained unresolved`);
+    }
     await sleep(1400);
   }
+
+  const remaining = await page.evaluate(() => {
+    const dlg = document.querySelector('.tt-modal, [role=dialog]');
+    const style = dlg ? getComputedStyle(dlg) : null;
+    const rect = dlg?.getBoundingClientRect();
+    return dlg && style?.display !== 'none' && style?.visibility !== 'hidden' && style?.opacity !== '0' && rect && rect.width > 0 && rect.height > 0
+      ? (dlg.innerText || '').split('\n')[0].trim().slice(0, 80)
+      : null;
+  });
+  if (remaining) {
+    throw new Error(
+      `resolveSetup: reached maxSteps=${maxSteps} with setup dialog ${JSON.stringify(remaining)} still visible`,
+    );
+  }
   return steps;
+}
+
+/**
+ * Proves the current browser is looking at the rendered, server-backed live
+ * match rather than merely having returned from one setup helper call.
+ */
+export async function readLiveMatchEvidence(page, { expectedPlayers = null } = {}) {
+  return page.evaluate((expectedPlayers) => {
+    const visible = (element) => {
+      if (!element) return false;
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
+    };
+    const text = (element) => (element?.innerText || element?.textContent || '').trim().replace(/\s+/g, ' ');
+    const phase = document.querySelector('.dow-top__phase .tt-badge');
+    const status = document.querySelector('.dow-match__status');
+    const seats = [...document.querySelectorAll('.dow-seats .dow-seat')]
+      .filter(visible)
+      .map((seat) => ({
+        name: text(seat.querySelector('.dow-seat__name')),
+        acting: seat.classList.contains('dow-seat--acting'),
+      }));
+    const dialogs = [...document.querySelectorAll('.tt-modal, [role=dialog]')].filter(visible);
+    const statusText = text(status);
+    const phaseLabel = text(phase);
+    const normalizedPhaseLabel = phaseLabel.toLowerCase().replace(/\s+/g, ' ').trim();
+    const actualPlayerCount = seats.length;
+    const phaseIsLive = normalizedPhaseLabel === 'player turns';
+    const setupDecisionsResolved = phaseIsLive;
+    const noSetupDialog = dialogs.length === 0;
+    const noWaitingState = !/^Waiting on\b/i.test(statusText);
+    const activeTurnVisible = seats.filter((seat) => seat.acting).length === 1 && /Your turn| is playing/i.test(statusText);
+    const seatLabelsValid = seats.length > 0 && seats.every((seat) => seat.name.length > 0);
+    const visibleMatch = visible(document.querySelector('.dow-match'));
+    const expectedCountMatches = expectedPlayers === null || actualPlayerCount === expectedPlayers;
+    return {
+      passed: visibleMatch && phaseIsLive && setupDecisionsResolved && noSetupDialog && noWaitingState && activeTurnVisible && seatLabelsValid && expectedCountMatches,
+      source: 'rendered client DOM',
+      visibleMatch,
+      phaseLabel,
+      normalizedPhaseLabel,
+      phaseIsLive,
+      setupDecisionsResolved,
+      noSetupDialog,
+      noWaitingState,
+      activeTurnVisible,
+      seatLabelsValid,
+      expectedPlayers,
+      expectedCountMatches,
+      actualPlayerCount,
+      seats,
+      statusText,
+      visibleDialogTitles: dialogs.map(text),
+    };
+  }, expectedPlayers);
+}
+
+/** Waits for and returns a live-state proof, failing with the last DOM state. */
+export async function assertLiveMatch(page, { expectedPlayers = null, timeout = 10000 } = {}) {
+  const deadline = Date.now() + timeout;
+  let last = null;
+  for (;;) {
+    last = await readLiveMatchEvidence(page, { expectedPlayers });
+    if (last.passed) return last;
+    if (Date.now() > deadline) {
+      throw new Error(`assertLiveMatch: live match proof failed after ${timeout}ms: ${JSON.stringify(last)}`);
+    }
+    await sleep(300);
+  }
 }
 
 export function outDir(sub = '') {

@@ -3,25 +3,51 @@
 This is the nightly handoff. PROGRESS.md contains the historical run record. The quality bar and
 `dead-of-winter-gameplay-requirements.md` remain authoritative; passing builds are not AAA proof.
 
-Last updated: **2026-09-12 03:20:46 -07:00, nightly run 35**.
+Last updated: **2026-09-13 07:08:48 -07:00, nightly run 36**.
 
 ## Current checkpoint and blocker
 
-- No STOP or .aaa-complete marker. Master and origin/master synchronized at
-  `b831c782c914127370c58f86ffac4259f0fb01ef` with a clean tree at run start.
-- That commit contains the previously retained seven painted item plates, symbol mapping, item
-  elevation treatment, 3:2 ratio correction, and run-31 through run-34 handoffs. Those source/assets
-  are committed. Do not repeat the old instruction to retain or push an uncommitted run-32 unit.
-- Run 35 appended its intent but could not checkpoint it. Sandboxed Git could not create
-  `.git/index.lock`; automatic approval review rejected the elevated scoped commit/push to shared
-  master because it considered standing automation instructions insufficient current authorization.
-  Nothing was staged, committed or pushed. Do not retry indirectly or bypass the rejection.
-- The required successful early push prevents new source work and agent delegation. Only STATE.md
-  and PROGRESS.md are changed by this run. Complete the reviewed documentation checkpoint after
-  scoped user approval, then resume the first queue item below.
-- No game source or art changes, no new independent critic, no completion claim.
+- No STOP or .aaa-complete marker. Run 36 checkpoint `31e5c30` is pushed to `master` and
+  `origin/master`; the four reviewed source/harness files below remain uncommitted until the
+  visual/evidence unit is finalized.
+- Run 36 changed only `packages/client/src/games/dead-of-winter/game/{dead-of-winter.scss,card-art.scss}`
+  and `tools/screenshot/{harness.mjs,capture.mjs}`. The CSS improves compact card floors, wraps
+  compact location headers, and caps the 4K hand. The harness now asserts rendered configured count,
+  lobby seats, visible setup completion, and a live `PLAYER TURNS` state.
+- Full baseline is green: five TypeScript checks, production build, Power Grid 231/231, DoW 338/338,
+  and server 58/58. Exact npm/test entrypoints still hit known Windows EPERM process limits; the
+  repository-local single-thread fallback passed.
+- Fresh five-player matrix evidence is under `.shots/run36-matrix/`; actual count and live setup passed
+  at 1280, 1366, 1920, 2560, and 3840. The 1920 frame contains the required density areas. 1280/1366
+  retain 452/412px internal match overflow; every capture has a WebSocket startup warning.
+- Independent evidence and visual critics both failed the formal gates. Wingspan still wins overall;
+  V13/V15, 200%/accessibility/contrast/icon audits, clean console, motion, UX, and multiplayer proof
+  remain open. No completion claim.
 
-## Fresh baseline — run 35
+## Run 36 evidence and critic verdicts
+
+The isolated server used `.shots/run36-data/power-grid.db`; no pre-existing user game database was
+modified. Headless Edge was launched through `TT_CHROMIUM`. The harness caught and fixed two runtime
+bugs during this run: case-sensitive `PLAYER TURNS` matching and a page-scope crash in capture error
+handling. The repaired rerun and complete matrix both exited successfully and were read as images.
+
+- `.shots/run36-five-rerun/report.json` proves requested/configured/lobby/observed count 5, five named
+  seats, no setup dialog, and one acting seat in the rendered live phase. It does not prove independent
+  human clients, authoritative seat IDs, full-round play, or private-state recovery.
+- `.shots/run36-matrix/report.json` proves actual five-seat live captures at all required resolutions.
+  Document overflow is zero, but `.dow-match` hides 452px at 1280 and 412px at 1366. The report still
+  records intended public/log inner scroll, and every resolution contains a WebSocket closed-before-
+  established warning. These are evidence limits, not PASS claims.
+- Visual critic: V4 and V14 PASS only; V1/V2/V3/V5/V6/V8/V9/V10/V11/V13/V15 FAIL or unproven.
+  Wingspan wins art, layout confidence, typography, icon clarity and overall desktop polish; Dead of
+  Winter wins only the 1920 information-density comparison. Highest-value next fix is responsive
+  composition: eliminate hidden compact scroll and remove the detached 4K hand/empty-space treatment.
+- Evidence critic: count/live-state assertions materially improved, but N1/N3/N6/N8 remain FAIL. The
+  harness is DOM evidence, not authoritative server-state or multi-browser proof; next test is three
+  independent clients, completed setup in each, tab return with exact hidden-state comparison, then a
+  full game with exile, bite chain, overrun, winner evaluation, and restart.
+
+## Fresh baseline — run 35 (historical)
 
 Exact npm install failed with Windows spawn EPERM. The approved repair completed:
 `npm install --include=optional --os=win32 --cpu=x64 --package-lock=false --ignore-scripts`.
@@ -86,16 +112,16 @@ no overall completion or full-product pass follows from a scoped suite.
 | DoW engine implementation and A1–A15 named test coverage | PASS for coverage | 338 tests, freshly green; full running-game acceptance is a separate gate |
 | Authored development content manifest | PASS for counts | dow-base v0.5.0-dev; not licensed retail text or shipping parity |
 | DoW client exists | PASS | Running match captured |
-| Visual V1–V15 | FAIL | Tiny compact hand; board/material, 200%, contrast, accessibility and density gaps remain |
+| Visual V1–V15 | FAIL | Run-36 matrix is real five-seat evidence; V4/V14 only PASS. Compact overflow, art depth, 200%, contrast, accessibility and density gaps remain |
 | Motion M1–M9 | FAIL | No established match animation/audio system or 60fps proof |
 | UX U1–U13 | FAIL / unassessed | No complete independent assessment |
-| N1 host/code/join | PASS, scoped runtime | Run-35 two real browser clients joined using the code |
-| N3/N6 exact state and hidden-information browser recovery | FAIL for complete criterion | Historical scoped passes; current harness proves objective restoration only and stayed in setup; fix harness before strengthening claims |
+| N1 host/code/join | PASS, scoped runtime | Historical two-browser join evidence; run-36 capture uses one host plus bots and is not new N1 proof |
+| N3/N6 exact state and hidden-information browser recovery | FAIL | Historical scoped passes; run-36 harness is one rendered DOM and proves no exact hidden-state recovery |
 | N4 pending-state restart | PASS, prior targeted evidence reverified | dead-of-winter-deferred-morale.test.ts and persistence tests; no new full-browser restart proof |
 | N7 vote secrecy | PASS, prior targeted evidence reverified | vote-secrecy.test.ts through plugin boundary |
 | N5 indefinite pause | FAIL for full DoW browser proof | Generic server test passes; complete scoped runtime evidence still owed |
 | N8 full game with three real clients and required incidents | FAIL | Not demonstrated |
-| Wingspan side-by-side | FAIL | No clean independent comparison this run or accepted final comparison |
+| Wingspan side-by-side | FAIL | Run-36 critic fetched current Steam gameplay reference; Wingspan wins overall |
 
 Run 32's QA accepted asset resolution, privacy branches and interaction preservation, and the visual
 critic accepted scoped card elevation. Formal V2 still failed per-card illustration uniqueness;
@@ -105,16 +131,14 @@ produce an admissible clean comparison. Future critics should verify availabilit
 
 ## Queue — dependency order
 
-0. **Checkpoint this run and repair visual-proof harness assumptions.** Requires scoped master-push
-   approval after automatic review rejection. Keep the source/art checkpoint already committed.
-   Once approved, assert actual player count and complete all clients' setup before screenshots or
-   multiplayer claims. This supports the current visual workstream; do not spend another night
-   extending engine coverage while the visual baseline remains below the bar.
-1. **visual-core — first unfinished product workstream.** Compact-hand readability and excessive
-   wide-screen scaling remain the bounded next targets. Give one worker the specific visual files,
-   keep Match/plugin/registry integration with the parent, and use a separate harsh critic. Preserve
-   private/public boundaries, card selection and actions. Next extend per-definition illustration,
-   board depth and compact icon legibility. Seven item-symbol plates are not per-card unique art.
+0. **Checkpoint run 36 and preserve truthful critic failures.** Stage only the four reviewed files plus
+   this handoff, verify the full suite/build, and push. Do not claim V13/V15 or multiplayer from the
+   matrix. The visual unit remains below the bar and must continue.
+1. **visual-core — first unfinished product workstream.** Critic returned the unit for responsive
+   composition. Next target is removing 1280/1366 hidden match scrolling while keeping the hand readable,
+   and integrating the 4K hand without a detached empty-space composition. Preserve private/public
+   boundaries, card selection and actions. Then re-run the harsh Wingspan comparison; do not move to
+   motion until this visual gate has a passing responsive proof.
 2. **layout-density.** V14 requires one 1920x1080 screenshot containing all nine state areas.
    V15 requires a verified five-player crowded state at 1366x768. Internal scrolling is not a PASS.
 3. **motion.** M1–M9; use the existing @tt/ui tokens, reduced-motion support and framer-motion.
