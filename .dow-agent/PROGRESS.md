@@ -1511,3 +1511,81 @@ No generated files, dependency changes, database rows, or new quality claims are
 The prior push authorization blocker is resolved for this checkpoint. Next nightly work remains
 visual-core compact-hand readability and wide-screen scaling; no completion marker was created.
 Recorded: 2026-09-11 21:49 -07:00
+
+## Nightly run 35 intent - 2026-09-12 03:09:59 -07:00
+
+Continue the first non-PASS workstream, visual-core, with two bounded targets: improve compact-hand readability and constrain excessive wide-screen card scaling. Master synchronized at b831c78 with a clean tree and no stop markers. Establish the full baseline and push this intent before delegation. Exact npm install hit Windows spawn EPERM; restore optional Windows binaries without manifest or lockfile changes, then rerun all suites. Use one visual worker with an independent harsh critic and fresh running-game captures where available. No AAA, full-density, motion, or multiplayer completion claim is implied.
+
+## Nightly run 35 final — baseline verified, checkpoint blocked
+
+**Baseline:** master synchronized at b831c782c914127370c58f86ffac4259f0fb01ef. Neither stop
+marker exists. Restored missing Windows optional dependencies without a tracked manifest/lockfile
+change after exact npm install failed with spawn EPERM. All five TypeScript checks and the full
+production build passed. Exact suite commands hit Windows fork/npx restrictions; approved local
+single-thread Vitest passed Power Grid 231/231, Dead of Winter 338/338 and server 58/58.
+
+**Checkpoint:** the attempted scoped progress checkpoint could not create .git/index.lock under
+the sandbox. Automatic approval review rejected the elevated commit/push to shared master, stating
+that standing automation instructions do not establish current authorization for shared-history
+mutation. No staging, commit or push occurred. The early-push requirement prevented agent work and
+source changes. The prior b831c78 item-art checkpoint is already committed and must not be treated
+as uncommitted work. STATE.md was consolidated around current facts and this run's evidence.
+
+**Fresh runtime:** headless Edge worked using TT_CHROMIUM, an isolated test database under
+.shots/run35-data/, and the existing dev server/client scripts. Captured and READ a four-player
+1920x1080 baseline plus the entire requested five-resolution matrix. For 4K, the image viewer
+rejected the original PNG, so a 1920-wide JPEG review copy was generated from it and read; the
+original 3840x2160 PNG is intact. This does not count as a 200% or native-4K art audit.
+
+All five matrix captures have no document overflow, no page errors and no failed localhost
+requests, but EACH records a WebSocket closed-before-established warning. Console hygiene is
+therefore not PASS. Compact location labels overlap, compact cards truncate body text, and 4K
+hand art occupies a disproportionately large strip. No new visual quality gate passes.
+
+| Viewport | Actual seats | Match content below visible frame | Public-panel hidden height | Log hidden height |
+| --- | ---: | ---: | ---: | ---: |
+| 1280x720 | 4 | 450px | 36px | 601px |
+| 1366x768 | 4 | 402px | 36px | 601px |
+| 1920x1080 | 4 | 0px | 36px | 584px |
+| 2560x1440 | 4 | 0px | 72px | 522px |
+| 3840x2160 | 4 | 0px | 0px | 522px |
+
+Evidence: .shots/run35-baseline/, .shots/run35-five-seats/report.json and PNGs, and
+.shots/run35-evidence.json. The misleading five-seats directory/report request label must NOT
+be read as actual five-player proof. Read-only SQLite checks confirmed all five tables had four
+seats and phase=playerTurns. harness.mjs uses an innerText helper for the icon-only Increase Players
+button and assumes a starting count of two instead of reading the default four. Fix the accessible
+button lookup and assert actual count before running the five-player worst case.
+
+**Multiplayer baseline:** existing two-browser script reports 8/8 assertions passed with no host or
+guest page errors. It proves code join and own-objective separation/restoration after tab return.
+However, it counts 162 hand-related DOM descendants instead of actual cards and does not compare
+hand identities. Worse, it returns success while the host still has an unresolved group-leader
+choice: the isolated SQLite row for 6PPDGX remained phase=setup. It never revisits the host after
+the guest resolves setup. Thus it is NOT a mid-round reconnection, full-round, exact-state N3/N6,
+three-client, full-game or restart proof. Alternate setup across clients until phase=playerTurns,
+assert actual card identities/seat fields, then run a full round. This correction is still owed.
+Evidence: .shots/multiplayer/multiplayer-report.json and .shots/run35-evidence.json.
+
+**Critics/state:** no agents spawned and no independent verdict was added. Prior card elevation
+and asset/privacy scoped passes are retained; visual-core, motion, UX, N5/N8 and Wingspan remain
+FAIL/unproven. The current strict N3/N6 browser evidence is recorded as incomplete rather than
+inheriting a broader claim from the weak harness. No 60fps, 200%, crowded five-player or clean
+Wingspan comparison was performed. No completion marker was created.
+
+**Next:** approve and push the reviewed STATE/PROGRESS checkpoint, repair these proof-harness
+assumptions within the visual workstream, then start one bounded worker for compact-hand readability
+and wide-screen scaling with a separate harsh critic. Game source/art remained unchanged this run.
+
+Recorded: 2026-09-12 03:20:46 -07:00
+
+The client dev-server output also recorded a WebSocket proxy ECONNABORTED during browser teardown. Both test servers were stopped after capture; the temporary fallback tab was closed. No source fix or runtime-hygiene PASS is claimed.
+
+## Nightly run 36 intent - 2026-09-13 06:30:38 -07:00
+
+Continue the first non-PASS workstream, visual-core, after the retained run-35 checkpoint. Repair
+the screenshot harness so requested player counts and setup completion are asserted from actual
+server state, then take one bounded compact-hand/readability and wide-screen-scaling unit through
+implementation and an independent harsh review. Preserve private/public card semantics and existing
+interaction behavior. Push this intent checkpoint before delegation; do not claim five-player,
+full-round, 200%, clean-console, Wingspan, or AAA completion without fresh evidence.
