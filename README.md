@@ -85,7 +85,9 @@ The client dev server proxies WebSocket traffic to the game server on port 8787.
 
 Players can create a username/password account without an OAuth provider, email
 service, company registration, or Google configuration. Usernames are case-insensitive;
-passwords require 12–128 characters and are stored as salted scrypt hashes.
+New passwords require at least 8 characters, one number, and one special character
+(maximum 128 characters), and are stored as salted scrypt hashes. Existing passwords
+continue to work when signing in.
 Keep passwords safe: self-service password recovery is not implemented.
 
 After signing in, choose **Link local games** to attach games saved by this browser

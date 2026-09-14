@@ -269,8 +269,12 @@ export class GoogleAuth {
     }
     const username = typeof req.body?.username === 'string' ? req.body.username.trim().toLowerCase() : '';
     const password = req.body?.password;
-    if (!/^[a-z0-9_]{3,32}$/.test(username) || typeof password !== 'string' || password.length < 12 || password.length > 128) {
-      res.status(400).json({ message: 'Use a username of 3–32 letters, numbers or underscores and a password of 12–128 characters.' });
+    if (!/^[a-z0-9_]{3,32}$/.test(username) || typeof password !== 'string' || password.length === 0 || password.length > 128) {
+      res.status(400).json({ message: 'Use a username of 3–32 letters, numbers or underscores and a password of at most 128 characters.' });
+      return;
+    }
+    if (register && (password.length < 8 || !/[0-9]/.test(password) || !/[^\p{L}\p{N}\s]/u.test(password))) {
+      res.status(400).json({ message: 'Passwords must contain at least 8 characters, one number, and one special character.' });
       return;
     }
     this.pendingPasswords++;

@@ -1,3 +1,5 @@
+import { scryptSync } from 'node:crypto';
+import { MemoryGameStore } from '../persistence/memoryStore.js';
 import { afterEach, expect, it } from 'vitest';
 import { boot, makeDataDir, removeDataDir, createGame } from './helpers.js';
 import { TestClient } from './testClient.js';
@@ -13,7 +15,7 @@ it('registers without Google, links a local seat, and resumes after restart with
   await local.client.wait('lobby');
   local.client.send({ t: 'startGame' });
   const originalState = await local.client.wait('state');
-  const credentials = { username: 'CloudPlayer', password: 'a sufficiently long password' };
+  const credentials = { username: 'CloudPlayer', password: 'Seven12!' };
   const registration = await post(`${server.url}/auth/register`, credentials);
   expect(registration.status).toBe(200);
   const cookie = registration.headers.get('set-cookie')!.split(';')[0]!;
@@ -52,4 +54,25 @@ it('registers without Google, links a local seat, and resumes after restart with
   expect((await fetch(`${restarted.url}/auth/logout`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://evil.invalid', Cookie: freshCookie }, body: '{}' })).status).toBe(403);
   expect((await post(`${restarted.url}/auth/logout`, {}, freshCookie)).status).toBe(200);
   expect((await (await fetch(`${restarted.url}/api/auth/me`, { headers: { Cookie: freshCookie } })).json()).authenticated).toBe(false);
+});
+
+it('rejects new passwords missing a required component', async () => {
+  const dataDir = makeDataDir(); dirs.push(dataDir);
+  const server = await boot({ dataDir }); servers.push(server);
+  for (const password of ['Short1!', 'NoNumbers!', 'Numbers123', 'Spaces12 ', 'Letters12é']) {
+    const response = await post(`${server.url}/auth/register`, { username: 'policytest', password });
+    expect(response.status).toBe(400);
+    expect((await response.json()).message).toContain('one special character');
+  }
+  expect(server.store.loadAccounts()).toHaveLength(0);
+});
+
+it('still accepts an existing password without a number or special character', async () => {
+  const store = new MemoryGameStore();
+  const password = 'previous long passphrase';
+  const salt = 'legacy-test-salt';
+  const hash = scryptSync(password, salt, 64, { N: 32768, r: 8, p: 3, maxmem: 64 * 1024 * 1024 }).toString('hex');
+  store.saveAccount({ accountId: 'legacy', username: 'legacyuser', name: 'Legacy', email: '', passwordHash: `${salt}:${hash}`, createdAt: 1, lastSeen: 1 });
+  const server = await boot({ store }); servers.push(server);
+  expect((await post(`${server.url}/auth/login`, { username: 'legacyuser', password })).status).toBe(200);
 });

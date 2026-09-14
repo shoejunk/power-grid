@@ -40,8 +40,8 @@ export function AuthControls(): JSX.Element | null {
         <strong>{register ? 'Create account' : 'Sign in'}</strong>
         <p>Save your games to your account and resume on any machine. After signing in, use “Link local games” to connect saves from this browser.</p>
         <label>Username<input autoFocus required autoComplete="username" minLength={3} maxLength={32} pattern="[A-Za-z0-9_]+" value={username} onChange={event => setUsername(event.target.value)} /></label>
-        <label>Password<input required type="password" autoComplete={register ? 'new-password' : 'current-password'} minLength={12} maxLength={128} value={password} onChange={event => setPassword(event.target.value)} /></label>
-        <small>Use 12–128 characters. Keep your password safe; password recovery is not available yet.</small>
+        <label>Password<input required type="password" autoComplete={register ? 'new-password' : 'current-password'} minLength={register ? 8 : undefined} pattern={register ? String.raw`(?=.*[0-9])(?=.*[^\p{L}\p{N}\s]).{8,128}` : undefined} maxLength={128} value={password} onChange={event => setPassword(event.target.value)} /></label>
+        <small>{register && 'Use at least 8 characters, one number, and one special character (maximum 128 characters). '}Keep your password safe; password recovery is not available yet.</small>
         {message && <p role="alert">{message}</p>}
         <button type="submit" disabled={busy}>{busy ? 'Please wait…' : register ? 'Create account' : 'Sign in'}</button>
         <button type="button" disabled={busy} onClick={() => { setRegister(!register); setMessage(''); }}>{register ? 'Already have an account? Sign in' : 'New here? Create account'}</button>
