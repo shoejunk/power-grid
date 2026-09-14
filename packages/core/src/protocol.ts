@@ -48,6 +48,11 @@ export type ServerMessage =
       sessionToken: string;
       playerId: PlayerId;
       gameKey: GameKey;
+      gameId: string;
+      code: string;
+      started: boolean;
+      updatedAt: number;
+      playerName: string;
       /** Present when this seat is associated with a Google account. */
       accountId?: string;
     }

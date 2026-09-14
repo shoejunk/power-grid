@@ -1,4 +1,4 @@
-import { CLOSE, type ClientMessage, type ServerMessage } from '@tt/core';
+import { CLOSE, type ClientMessage, type GameKey, type ServerMessage } from '@tt/core';
 
 import type { ConnectionStatus } from './types';
 
@@ -6,13 +6,23 @@ import type { ConnectionStatus } from './types';
  * Session persistence
  * ------------------------------------------------------------------ */
 
-/** Read only for upgrading a browser from the old anonymous-token build. */
 const LEGACY_SESSION_KEY = 'tt.sessionToken';
+const ANONYMOUS_GAMES_KEY = 'tt.anonymousGames';
+
+export interface AnonymousGame {
+  gameId: string;
+  gameKey: GameKey;
+  code: string;
+  started: boolean;
+  updatedAt: number;
+  playerName: string;
+  sessionToken: string;
+}
 
 /**
- * The local-storage helpers exist only to read and retire the one legacy seat
- * token created by pre-account builds. Normal account sessions use cookies and
- * never depend on browser storage.
+ * Anonymous servers keep the active seat token here so a reload resumes it.
+ * The historical key name is retained so existing browser seats keep working.
+ * Account sessions use cookies and retire this active anonymous token.
  */
 export function readStored(key: string): string | null {
   try {
@@ -34,6 +44,62 @@ export function writeStored(key: string, value: string | null): void {
 export const loadLegacySessionToken = (): string | null => readStored(LEGACY_SESSION_KEY);
 export const clearLegacySessionToken = (): void => writeStored(LEGACY_SESSION_KEY, null);
 export const saveLegacySessionToken = (token: string | null): void => writeStored(LEGACY_SESSION_KEY, token);
+
+function isAnonymousGame(value: unknown): value is AnonymousGame {
+  if (!value || typeof value !== 'object') return false;
+  const game = value as Partial<AnonymousGame>;
+  return typeof game.gameId === 'string'
+    && typeof game.gameKey === 'string'
+    && typeof game.code === 'string'
+    && typeof game.started === 'boolean'
+    && typeof game.updatedAt === 'number'
+    && Number.isFinite(game.updatedAt)
+    && typeof game.playerName === 'string'
+    && typeof game.sessionToken === 'string';
+}
+
+export function loadAnonymousGames(): AnonymousGame[] {
+  const raw = readStored(ANONYMOUS_GAMES_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isAnonymousGame).sort((a, b) => b.updatedAt - a.updatedAt);
+  } catch {
+    return [];
+  }
+}
+
+function saveAnonymousGames(games: AnonymousGame[]): AnonymousGame[] {
+  const sorted = [...games].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 50);
+  writeStored(ANONYMOUS_GAMES_KEY, JSON.stringify(sorted));
+  return sorted;
+}
+
+export function upsertAnonymousGame(game: AnonymousGame): AnonymousGame[] {
+  return saveAnonymousGames([
+    game,
+    ...loadAnonymousGames().filter((candidate) => candidate.gameId !== game.gameId),
+  ]);
+}
+
+export function removeAnonymousGameByToken(sessionToken: string): AnonymousGame[] {
+  return saveAnonymousGames(
+    loadAnonymousGames().filter((game) => game.sessionToken !== sessionToken),
+  );
+}
+
+export function markAnonymousGameStartedByToken(sessionToken: string): AnonymousGame[] {
+  return saveAnonymousGames(
+    loadAnonymousGames().map((game) => (
+      game.sessionToken === sessionToken ? { ...game, started: true } : game
+    )),
+  );
+}
+
+export function removeAnonymousGameById(gameId: string): AnonymousGame[] {
+  return saveAnonymousGames(loadAnonymousGames().filter((game) => game.gameId !== gameId));
+}
 
 /* ------------------------------------------------------------------ *
  * Backoff

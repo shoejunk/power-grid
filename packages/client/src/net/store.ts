@@ -4,7 +4,14 @@ import { create } from 'zustand';
 import {
   GameSocket,
   clearLegacySessionToken,
+  loadAnonymousGames,
+  loadLegacySessionToken,
+  markAnonymousGameStartedByToken,
+  removeAnonymousGameById,
+  removeAnonymousGameByToken,
   saveLegacySessionToken,
+  upsertAnonymousGame,
+  type AnonymousGame,
 } from './socket';
 import type { ConnectionStatus, Toast, ToastInput } from './types';
 import { navigate } from '@/router';
@@ -60,6 +67,7 @@ export interface GameStore {
   myPlayerId: PlayerId | null;
   playerName: string;
   auth: AuthState;
+  anonymousGames: AnonymousGame[];
 
   /* --- server state --- */
   lobby: LobbyState | null;
@@ -120,6 +128,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     games: [],
     loading: true,
   },
+  anonymousGames: loadAnonymousGames(),
 
   lobby: null,
   gameKey: null,
@@ -166,11 +175,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
     switch (message.t) {
       case 'welcome': {
         // Account sessions are recovered through the server's HttpOnly
-        // cookie. Only anonymous legacy servers still need the old browser
-        // token, and an account-bearing welcome retires it immediately.
-        if (message.accountId) clearLegacySessionToken();
-        else saveLegacySessionToken(message.sessionToken);
-        set({ myPlayerId: message.playerId, gameKey: message.gameKey });
+        // cookie. Anonymous seats live in this browser's local game list, and
+        // an account-bearing welcome retires the matching local entry.
+        let anonymousGames = get().anonymousGames;
+        if (message.accountId) {
+          clearLegacySessionToken();
+          anonymousGames = removeAnonymousGameByToken(message.sessionToken);
+        } else {
+          saveLegacySessionToken(message.sessionToken);
+          anonymousGames = upsertAnonymousGame({
+            gameId: message.gameId,
+            gameKey: message.gameKey,
+            code: message.code,
+            started: message.started,
+            updatedAt: message.updatedAt,
+            playerName: message.playerName,
+            sessionToken: message.sessionToken,
+          });
+        }
+        set({
+          myPlayerId: message.playerId,
+          gameKey: message.gameKey,
+          anonymousGames,
+        });
         break;
       }
 
@@ -204,11 +231,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
 
       case 'state': {
+        const token = loadLegacySessionToken();
+        const anonymousGames = token
+          && get().anonymousGames.some((game) => game.sessionToken === token && !game.started)
+          ? markAnonymousGameStartedByToken(token)
+          : get().anonymousGames;
         set({
           state: message.state,
           gameKey: message.gameKey,
           pending: false,
           lastError: null,
+          anonymousGames,
         });
         break;
       }
@@ -222,8 +255,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
          * player. Every other code is a genuine error.
          */
         if (message.code === 'noSession' || message.code === 'unknownSession') {
+          const staleToken = loadLegacySessionToken();
           clearLegacySessionToken();
-          set({ pending: false });
+          set({
+            pending: false,
+            ...(staleToken
+              ? { anonymousGames: removeAnonymousGameByToken(staleToken) }
+              : {}),
+          });
           break;
         }
         set({ lastError: { code: message.code, message: message.message }, pending: false });
@@ -253,7 +292,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
 
       case 'viewingGames': {
-        if (message.quit) clearLegacySessionToken();
+        let anonymousGames = get().anonymousGames;
+        clearLegacySessionToken();
+        if (message.quit) {
+          anonymousGames = removeAnonymousGameById(message.gameId);
+        }
         set({
           lobby: null,
           gameKey: null,
@@ -262,6 +305,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           chat: [],
           lastError: null,
           pending: false,
+          anonymousGames,
         });
         navigate({ name: 'portal' });
         // Membership is server-owned. Refresh after both paths so the portal
@@ -438,6 +482,24 @@ export const net = {
 
   rejoin(sessionToken: string): void {
     socket.send({ t: 'rejoin', sessionToken });
+  },
+
+  /** Resumes one table from this browser's anonymous local game list. */
+  resumeAnonymousGame(gameId: string): void {
+    const game = useGameStore.getState().anonymousGames.find(
+      (candidate) => candidate.gameId === gameId,
+    );
+    if (!game) {
+      useGameStore.getState().pushToast({
+        tone: 'warning',
+        title: 'Game no longer available',
+        message: 'This browser no longer has a saved seat for that table.',
+      });
+      return;
+    }
+    saveLegacySessionToken(game.sessionToken);
+    useGameStore.setState({ pending: true, lastError: null });
+    socket.send({ t: 'rejoin', sessionToken: game.sessionToken });
   },
 
   resumeGame(gameId: string): void {

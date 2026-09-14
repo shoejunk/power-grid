@@ -37,7 +37,14 @@ import { AuthControls } from './AuthControls';
 export function Portal(): JSX.Element {
   const { games, loading, error } = useCatalogue();
   const auth = useGameStore((state) => state.auth);
-  const latestGame = auth.games[0] ?? null;
+  const anonymousGames = useGameStore((state) => state.anonymousGames);
+  const savedGames = auth.account ? auth.games : anonymousGames;
+  const latestGame = savedGames[0] ?? null;
+
+  const resumeGame = (gameId: string): void => {
+    if (auth.account) net.resumeGame(gameId);
+    else net.resumeAnonymousGame(gameId);
+  };
 
   return (
     <div className="tt-screen tt-portal">
@@ -78,7 +85,7 @@ export function Portal(): JSX.Element {
                 variant="live"
                 size="lg"
                 icon={<IconPlay />}
-                onClick={() => net.resumeGame(latestGame.gameId)}
+                onClick={() => resumeGame(latestGame.gameId)}
                 title={`Resume ${latestGame.gameKey} · ${latestGame.code}`}
               >
                 Resume latest game
@@ -99,15 +106,15 @@ export function Portal(): JSX.Element {
             </Button>
           </motion.div>
 
-          {auth.account && auth.games.length > 0 ? (
+          {savedGames.length > 0 ? (
             <motion.div variants={staggerItem} className="tt-account-games">
               <span className="tt-overline">Your games</span>
-              {auth.games.map((game) => (
+              {savedGames.map((game) => (
                 <button
                   key={game.gameId}
                   type="button"
                   className="tt-account-game"
-                  onClick={() => net.resumeGame(game.gameId)}
+                  onClick={() => resumeGame(game.gameId)}
                 >
                   <span>
                     <strong>{games.find((entry) => entry.key === game.gameKey)?.name ?? game.gameKey}</strong>

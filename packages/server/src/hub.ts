@@ -509,6 +509,11 @@ export class GameHub {
       sessionToken: token,
       playerId: session.playerId,
       gameKey: room.gameKey,
+      gameId: room.gameId,
+      code: room.code,
+      started: room.started,
+      updatedAt: room.updatedAt,
+      playerName: seat.name,
       ...(session.accountId ? { accountId: session.accountId } : {}),
     });
     room.sendSnapshot(session.playerId, conn);
@@ -625,6 +630,11 @@ export class GameHub {
       sessionToken: session.token,
       playerId: hostId,
       gameKey,
+      gameId: room.gameId,
+      code: room.code,
+      started: room.started,
+      updatedAt: room.updatedAt,
+      playerName: seat.name,
       ...(session.accountId ? { accountId: session.accountId } : {}),
     });
     room.sendSnapshot(hostId, conn);
@@ -676,6 +686,11 @@ export class GameHub {
       sessionToken: session.token,
       playerId,
       gameKey: room.gameKey,
+      gameId: room.gameId,
+      code: room.code,
+      started: room.started,
+      updatedAt: room.updatedAt,
+      playerName: seat.name,
       ...(session.accountId ? { accountId: session.accountId } : {}),
     });
     room.sendSnapshot(playerId, conn);

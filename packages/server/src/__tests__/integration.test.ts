@@ -47,6 +47,13 @@ describe('multiplayer server', () => {
       expect(host.lobby.hostId).toBe(host.playerId);
       expect(host.lobby.players).toHaveLength(1);
       expect(host.lobby.players[0]).toMatchObject({ name: 'Ada', isHost: true, connected: true });
+      expect(host.client.received.find((message) => message.t === 'welcome')).toMatchObject({
+        gameId: host.lobby.gameId,
+        gameKey: 'stub',
+        code: host.code,
+        started: false,
+        playerName: 'Ada',
+      });
     });
 
     it('lets a second player join by code and broadcasts the lobby to everyone', async () => {
@@ -524,6 +531,16 @@ describe('multiplayer server', () => {
       expect(server.store.loadSessions()).toEqual(
         expect.arrayContaining([expect.objectContaining({ playerId: host.playerId })]),
       );
+
+      host.client.clear();
+      host.client.send({ t: 'rejoin', sessionToken: host.sessionToken });
+      expect(await host.client.wait('welcome')).toMatchObject({
+        gameId: host.lobby.gameId,
+        code: host.code,
+        playerId: host.playerId,
+        playerName: 'Ada',
+      });
+      expect((await host.client.wait('lobby')).lobby.gameId).toBe(host.lobby.gameId);
     });
 
     it('removes an in-progress game when its last human quits', async () => {
