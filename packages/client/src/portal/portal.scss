@@ -861,3 +861,19 @@
     padding-right: var(--tt-space-4);
   }
 }
+
+.tt-account-control { position: relative; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tt-auth-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px; background: #000a; }
+.tt-auth-form {
+  position: relative; max-height: calc(100dvh - 32px); overflow-y: auto;
+  width: min(360px, calc(100vw - 32px)); padding: 20px;
+  display: grid; gap: 12px; border: 1px solid var(--tt-border);
+  border-radius: 12px; background: #192029; color: #f5f5f5;
+  box-shadow: 0 12px 40px #0008;
+  p, small { font-size: 13px; line-height: 1.5; }
+  label { display: grid; gap: 6px; }
+  input, button { padding: 10px; border-radius: 6px; }
+  input { width: 100%; background: #10151c; color: white; border: 1px solid #74808d; }
+  button { cursor: pointer; color: #f5f5f5; background: #344357; border: 1px solid #74808d; }
+  button:focus-visible, input:focus-visible { outline: 2px solid #ffca60; outline-offset: 2px; }
+}

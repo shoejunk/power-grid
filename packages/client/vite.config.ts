@@ -63,7 +63,7 @@ export default defineConfig({
       },
       '/api': {
         target: SERVER_ORIGIN,
-        changeOrigin: true,
+        changeOrigin: false,
       },
       '/auth': {
         target: SERVER_ORIGIN,

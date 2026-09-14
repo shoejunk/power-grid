@@ -81,25 +81,25 @@ npm run dev:client
 
 The client dev server proxies WebSocket traffic to the game server on port 8787.
 
-### Google sign-in
+### Player accounts and cloud saves
 
-Games are account-backed when Google OAuth is configured. Create a Google Cloud
-OAuth client of type **Web application**, add the exact redirect URI
-`https://your.domain/auth/google/callback` (and
-`http://localhost:5173/auth/google/callback` for local development), then set:
+Players can create a username/password account without an OAuth provider, email
+service, company registration, or Google configuration. Usernames are case-insensitive;
+passwords require 12–128 characters and are stored as salted scrypt hashes.
+Keep passwords safe: self-service password recovery is not implemented.
 
-```bash
-TT_GOOGLE_CLIENT_ID=...
-TT_GOOGLE_CLIENT_SECRET=...
-TT_PUBLIC_ORIGIN=https://your.domain
-TT_GOOGLE_AUTH_REQUIRED=true
-```
+After signing in, choose **Link local games** to attach games saved by this browser
+to the account. Only successfully linked entries are removed from browser storage.
+Then sign in on another machine and choose a game from the portal to resume it.
+Game state already lives in the server database; local storage holds seat references,
+not an offline game snapshot. An expired or deleted server game cannot be recovered
+from a local reference. Anonymous play remains available.
 
-The server exchanges the authorization code with Google using PKCE, stores the
-Google subject and account session on the server, and gives the browser only a
-`Secure`/`HttpOnly` account cookie. No game seat token is written to browser
-storage. If the old client left a `tt.sessionToken` behind, the first signed-in
-connection may claim that seat and then retires the legacy token.
+For cloud access, deploy the server with HTTPS, set `TT_PUBLIC_ORIGIN=https://your.domain`,
+and keep `TT_DATA_DIR` on persistent disk with backups. Account records, login sessions,
+and games use that same SQLite database (or the durable JSON fallback). Do not use
+`TT_STORE=memory` in production. Games expire after `TT_GAME_TTL_MS` (30 days by default).
+Legacy Google accounts remain supported when configured, but new accounts need no Google setup.
 
 ## Checks
 

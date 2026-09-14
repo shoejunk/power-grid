@@ -297,6 +297,11 @@ export class GameHub {
    * ---------------------------------------------------------------- */
 
   handleMessage(conn: Connection, message: ClientMessage): void {
+    const ownership = conn.sessionToken ? this.sessions.get(conn.sessionToken)?.accountId : undefined;
+    if (ownership && ownership !== conn.accountId) {
+      conn.close(1008, 'Sign in to resume this linked game');
+      return;
+    }
     switch (message.t) {
       case 'ping':
         conn.send({ t: 'pong' });
@@ -434,7 +439,7 @@ export class GameHub {
     }
     if (token && !this.deps.auth.required && this.resume(conn, token)) return;
     if (this.deps.auth.required && !conn.accountId) {
-      conn.error('authRequired', 'Sign in with Google before creating or joining a game.');
+      conn.error('authRequired', 'Sign in before creating or joining a game.');
       return;
     }
     // No usable session: the client should show the game picker.
@@ -447,7 +452,7 @@ export class GameHub {
       return;
     }
     if (this.deps.auth.required && !conn.accountId) {
-      conn.error('authRequired', 'Sign in with Google before creating or joining a game.');
+      conn.error('authRequired', 'Sign in before creating or joining a game.');
       return;
     }
     conn.error('unknownSession', 'That session is no longer valid. Join the game again by code.');
@@ -457,7 +462,7 @@ export class GameHub {
     if (!conn.accountId) {
       conn.error(
         this.deps.auth.required ? 'authRequired' : 'unknownSession',
-        'Sign in with Google to resume a saved game.',
+        'Sign in to resume a saved game.',
       );
       return;
     }
@@ -478,7 +483,7 @@ export class GameHub {
     if (!session) return false;
     if (conn.accountId !== null) {
       if (session.accountId !== conn.accountId) return false;
-    } else if (this.deps.auth.required) {
+    } else if (session.accountId || this.deps.auth.required) {
       return false;
     }
     const room = this.rooms.get(session.gameId);
@@ -533,7 +538,7 @@ export class GameHub {
   }
 
   /** Claims a pre-authentication seat token once for the currently signed-in account. */
-  private claimLegacySession(token: string, accountId: string): boolean {
+  claimLegacySession(token: string, accountId: string): boolean {
     const session = this.sessions.get(token);
     if (!session || session.accountId) return false;
     const room = this.rooms.get(session.gameId);
@@ -546,6 +551,7 @@ export class GameHub {
     session.accountId = accountId;
     session.lastSeen = Date.now();
     this.deps.store.saveSession(session);
+    room.revokeAnonymousAccess(session.playerId);
     return true;
   }
 
@@ -707,7 +713,7 @@ export class GameHub {
 
   private canPlay(conn: Connection): boolean {
     if (this.deps.auth.required && !conn.accountId) {
-      conn.error('authRequired', 'Sign in with Google before creating or joining a game.');
+      conn.error('authRequired', 'Sign in before creating or joining a game.');
       return false;
     }
     return true;

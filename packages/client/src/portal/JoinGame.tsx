@@ -169,7 +169,7 @@ export function JoinGame({ initialCode }: { initialCode: string | null }): JSX.E
                 ) : null}
 
                 {auth.required && !auth.authenticated ? (
-                  <p className="tt-auth-hint">Sign in with Google above to join this table.</p>
+                  <p className="tt-auth-hint">Sign in above to join this table.</p>
                 ) : null}
 
                 <Button

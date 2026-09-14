@@ -142,6 +142,8 @@ export interface SessionRecord {
 
 /** Durable account profile keyed by Google's stable subject identifier. */
 export interface AccountRecord {
+  username?: string;
+  passwordHash?: string;
   accountId: string;
   email: string;
   name: string;

@@ -137,6 +137,8 @@ interface SessionRow {
 }
 
 interface AccountRow {
+  username: string | null;
+  passwordHash: string | null;
   accountId: string;
   email: string;
   name: string;
@@ -219,6 +221,11 @@ export class SqliteGameStore implements GameStore {
       // until a future start creates a complete stream with its setup event.
       this.db.exec('ALTER TABLE games ADD COLUMN auditSequence INTEGER');
     }
+    const accountColumns = new Set((this.db.prepare('PRAGMA table_info(accounts)').all() as unknown as { name: string }[]).map(c => c.name));
+    for (const column of ['username', 'passwordHash']) {
+      if (!accountColumns.has(column)) this.db.exec(`ALTER TABLE accounts ADD COLUMN ${column} TEXT`);
+    }
+    this.db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_username ON accounts(username)');
     const sessionColumns = new Set(
       (this.db.prepare('PRAGMA table_info(sessions)').all() as unknown as { name: string }[]).map(
         (c) => c.name,
@@ -517,6 +524,8 @@ export class SqliteGameStore implements GameStore {
     const rows = this.db.prepare('SELECT * FROM accounts').all() as unknown as AccountRow[];
     return rows.map((row) => ({
       accountId: row.accountId,
+      ...(row.username ? { username: row.username } : {}),
+      ...(row.passwordHash ? { passwordHash: row.passwordHash } : {}),
       email: row.email,
       name: row.name,
       ...(row.picture !== null ? { picture: row.picture } : {}),
@@ -528,10 +537,11 @@ export class SqliteGameStore implements GameStore {
   saveAccount(account: AccountRecord): void {
     this.db
       .prepare(
-        `INSERT INTO accounts (accountId, email, name, picture, createdAt, lastSeen)
-         VALUES (?, ?, ?, ?, ?, ?)
+        `INSERT INTO accounts (accountId, email, name, picture, createdAt, lastSeen, username, passwordHash)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(accountId) DO UPDATE SET
            email=excluded.email, name=excluded.name, picture=excluded.picture,
+           username=excluded.username, passwordHash=excluded.passwordHash,
            lastSeen=excluded.lastSeen`,
       )
       .run(
@@ -541,6 +551,8 @@ export class SqliteGameStore implements GameStore {
         account.picture ?? null,
         account.createdAt,
         account.lastSeen,
+        account.username ?? null,
+        account.passwordHash ?? null,
       );
   }
 

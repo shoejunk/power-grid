@@ -34,6 +34,29 @@ export function createHttpApp(deps: HttpAppDeps): Express {
   app.use(cors());
   app.use(express.json({ limit: '32kb' }));
 
+  // Require same-origin JSON writes; browsers cannot submit these via cross-site forms.
+  app.use(['/auth', '/api/auth'], (req, res, next) => {
+    if (req.method === 'POST' && (!req.is('application/json') ||
+        (req.get('origin') && req.get('origin') !== (config.publicOrigin ?? `${req.protocol}://${req.get('host')}`)))) {
+      res.status(403).json({ message: 'Please use the account form on this site.' });
+      return;
+    }
+    next();
+  });
+  app.post('/auth/register', (req, res) => { void deps.auth.passwordLogin(req, res, true); });
+  app.post('/auth/login', (req, res) => { void deps.auth.passwordLogin(req, res, false); });
+  app.post('/api/auth/link-games', (req, res) => {
+    const accountId = deps.auth.accountIdForRequest(req);
+    if (!accountId) { res.status(401).json({ message: 'Sign in first.' }); return; }
+    const tokens: unknown = req.body?.tokens;
+    if (!Array.isArray(tokens) || tokens.length > 100 || tokens.some(t => typeof t !== 'string' || t.length > 256)) {
+      res.status(400).json({ message: 'Invalid local games.' }); return;
+    }
+    const linked = tokens.filter(token => deps.hub.claimLegacySession(token, accountId) ||
+      deps.store.loadSessions().some(session => session.token === token && session.accountId === accountId));
+    res.json({ linked });
+  });
+
   app.get('/auth/google/start', (req: Request, res: Response) => {
     deps.auth.start(req, res);
   });

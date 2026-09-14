@@ -74,6 +74,10 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
   const connections = new Set<Connection>();
 
   wss.on('connection', (ws, req) => {
+    if (config.publicOrigin && req.headers.origin && req.headers.origin !== config.publicOrigin.replace(/\/$/, '')) {
+      ws.close(1008, 'Invalid origin');
+      return;
+    }
     const conn = new Connection(ws, {
       maxBufferedBytes: config.maxBufferedBytes,
       maxMessagesPerSecond: config.maxMessagesPerSecond,
@@ -101,6 +105,10 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
         return;
       }
       try {
+        if (conn.accountId && auth.accountIdForCookie(req.headers.cookie) !== conn.accountId) {
+          ws.close(1008, 'Please sign in again');
+          return;
+        }
         hub.handleMessage(conn, parsed.message);
       } catch (err) {
         // A bug in one handler must never take the process down mid-game.

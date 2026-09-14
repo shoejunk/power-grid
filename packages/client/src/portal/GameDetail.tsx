@@ -194,7 +194,7 @@ export function GameDetail({ gameKey }: { gameKey: string }): JSX.Element {
               )}
 
               {auth.required && !auth.authenticated ? (
-                <p className="tt-auth-hint">Sign in with Google above to create a persistent table.</p>
+                <p className="tt-auth-hint">Sign in above to create a persistent table.</p>
               ) : null}
 
               {lastError !== null ? (

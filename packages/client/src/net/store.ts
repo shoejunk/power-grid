@@ -428,31 +428,58 @@ export const net = {
   },
 
   login(): void {
-    window.location.assign('/auth/google/start');
+    window.dispatchEvent(new Event('tt:login'));
+  },
+
+  async authenticate(username: string, password: string, register: boolean): Promise<void> {
+    const response = await fetch(register ? '/auth/register' : '/auth/login', {
+      method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message ?? 'Sign-in failed.');
+    socket.disconnect();
+    await net.loadAuth();
+    socket.connect();
+  },
+
+  async linkLocalGames(): Promise<number> {
+    const tokens = [...new Set([...loadAnonymousGames().map(game => game.sessionToken), loadLegacySessionToken()].filter((token): token is string => !!token))];
+    const response = await fetch('/api/auth/link-games', {
+      method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tokens }),
+    });
+    if (!response.ok) throw new Error('Could not link local games. Please try again.');
+    const result = await response.json() as { linked: string[] };
+    for (const token of result.linked) {
+      removeAnonymousGameByToken(token);
+      if (loadLegacySessionToken() === token) clearLegacySessionToken();
+    }
+    useGameStore.setState({ anonymousGames: loadAnonymousGames() });
+    await net.loadAuth();
+    return result.linked.length;
   },
 
   async logout(): Promise<void> {
-    try {
-      await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' });
-    } finally {
-      socket.disconnect();
-      clearLegacySessionToken();
-      useGameStore.setState({
-        auth: {
-          configured: useGameStore.getState().auth.configured,
-          required: useGameStore.getState().auth.required,
-          authenticated: false,
-          account: null,
-          games: [],
-          loading: false,
-        },
-        lobby: null,
-        state: null,
-        gameKey: null,
-        myPlayerId: null,
-        chat: [],
-      });
-    }
+    const response = await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (!response.ok) throw new Error('Sign out failed.');
+    socket.disconnect();
+    clearLegacySessionToken();
+    useGameStore.setState({
+      auth: {
+        configured: useGameStore.getState().auth.configured,
+        required: useGameStore.getState().auth.required,
+        authenticated: false,
+        account: null,
+        games: [],
+        loading: false,
+      },
+      lobby: null,
+      state: null,
+      gameKey: null,
+      myPlayerId: null,
+      chat: [],
+    });
   },
 
   stop(): void {

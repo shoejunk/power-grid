@@ -1,12 +1,12 @@
 /**
- * Google OpenID Connect authentication.
+ * Password accounts with optional legacy Google OpenID Connect authentication.
  *
  * The browser only receives an opaque HttpOnly cookie. Google identifiers and
  * login sessions stay on the server, which lets a player recover every seat
  * from a different machine without putting a bearer token in localStorage.
  */
 
-import { createHash, randomBytes } from 'node:crypto';
+import { scrypt, timingSafeEqual, createHash, randomBytes } from 'node:crypto';
 import type { Request, Response } from 'express';
 import type { ServerConfig } from './config.js';
 import type { Logger } from './logger.js';
@@ -104,14 +104,16 @@ export class GoogleAuth {
     },
   ) {}
 
-  get configured(): boolean {
+  get configured(): boolean { return true; }
+
+  private get googleConfigured(): boolean {
     return Boolean(
       this.deps.config.googleClientId?.trim() && this.deps.config.googleClientSecret?.trim(),
     );
   }
 
   get required(): boolean {
-    return this.configured && this.deps.config.googleAuthRequired;
+    return this.googleConfigured && this.deps.config.googleAuthRequired;
   }
 
   /** Restores account profiles and server-side login sessions at boot. */
@@ -125,7 +127,7 @@ export class GoogleAuth {
         this.sessions.set(session.token, session);
       }
     }
-    if (this.configured) {
+    if (this.googleConfigured) {
       this.deps.logger.info('Google authentication enabled', { required: this.required });
     } else if (this.deps.config.googleClientId || this.deps.config.googleClientSecret) {
       this.deps.logger.warn('Google authentication is disabled because credentials are incomplete');
@@ -153,7 +155,7 @@ export class GoogleAuth {
 
   /** Starts the authorization-code + PKCE flow. */
   start(req: Request, res: Response): void {
-    if (!this.configured) {
+    if (!this.googleConfigured) {
       res.status(503).json({ ok: false, code: 'authNotConfigured' });
       return;
     }
@@ -189,7 +191,7 @@ export class GoogleAuth {
 
   /** Completes the authorization-code exchange and establishes the account cookie. */
   async callback(req: Request, res: Response): Promise<void> {
-    if (!this.configured) {
+    if (!this.googleConfigured) {
       res.status(503).json({ ok: false, code: 'authNotConfigured' });
       return;
     }
@@ -246,6 +248,63 @@ export class GoogleAuth {
         error: error instanceof Error ? error.message : String(error),
       });
       res.status(502).json({ ok: false, code: 'authExchangeFailed' });
+    }
+  }
+
+  private readonly loginAttempts = new Map<string, { count: number; until: number }>();
+  private pendingPasswords = 0;
+
+  async passwordLogin(req: Request, res: Response, register: boolean): Promise<void> {
+    const now = Date.now();
+    for (const [key, value] of this.loginAttempts) {
+      if (value.until <= now) this.loginAttempts.delete(key);
+    }
+    const ip = req.ip ?? 'unknown';
+    const attempt = this.loginAttempts.get(ip) ?? { count: 0, until: now + 15 * 60_000 };
+    attempt.count++;
+    this.loginAttempts.set(ip, attempt);
+    if (attempt.count > 30 || this.pendingPasswords >= 4) {
+      res.status(429).json({ message: 'Too many attempts. Please try again later.' });
+      return;
+    }
+    const username = typeof req.body?.username === 'string' ? req.body.username.trim().toLowerCase() : '';
+    const password = req.body?.password;
+    if (!/^[a-z0-9_]{3,32}$/.test(username) || typeof password !== 'string' || password.length < 12 || password.length > 128) {
+      res.status(400).json({ message: 'Use a username of 3–32 letters, numbers or underscores and a password of 12–128 characters.' });
+      return;
+    }
+    this.pendingPasswords++;
+    try {
+      let account = [...this.accounts.values()].find((value) => value.username === username);
+      const salt = account?.passwordHash?.split(':')[0] ?? randomBytes(16).toString('hex');
+      const derived = await new Promise<Buffer>((resolve, reject) => {
+        scrypt(password, salt, 64, { N: 32768, r: 8, p: 3, maxmem: 64 * 1024 * 1024 }, (error, key) => error ? reject(error) : resolve(key));
+      });
+      if (register) {
+        // Recheck after asynchronous hashing to prevent concurrent duplicate registrations.
+        if ([...this.accounts.values()].some((value) => value.username === username)) {
+          res.status(409).json({ message: 'That username is unavailable.' });
+          return;
+        }
+        account = { accountId: `local:${randomBytes(24).toString('hex')}`, username, passwordHash: `${salt}:${derived.toString('hex')}`, email: '', name: username, createdAt: now, lastSeen: now };
+        this.deps.store.saveAccount(account);
+        this.accounts.set(account.accountId, account);
+      } else {
+        const expected = Buffer.from(account?.passwordHash?.split(':')[1] ?? '', 'hex');
+        if (!account || expected.length !== derived.length || !timingSafeEqual(expected, derived)) {
+          res.status(401).json({ message: 'Incorrect username or password.' });
+          return;
+        }
+      }
+      const session: AuthSessionRecord = { token: randomBytes(32).toString('base64url'), accountId: account.accountId, createdAt: now, lastSeen: now, expiresAt: now + this.deps.config.authSessionTtlMs };
+      this.deps.store.saveAuthSession(session);
+      this.sessions.set(session.token, session);
+      res.setHeader('Set-Cookie', cookie(AUTH_COOKIE, session.token, { maxAge: this.deps.config.authSessionTtlMs / 1000, secure: this.cookieSecure(req) }));
+      res.json({ ok: true });
+    } catch {
+      res.status(500).json({ message: 'Unable to save your account. Please try again.' });
+    } finally {
+      this.pendingPasswords--;
     }
   }
 

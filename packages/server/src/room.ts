@@ -207,6 +207,15 @@ export class GameRoom {
     this.rescheduleAutoAction();
   }
 
+  /** End anonymous access when a seat is linked through the account page. */
+  revokeAnonymousAccess(playerId: PlayerId): void {
+    const conn = this.sockets.get(playerId);
+    if (conn && !conn.accountId) {
+      this.detach(playerId, conn);
+      conn.close(1008, 'Sign in to resume this linked game');
+    }
+  }
+
   /** Socket closed. The seat stays; only presence changes. */
   detach(playerId: PlayerId, conn: Connection): boolean {
     const current = this.sockets.get(playerId);
