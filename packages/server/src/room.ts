@@ -81,8 +81,8 @@ export class GameRoom {
   readonly createdAt: number;
   updatedAt: number;
 
-  /** Live sockets, keyed by seat. Never persisted. */
-  private readonly sockets = new Map<PlayerId, Connection>();
+  /** Live sockets, grouped by seat. Never persisted. */
+  private readonly sockets = new Map<PlayerId, Set<Connection>>();
   private turnTimer: NodeJS.Timeout | null = null;
   /** Game mutations waiting for the next atomic snapshot commit. */
   private pendingAudit: GameAuditEventInput[] = [];
@@ -153,7 +153,7 @@ export class GameRoom {
     const seat = this.seat(playerId);
     if (!seat) return false;
     if (seat.isBot) return true;
-    return this.sockets.has(playerId);
+    return (this.sockets.get(playerId)?.size ?? 0) > 0;
   }
 
   get humanSeats(): Seat[] {
@@ -189,18 +189,14 @@ export class GameRoom {
    * Socket attachment
    * ---------------------------------------------------------------- */
 
-  /**
-   * Binds a socket to a seat. Any previous socket for the same seat is closed
-   * first — a second tab takes over rather than fighting for the seat.
-   */
+  /** Binds a socket to a seat without displacing the player's other devices. */
   attach(playerId: PlayerId, conn: Connection): void {
-    const existing = this.sockets.get(playerId);
-    if (existing && existing !== conn) {
-      this.deps.logger.debug('Replacing socket for seat', { gameId: this.gameId, playerId });
-      existing.playerId = null; // stop its close handler from marking us offline
-      existing.close(CLOSE.REPLACED, 'replaced by a newer connection');
+    let connections = this.sockets.get(playerId);
+    if (!connections) {
+      connections = new Set();
+      this.sockets.set(playerId, connections);
     }
-    this.sockets.set(playerId, conn);
+    connections.add(conn);
     conn.playerId = playerId;
     conn.gameId = this.gameId;
     this.syncPresence();
@@ -209,21 +205,34 @@ export class GameRoom {
 
   /** End anonymous access when a seat is linked through the account page. */
   revokeAnonymousAccess(playerId: PlayerId): void {
-    const conn = this.sockets.get(playerId);
-    if (conn && !conn.accountId) {
-      this.detach(playerId, conn);
-      conn.close(1008, 'Sign in to resume this linked game');
+    const connections = this.sockets.get(playerId);
+    if (!connections) return;
+    for (const conn of [...connections]) {
+      if (!conn.accountId) {
+        this.detach(playerId, conn);
+        conn.close(1008, 'Sign in to resume this linked game');
+      }
     }
   }
 
   /** Socket closed. The seat stays; only presence changes. */
   detach(playerId: PlayerId, conn: Connection): boolean {
-    const current = this.sockets.get(playerId);
-    if (current !== conn) return false;
-    this.sockets.delete(playerId);
+    const connections = this.sockets.get(playerId);
+    if (!connections?.delete(conn)) return false;
+    if (connections.size === 0) this.sockets.delete(playerId);
     this.syncPresence();
     this.rescheduleAutoAction();
     return true;
+  }
+
+  /** Detaches every device for a seat when the player explicitly quits. */
+  detachAll(playerId: PlayerId): Connection[] {
+    const connections = this.sockets.get(playerId);
+    if (!connections) return [];
+    this.sockets.delete(playerId);
+    this.syncPresence();
+    this.rescheduleAutoAction();
+    return [...connections];
   }
 
   /* ---------------------------------------------------------------- *
@@ -300,14 +309,17 @@ export class GameRoom {
 
   broadcastLobby(): void {
     const lobby = this.toLobbyState();
-    for (const [, conn] of this.sockets) conn.send({ t: 'lobby', lobby });
+    for (const connections of this.sockets.values()) {
+      for (const conn of connections) conn.send({ t: 'lobby', lobby });
+    }
   }
 
   broadcastState(): void {
     if (this.state === null || this.state === undefined) return;
     this.syncPresence();
-    for (const [playerId, conn] of this.sockets) {
-      conn.send({ t: 'state', gameKey: this.gameKey, state: this.stateFor(playerId) });
+    for (const [playerId, connections] of this.sockets) {
+      const message = { t: 'state' as const, gameKey: this.gameKey, state: this.stateFor(playerId) };
+      for (const conn of connections) conn.send(message);
     }
   }
 
@@ -453,13 +465,16 @@ export class GameRoom {
       return fail('gameStarted', 'Players cannot be removed from a game in progress.');
     }
     this.seats = this.seats.filter((s) => s.playerId !== targetId);
-    const conn = this.sockets.get(targetId);
-    if (conn) {
-      conn.send({ t: 'error', code: 'kicked', message: 'The host removed you from the game.' });
-      conn.playerId = null;
-      conn.gameId = null;
+    const connections = this.sockets.get(targetId);
+    if (connections) {
+      for (const conn of connections) {
+        conn.send({ t: 'error', code: 'kicked', message: 'The host removed you from the game.' });
+        conn.playerId = null;
+        conn.gameId = null;
+        conn.sessionToken = null;
+        conn.close(CLOSE.NORMAL, 'kicked');
+      }
       this.sockets.delete(targetId);
-      conn.close(CLOSE.NORMAL, 'kicked');
     }
     return done;
   }
@@ -764,7 +779,9 @@ export class GameRoom {
       this.chat = this.chat.slice(-this.deps.config.chatHistoryLimit);
     }
     const out: ChatMessageOut = { t: 'chat', from: entry.from, name: entry.name, text: entry.text, at: entry.at };
-    for (const [, conn] of this.sockets) conn.send(out);
+    for (const connections of this.sockets.values()) {
+      for (const conn of connections) conn.send(out);
+    }
     return out;
   }
 
@@ -889,7 +906,9 @@ export class GameRoom {
   dispose(closeCode: number = CLOSE.SHUTDOWN, reason = 'server shutting down'): void {
     this.disposed = true;
     this.clearTurnTimer();
-    for (const [, conn] of this.sockets) conn.close(closeCode, reason);
+    for (const connections of this.sockets.values()) {
+      for (const conn of connections) conn.close(closeCode, reason);
+    }
     this.sockets.clear();
   }
 }

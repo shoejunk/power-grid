@@ -400,14 +400,56 @@ describe('multiplayer server', () => {
       expect((await fresh.wait('error')).code).toBe('unknownSession');
     });
 
-    it('lets a rejoin take over the seat from a stale socket', async () => {
+    it('keeps multiple devices attached to the same seat and lets either one act', async () => {
+      const host = track(await createGame(server, 'Ada'));
+      const guest = track(await joinGame(server, host.code, 'Grace'));
+      guest.client.send({ t: 'setReady', ready: true });
+      await host.client.waitLobby((l) => l.players.every((p) => p.ready || p.isHost));
+      host.client.send({ t: 'startGame' });
+      await host.client.wait('state');
+      await guest.client.wait('state');
+
+      const second = await TestClient.connect(server.wsUrl);
+      openClients.push(second);
+      second.send({ t: 'rejoin', sessionToken: host.sessionToken });
+      expect((await second.wait('welcome')).playerId).toBe(host.playerId);
+      await second.wait('state');
+
+      host.client.clear();
+      second.clear();
+      guest.client.clear();
+      second.send({ t: 'action', action: { type: 'claim', itemId: 5, cost: 7 } });
+      await host.client.waitState((s) => s.activePlayerId === guest.playerId);
+      await second.waitState((s) => s.activePlayerId === guest.playerId);
+
+      guest.client.send({ t: 'action', action: { type: 'pass' } });
+      await host.client.waitState((s) => s.activePlayerId === host.playerId);
+      await second.waitState((s) => s.activePlayerId === host.playerId);
+
+      host.client.send({ t: 'action', action: { type: 'pass' } });
+      await second.waitState((s) => s.activePlayerId === guest.playerId);
+
+      second.clear();
+      guest.client.clear();
+      await second.close();
+      const stillOnline = await guest.client.waitLobby(
+        (l) => l.players.find((p) => p.id === host.playerId)?.connected === true,
+      );
+      expect(stillOnline.lobby.players.find((p) => p.id === host.playerId)?.connected).toBe(true);
+    });
+
+    it('applies an explicit quit to every device attached to the seat', async () => {
       const host = track(await createGame(server, 'Ada'));
       const second = await TestClient.connect(server.wsUrl);
       openClients.push(second);
       second.send({ t: 'rejoin', sessionToken: host.sessionToken });
       await second.wait('welcome');
-      // The original socket is closed by the server, not left fighting for the seat.
-      await expect(host.client.wait('lobby', 1500)).rejects.toThrow();
+
+      host.client.clear();
+      second.clear();
+      second.send({ t: 'leaveGame' });
+      await expect(host.client.wait('viewingGames')).resolves.toMatchObject({ quit: true });
+      await expect(second.wait('viewingGames')).resolves.toMatchObject({ quit: true });
     });
 
     it('refuses a brand-new join to a started game but still allows rejoin by token', async () => {

@@ -744,10 +744,12 @@ export class GameHub {
     const { room, playerId } = bound;
     const gameId = room.gameId;
 
-    room.detach(playerId, conn);
-    conn.playerId = null;
-    conn.gameId = null;
-    conn.sessionToken = null;
+    const devices = room.detachAll(playerId);
+    for (const device of devices) {
+      device.playerId = null;
+      device.gameId = null;
+      device.sessionToken = null;
+    }
 
     if (!room.started) {
       room.seats = room.seats.filter((s) => s.playerId !== playerId);
@@ -755,7 +757,7 @@ export class GameHub {
       room.promoteHostIfNeeded(playerId);
       if (room.humanSeats.length === 0) {
         this.destroyRoom(room, 'last player left the lobby');
-        conn.send({ t: 'viewingGames', gameId, quit: true });
+        for (const device of devices) device.send({ t: 'viewingGames', gameId, quit: true });
         return;
       }
     } else {
@@ -765,7 +767,7 @@ export class GameHub {
       room.promoteHostIfNeeded(playerId);
       if (room.humanSeats.length === 0) {
         this.destroyRoom(room, 'last human quit the game');
-        conn.send({ t: 'viewingGames', gameId, quit: true });
+        for (const device of devices) device.send({ t: 'viewingGames', gameId, quit: true });
         return;
       }
     }
@@ -773,7 +775,7 @@ export class GameHub {
     room.persist();
     room.broadcast();
     room.rescheduleAutoAction();
-    conn.send({ t: 'viewingGames', gameId, quit: true });
+    for (const device of devices) device.send({ t: 'viewingGames', gameId, quit: true });
   }
 
   /** Called when a socket dies for any reason. Seats and host ownership survive. */
