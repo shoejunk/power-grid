@@ -10,6 +10,7 @@ import type {
   GameAuditEventInput,
   GameStore,
   PersistedGame,
+  PushSubscriptionRecord,
   SessionRecord,
 } from './types.js';
 
@@ -20,6 +21,7 @@ export class MemoryGameStore implements GameStore {
   private sessions = new Map<string, SessionRecord>();
   private accounts = new Map<string, AccountRecord>();
   private authSessions = new Map<string, AuthSessionRecord>();
+  private pushSubscriptions = new Map<string, PushSubscriptionRecord>();
   private auditEvents = new Map<string, GameAuditEvent[]>();
 
   loadGames(): PersistedGame[] {
@@ -97,6 +99,18 @@ export class MemoryGameStore implements GameStore {
 
   deleteAuthSession(token: string): void {
     this.authSessions.delete(token);
+  }
+
+  loadPushSubscriptions(): PushSubscriptionRecord[] {
+    return [...this.pushSubscriptions.values()].map((subscription) => ({ ...subscription }));
+  }
+
+  savePushSubscription(subscription: PushSubscriptionRecord): void {
+    this.pushSubscriptions.set(subscription.subscriptionId, { ...subscription });
+  }
+
+  deletePushSubscription(subscriptionId: string): void {
+    this.pushSubscriptions.delete(subscriptionId);
   }
 
   close(): void {

@@ -8,6 +8,7 @@ import { JoinGame } from './portal/JoinGame';
 import { Lobby } from './portal/Lobby';
 import { Portal } from './portal/Portal';
 import { GameDetail } from './portal/GameDetail';
+import { NotificationSettings } from './portal/NotificationSettings';
 import { NotFound } from './portal/NotFound';
 import { useRoute } from './router';
 import { ErrorBoundary } from '@tt/ui';
@@ -104,6 +105,7 @@ export function App(): JSX.Element {
       </GameTheme>
 
       <Toaster />
+      <NotificationSettings />
     </MotionConfig>
   );
 }

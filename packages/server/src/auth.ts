@@ -26,6 +26,7 @@ const GOOGLE_USERINFO_URL = 'https://openidconnect.googleapis.com/v1/userinfo';
 export interface PublicAccount {
   id: string;
   email: string;
+  emailVerified: boolean;
   name: string;
   picture?: string;
 }
@@ -219,8 +220,10 @@ export class GoogleAuth {
       const now = Date.now();
       const previous = this.accounts.get(profile.accountId);
       const account: AccountRecord = {
+        ...previous,
         accountId: profile.accountId,
         email: profile.email,
+        emailVerified: profile.emailVerified || (previous?.email === profile.email && previous.emailVerified === true),
         name: profile.name,
         ...(profile.picture ? { picture: profile.picture } : {}),
         createdAt: previous?.createdAt ?? now,
@@ -290,7 +293,7 @@ export class GoogleAuth {
           res.status(409).json({ message: 'That username is unavailable.' });
           return;
         }
-        account = { accountId: `local:${randomBytes(24).toString('hex')}`, username, passwordHash: `${salt}:${derived.toString('hex')}`, email: '', name: username, createdAt: now, lastSeen: now };
+        account = { accountId: `local:${randomBytes(24).toString('hex')}`, username, passwordHash: `${salt}:${derived.toString('hex')}`, email: '', emailVerified: false, emailTurnAlerts: false, name: username, createdAt: now, lastSeen: now };
         this.deps.store.saveAccount(account);
         this.accounts.set(account.accountId, account);
       } else {
@@ -352,15 +355,28 @@ export class GoogleAuth {
     return {
       id: account.accountId,
       email: account.email,
+      emailVerified: account.emailVerified === true,
       name: account.name,
       ...(account.picture ? { picture: account.picture } : {}),
     };
   }
 
+  /** Account profile used by authenticated account settings routes. */
+  getAccount(accountId: string): AccountRecord | null {
+    const account = this.accounts.get(accountId);
+    return account ? structuredClone(account) : null;
+  }
+
+  /** Keeps the in-memory authentication view and durable profile in sync. */
+  saveAccount(account: AccountRecord): void {
+    this.accounts.set(account.accountId, structuredClone(account));
+    this.deps.store.saveAccount(account);
+  }
+
   private async exchangeCode(
     code: string,
     attempt: OAuthAttempt,
-  ): Promise<{ accountId: string; email: string; name: string; picture?: string }> {
+  ): Promise<{ accountId: string; email: string; emailVerified: boolean; name: string; picture?: string }> {
     const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -394,6 +410,7 @@ export class GoogleAuth {
     return {
       accountId,
       email: email.slice(0, 320),
+      emailVerified: userBody.email_verified === true,
       name,
       ...(picture && /^https:\/\//i.test(picture) ? { picture } : {}),
     };

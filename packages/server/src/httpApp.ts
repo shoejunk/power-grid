@@ -16,6 +16,7 @@ import type { GameHub } from './hub.js';
 import type { GoogleAuth } from './auth.js';
 import type { Logger } from './logger.js';
 import type { GameStore } from './persistence/types.js';
+import type { TurnNotifications } from './notifications.js';
 
 export interface HttpAppDeps {
   config: ServerConfig;
@@ -24,6 +25,7 @@ export interface HttpAppDeps {
   logger: Logger;
   startedAt: number;
   auth: GoogleAuth;
+  notifications: TurnNotifications;
 }
 
 export function createHttpApp(deps: HttpAppDeps): Express {
@@ -35,7 +37,7 @@ export function createHttpApp(deps: HttpAppDeps): Express {
   app.use(express.json({ limit: '32kb' }));
 
   // Require same-origin JSON writes; browsers cannot submit these via cross-site forms.
-  app.use(['/auth', '/api/auth'], (req, res, next) => {
+  app.use(['/auth', '/api/auth', '/api/notifications'], (req, res, next) => {
     if (req.method === 'POST' && (!req.is('application/json') ||
         (req.get('origin') && req.get('origin') !== (config.publicOrigin ?? `${req.protocol}://${req.get('host')}`)))) {
       res.status(403).json({ message: 'Please use the account form on this site.' });
@@ -55,6 +57,72 @@ export function createHttpApp(deps: HttpAppDeps): Express {
     const linked = tokens.filter(token => deps.hub.claimLegacySession(token, accountId) ||
       deps.store.loadSessions().some(session => session.token === token && session.accountId === accountId));
     res.json({ linked });
+  });
+
+  app.get('/api/notifications/config', (_req, res) => {
+    res.json(deps.notifications.publicConfig());
+  });
+
+  app.post('/api/notifications/settings', (req, res) => {
+    const accountId = deps.auth.accountIdForRequest(req);
+    const sessionToken = typeof req.body?.sessionToken === 'string' ? req.body.sessionToken : null;
+    try {
+      res.json(deps.notifications.settings(accountId, sessionToken));
+    } catch (error) {
+      res.status(400).json({ message: error instanceof Error ? error.message : 'Unable to load alert settings.' });
+    }
+  });
+
+  app.post('/api/notifications/push/subscribe', (req, res) => {
+    if (!deps.notifications.publicConfig().pushEnabled) {
+      res.status(503).json({ message: 'Browser push is not configured on this server.' });
+      return;
+    }
+    const accountId = deps.auth.accountIdForRequest(req);
+    const sessionToken = typeof req.body?.sessionToken === 'string' ? req.body.sessionToken : null;
+    try {
+      deps.notifications.savePushSubscription(accountId, sessionToken, req.body?.subscription);
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(400).json({ message: error instanceof Error ? error.message : 'Unable to enable browser alerts.' });
+    }
+  });
+
+  app.post('/api/notifications/push/unsubscribe', (req, res) => {
+    const accountId = deps.auth.accountIdForRequest(req);
+    const sessionToken = typeof req.body?.sessionToken === 'string' ? req.body.sessionToken : null;
+    try {
+      deps.notifications.removePushSubscription(accountId, sessionToken, req.body?.endpoint);
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(400).json({ message: error instanceof Error ? error.message : 'Unable to disable browser alerts.' });
+    }
+  });
+
+  app.post('/api/notifications/email', async (req, res) => {
+    const accountId = deps.auth.accountIdForRequest(req);
+    if (!accountId) { res.status(401).json({ message: 'Sign in to manage email alerts.' }); return; }
+    if (req.body?.enabled === true && !deps.notifications.publicConfig().emailEnabled) {
+      res.status(503).json({ message: 'Email alerts are not configured on this server.' });
+      return;
+    }
+    try {
+      const result = await deps.notifications.updateEmailAlerts(accountId, req.body?.email, req.body?.enabled);
+      res.json({ ok: true, ...result });
+    } catch (error) {
+      res.status(400).json({ message: error instanceof Error ? error.message : 'Unable to update email alerts.' });
+    }
+  });
+
+  app.post('/api/notifications/email/verify', (req, res) => {
+    const accountId = deps.auth.accountIdForRequest(req);
+    if (!accountId) { res.status(401).json({ message: 'Sign in to verify your email.' }); return; }
+    try {
+      deps.notifications.verifyEmail(accountId, req.body?.code);
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(400).json({ message: error instanceof Error ? error.message : 'Unable to verify that email.' });
+    }
   });
 
   app.get('/auth/google/start', (req: Request, res: Response) => {

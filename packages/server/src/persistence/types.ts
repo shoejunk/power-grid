@@ -146,8 +146,28 @@ export interface AccountRecord {
   passwordHash?: string;
   accountId: string;
   email: string;
+  emailVerified?: boolean;
+  notificationEmail?: string;
+  notificationEmailVerified?: boolean;
+  emailTurnAlerts?: boolean;
+  pendingNotificationEmail?: string;
+  notificationEmailVerificationHash?: string;
+  notificationEmailVerificationExpiresAt?: number;
   name: string;
   picture?: string;
+  createdAt: number;
+  lastSeen: number;
+}
+
+/** A browser push endpoint belongs to one account or one anonymous game seat. */
+export interface PushSubscriptionRecord {
+  subscriptionId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  accountId?: string;
+  /** SHA-256 of the seat bearer token, never the token itself. */
+  sessionTokenHash?: string;
   createdAt: number;
   lastSeen: number;
 }
@@ -188,6 +208,10 @@ export interface GameStore {
   loadAuthSessions(): AuthSessionRecord[];
   saveAuthSession(session: AuthSessionRecord): void;
   deleteAuthSession(token: string): void;
+
+  loadPushSubscriptions(): PushSubscriptionRecord[];
+  savePushSubscription(subscription: PushSubscriptionRecord): void;
+  deletePushSubscription(subscriptionId: string): void;
 
   close(): void;
 }

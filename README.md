@@ -103,6 +103,25 @@ and games use that same SQLite database (or the durable JSON fallback). Do not u
 `TT_STORE=memory` in production. Games expire after `TT_GAME_TTL_MS` (30 days by default).
 Legacy Google accounts remain supported when configured, but new accounts need no Google setup.
 
+### Turn alerts
+
+The **Turn alerts** control opts this browser into push notifications. Signed-in accounts
+can receive alerts for their games on any subscribed device. Anonymous players can subscribe
+the current device for each game seat. Email alerts are separately opt-in and account-only;
+newly entered addresses must be verified with a code before turn emails are sent. A verified
+Google account email can be used directly after the player enables email alerts.
+
+Browser push is disabled until the server has stable VAPID keys. Generate them once with
+`npx web-push generate-vapid-keys --json`, store the private key as a server secret, and
+configure `TT_VAPID_PUBLIC_KEY`, `TT_VAPID_PRIVATE_KEY`, and `TT_VAPID_SUBJECT`.
+
+Email verification and turn email require an SMTP service. Configure `TT_SMTP_URL` and
+`TT_EMAIL_FROM` as server secrets, for example an SMTP URL such as
+`smtps://user:password@smtp.example.com:465` and a sender such as
+`TableTop <alerts@example.com>`. URL-encode reserved characters in SMTP credentials. These
+settings are intentionally not committed to the repository. Push and email can be enabled
+independently; without their server configuration, the corresponding option is unavailable.
+
 ## Checks
 
 ```bash
@@ -304,6 +323,11 @@ Each also accepts its legacy `PG_`-prefixed name.
 | `TT_PUBLIC_ORIGIN` | request origin | Canonical origin used for the OAuth callback |
 | `TT_GOOGLE_AUTH_REQUIRED` | `true` | Require Google sign-in when both credentials are configured |
 | `TT_AUTH_SESSION_TTL_MS` | 30 days | Server-side account-login lifetime |
+| `TT_VAPID_PUBLIC_KEY` | unset | Public key used by browser push subscriptions |
+| `TT_VAPID_PRIVATE_KEY` | unset | Private VAPID signing key; keep this server-side |
+| `TT_VAPID_SUBJECT` | unset | VAPID contact, such as `mailto:ops@your.domain` |
+| `TT_SMTP_URL` | unset | SMTP URL used for email verification and turn alerts |
+| `TT_EMAIL_FROM` | unset | Sender identity used for turn alert emails |
 
 ### Hosting the client separately
 

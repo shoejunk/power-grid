@@ -20,6 +20,7 @@ import { createStore } from './persistence/index.js';
 import type { GameStore } from './persistence/types.js';
 import { parseClientMessage } from './protocol.js';
 import { CLOSE, Connection } from './wire.js';
+import { TurnNotifications, type NotificationAdapters } from './notifications.js';
 
 export interface StartServerOptions extends Partial<ServerConfig> {
   /** Pre-built store. When supplied, `storeKind`/`dataDir` are ignored. */
@@ -27,6 +28,8 @@ export interface StartServerOptions extends Partial<ServerConfig> {
   /** Pre-built registry. When supplied, the built-in game list is skipped. */
   registry?: GameRegistry;
   logger?: Logger;
+  /** Fake delivery functions for focused integration tests. */
+  notificationAdapters?: NotificationAdapters;
 }
 
 export interface RunningServer {
@@ -38,6 +41,7 @@ export interface RunningServer {
   readonly hub: GameHub;
   readonly store: GameStore;
   readonly registry: GameRegistry;
+  readonly notifications: TurnNotifications;
   close(): Promise<void>;
 }
 
@@ -53,11 +57,15 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
   const registry = options.registry ?? createRegistry();
   const auth = new GoogleAuth({ config, store, logger: logger.child('auth') });
   auth.load();
+  const notifications = new TurnNotifications(
+    { config, store, auth, logger: logger.child('notifications') },
+    options.notificationAdapters,
+  );
 
-  const hub = new GameHub({ store, registry, config, logger, auth });
+  const hub = new GameHub({ store, registry, config, logger, auth, notifications });
   hub.load();
 
-  const app = createHttpApp({ config, hub, store, logger, startedAt, auth });
+  const app = createHttpApp({ config, hub, store, logger, startedAt, auth, notifications });
   const httpServer = http.createServer(app);
 
   /**
@@ -188,6 +196,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
     hub,
     store,
     registry,
+    notifications,
     close,
   };
 }
@@ -209,6 +218,12 @@ function listen(server: http.Server, port: number, host: string): Promise<number
 
 /** Removes the non-config injectables so they cannot pollute `ServerConfig`. */
 function stripInjectables(options: StartServerOptions): Partial<ServerConfig> {
-  const { store: _store, registry: _registry, logger: _logger, ...rest } = options;
+  const {
+    store: _store,
+    registry: _registry,
+    logger: _logger,
+    notificationAdapters: _notificationAdapters,
+    ...rest
+  } = options;
   return rest;
 }

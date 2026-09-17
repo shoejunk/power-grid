@@ -26,6 +26,7 @@ import {
   type GameAuditEventInput,
   type GameStore,
   type PersistedGame,
+  type PushSubscriptionRecord,
   type SessionRecord,
 } from './types.js';
 
@@ -75,6 +76,13 @@ CREATE INDEX IF NOT EXISTS idx_sessions_game ON sessions(gameId);
 CREATE TABLE IF NOT EXISTS accounts (
   accountId TEXT PRIMARY KEY,
   email     TEXT NOT NULL,
+  emailVerified INTEGER NOT NULL DEFAULT 0,
+  notificationEmail TEXT,
+  notificationEmailVerified INTEGER NOT NULL DEFAULT 0,
+  emailTurnAlerts INTEGER NOT NULL DEFAULT 0,
+  pendingNotificationEmail TEXT,
+  notificationEmailVerificationHash TEXT,
+  notificationEmailVerificationExpiresAt INTEGER,
   name      TEXT NOT NULL,
   picture   TEXT,
   createdAt INTEGER NOT NULL,
@@ -89,6 +97,20 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
   expiresAt INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_account ON auth_sessions(accountId);
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  subscriptionId TEXT PRIMARY KEY,
+  endpoint TEXT NOT NULL,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  accountId TEXT,
+  sessionTokenHash TEXT,
+  createdAt INTEGER NOT NULL,
+  lastSeen INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_account ON push_subscriptions(accountId);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_session ON push_subscriptions(sessionTokenHash);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_endpoint ON push_subscriptions(endpoint);
 
 CREATE TABLE IF NOT EXISTS audit_events (
   gameId    TEXT NOT NULL,
@@ -141,8 +163,26 @@ interface AccountRow {
   passwordHash: string | null;
   accountId: string;
   email: string;
+  emailVerified: number;
+  notificationEmail: string | null;
+  notificationEmailVerified: number;
+  emailTurnAlerts: number;
+  pendingNotificationEmail: string | null;
+  notificationEmailVerificationHash: string | null;
+  notificationEmailVerificationExpiresAt: number | null;
   name: string;
   picture: string | null;
+  createdAt: number;
+  lastSeen: number;
+}
+
+interface PushSubscriptionRow {
+  subscriptionId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  accountId: string | null;
+  sessionTokenHash: string | null;
   createdAt: number;
   lastSeen: number;
 }
@@ -222,8 +262,19 @@ export class SqliteGameStore implements GameStore {
       this.db.exec('ALTER TABLE games ADD COLUMN auditSequence INTEGER');
     }
     const accountColumns = new Set((this.db.prepare('PRAGMA table_info(accounts)').all() as unknown as { name: string }[]).map(c => c.name));
-    for (const column of ['username', 'passwordHash']) {
-      if (!accountColumns.has(column)) this.db.exec(`ALTER TABLE accounts ADD COLUMN ${column} TEXT`);
+    const accountAdditions: Array<[string, string]> = [
+      ['username', 'TEXT'],
+      ['passwordHash', 'TEXT'],
+      ['emailVerified', 'INTEGER NOT NULL DEFAULT 0'],
+      ['notificationEmail', 'TEXT'],
+      ['notificationEmailVerified', 'INTEGER NOT NULL DEFAULT 0'],
+      ['emailTurnAlerts', 'INTEGER NOT NULL DEFAULT 0'],
+      ['pendingNotificationEmail', 'TEXT'],
+      ['notificationEmailVerificationHash', 'TEXT'],
+      ['notificationEmailVerificationExpiresAt', 'INTEGER'],
+    ];
+    for (const [column, definition] of accountAdditions) {
+      if (!accountColumns.has(column)) this.db.exec(`ALTER TABLE accounts ADD COLUMN ${column} ${definition}`);
     }
     this.db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_username ON accounts(username)');
     const sessionColumns = new Set(
@@ -527,6 +578,17 @@ export class SqliteGameStore implements GameStore {
       ...(row.username ? { username: row.username } : {}),
       ...(row.passwordHash ? { passwordHash: row.passwordHash } : {}),
       email: row.email,
+      emailVerified: row.emailVerified === 1,
+      ...(row.notificationEmail !== null ? { notificationEmail: row.notificationEmail } : {}),
+      notificationEmailVerified: row.notificationEmailVerified === 1,
+      emailTurnAlerts: row.emailTurnAlerts === 1,
+      ...(row.pendingNotificationEmail !== null ? { pendingNotificationEmail: row.pendingNotificationEmail } : {}),
+      ...(row.notificationEmailVerificationHash !== null
+        ? { notificationEmailVerificationHash: row.notificationEmailVerificationHash }
+        : {}),
+      ...(row.notificationEmailVerificationExpiresAt !== null
+        ? { notificationEmailVerificationExpiresAt: row.notificationEmailVerificationExpiresAt }
+        : {}),
       name: row.name,
       ...(row.picture !== null ? { picture: row.picture } : {}),
       createdAt: row.createdAt,
@@ -537,16 +599,32 @@ export class SqliteGameStore implements GameStore {
   saveAccount(account: AccountRecord): void {
     this.db
       .prepare(
-        `INSERT INTO accounts (accountId, email, name, picture, createdAt, lastSeen, username, passwordHash)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO accounts (accountId, email, emailVerified, notificationEmail, notificationEmailVerified,
+           emailTurnAlerts, pendingNotificationEmail, notificationEmailVerificationHash,
+           notificationEmailVerificationExpiresAt, name, picture, createdAt, lastSeen, username, passwordHash)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(accountId) DO UPDATE SET
-           email=excluded.email, name=excluded.name, picture=excluded.picture,
+           email=excluded.email, emailVerified=excluded.emailVerified,
+           notificationEmail=excluded.notificationEmail,
+           notificationEmailVerified=excluded.notificationEmailVerified,
+           emailTurnAlerts=excluded.emailTurnAlerts,
+           pendingNotificationEmail=excluded.pendingNotificationEmail,
+           notificationEmailVerificationHash=excluded.notificationEmailVerificationHash,
+           notificationEmailVerificationExpiresAt=excluded.notificationEmailVerificationExpiresAt,
+           name=excluded.name, picture=excluded.picture,
            username=excluded.username, passwordHash=excluded.passwordHash,
            lastSeen=excluded.lastSeen`,
       )
       .run(
         account.accountId,
         account.email,
+        account.emailVerified ? 1 : 0,
+        account.notificationEmail ?? null,
+        account.notificationEmailVerified ? 1 : 0,
+        account.emailTurnAlerts ? 1 : 0,
+        account.pendingNotificationEmail ?? null,
+        account.notificationEmailVerificationHash ?? null,
+        account.notificationEmailVerificationExpiresAt ?? null,
         account.name,
         account.picture ?? null,
         account.createdAt,
@@ -581,6 +659,44 @@ export class SqliteGameStore implements GameStore {
 
   deleteAuthSession(token: string): void {
     this.db.prepare('DELETE FROM auth_sessions WHERE token = ?').run(token);
+  }
+
+  loadPushSubscriptions(): PushSubscriptionRecord[] {
+    const rows = this.db.prepare('SELECT * FROM push_subscriptions').all() as unknown as PushSubscriptionRow[];
+    return rows.map((row) => ({
+      subscriptionId: row.subscriptionId,
+      endpoint: row.endpoint,
+      p256dh: row.p256dh,
+      auth: row.auth,
+      ...(row.accountId !== null ? { accountId: row.accountId } : {}),
+      ...(row.sessionTokenHash !== null ? { sessionTokenHash: row.sessionTokenHash } : {}),
+      createdAt: row.createdAt,
+      lastSeen: row.lastSeen,
+    }));
+  }
+
+  savePushSubscription(subscription: PushSubscriptionRecord): void {
+    this.db.prepare(
+      `INSERT INTO push_subscriptions (subscriptionId, endpoint, p256dh, auth, accountId, sessionTokenHash, createdAt, lastSeen)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(subscriptionId) DO UPDATE SET endpoint=excluded.endpoint,
+         p256dh=excluded.p256dh, auth=excluded.auth,
+         accountId=excluded.accountId, sessionTokenHash=excluded.sessionTokenHash,
+         lastSeen=excluded.lastSeen`,
+    ).run(
+      subscription.subscriptionId,
+      subscription.endpoint,
+      subscription.p256dh,
+      subscription.auth,
+      subscription.accountId ?? null,
+      subscription.sessionTokenHash ?? null,
+      subscription.createdAt,
+      subscription.lastSeen,
+    );
+  }
+
+  deletePushSubscription(subscriptionId: string): void {
+    this.db.prepare('DELETE FROM push_subscriptions WHERE subscriptionId = ?').run(subscriptionId);
   }
 
   close(): void {

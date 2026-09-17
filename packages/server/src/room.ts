@@ -26,6 +26,7 @@ import type {
   Seat,
 } from './persistence/types.js';
 import type { Connection } from './wire.js';
+import type { TurnBeganEvent } from './notifications.js';
 import { CLOSE } from './wire.js';
 import { hashReplayState } from './persistence/replay.js';
 
@@ -37,6 +38,7 @@ export interface RoomDeps {
   plugin: AnyGamePlugin;
   config: ServerConfig;
   logger: Logger;
+  onTurnBegan?: (event: TurnBeganEvent) => void;
 }
 
 export type RoomResult = { ok: true } | { ok: false; code: string; message: string };
@@ -86,6 +88,7 @@ export class GameRoom {
   private turnTimer: NodeJS.Timeout | null = null;
   /** Game mutations waiting for the next atomic snapshot commit. */
   private pendingAudit: GameAuditEventInput[] = [];
+  private pendingTurnStarts: PlayerId[] = [];
   /** Highest event sequence included in the durable snapshot. */
   private auditSequence: number;
   /** Legacy snapshots have no complete setup event and remain snapshot-only. */
@@ -128,6 +131,27 @@ export class GameRoom {
 
   get maxPlayers(): number {
     return this.plugin.descriptor.maxPlayers;
+  }
+
+  /** Dispatches turn changes only after the corresponding snapshot is durable. */
+  flushTurnNotifications(): void {
+    const players = this.pendingTurnStarts.splice(0);
+    for (const playerId of players) {
+      this.deps.onTurnBegan?.({
+        gameId: this.gameId,
+        gameKey: this.gameKey,
+        gameName: this.plugin.descriptor.name,
+        code: this.code,
+        playerId,
+      });
+    }
+  }
+
+  private queueTurnChange(previous: PlayerId | null): void {
+    if (!this.started || this.state == null || this.plugin.isGameOver(this.state as never)) return;
+    const next = this.plugin.activePlayerOf(this.state as never);
+    if (!next || next === previous || this.seat(next)?.isBot) return;
+    this.pendingTurnStarts.push(next);
   }
 
   /**
@@ -524,6 +548,7 @@ export class GameRoom {
 
     this.state = state;
     this.started = true;
+    this.queueTurnChange(null);
     this.auditEnabled = true;
     this.auditState = structuredClone(state);
     this.pendingAudit.push({
@@ -696,6 +721,7 @@ export class GameRoom {
     }
 
     this.state = next;
+    this.queueTurnChange(active);
     if (this.auditEnabled && auditBefore !== null && auditNext !== null) {
       const beforeHash = hashReplayState(auditBefore);
       const afterHash = hashReplayState(auditNext);
@@ -862,6 +888,7 @@ export class GameRoom {
       name: this.seat(playerId)?.name,
     });
     this.persist();
+    this.flushTurnNotifications();
     this.broadcastState();
     // The next player may also be a bot; keep the table moving.
     this.rescheduleAutoAction();

@@ -26,6 +26,7 @@ import type { GameStore, PersistedGame, SessionRecord } from './persistence/type
 import { replayPersistedGame } from './persistence/replay.js';
 import { GameRoom } from './room.js';
 import type { Connection } from './wire.js';
+import type { TurnNotifications } from './notifications.js';
 
 export interface HubDeps {
   store: GameStore;
@@ -33,6 +34,7 @@ export interface HubDeps {
   config: ServerConfig;
   logger: Logger;
   auth: GoogleAuth;
+  notifications: TurnNotifications;
 }
 
 const seatKey = (gameId: string, playerId: PlayerId): string => `${gameId}:${playerId}`;
@@ -110,7 +112,20 @@ export class GameHub {
         return null;
       }
     }
-    return new GameRoom({ ...this.deps, plugin, logger: this.logger.child(record.code) }, hydrated);
+    return new GameRoom({
+      ...this.deps,
+      plugin,
+      logger: this.logger.child(record.code),
+      onTurnBegan: (event) => {
+        void this.deps.notifications.turnBegan(event).catch((error) => {
+          this.logger.warn('Turn alert processing failed', {
+            gameId: event.gameId,
+            playerId: event.playerId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+      },
+    }, hydrated);
   }
 
   /* ---------------------------------------------------------------- *
@@ -371,6 +386,7 @@ export class GameHub {
           return;
         }
         room.persist();
+        room.flushTurnNotifications();
         room.broadcast();
         room.rescheduleAutoAction();
         return;
@@ -392,6 +408,7 @@ export class GameHub {
           return;
         }
         room.persist();
+        room.flushTurnNotifications();
         room.broadcastState();
         room.rescheduleAutoAction();
         return;

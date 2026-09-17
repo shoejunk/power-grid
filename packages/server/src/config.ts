@@ -53,6 +53,13 @@ export interface ServerConfig {
   publicOrigin: string | null;
   /** Lifetime of the HttpOnly account-login cookie. */
   authSessionTtlMs: number;
+  /** VAPID credentials for browser push; all three values enable push alerts. */
+  vapidPublicKey: string | null;
+  vapidPrivateKey: string | null;
+  vapidSubject: string | null;
+  /** SMTP connection and sender used for email verification and turn alerts. */
+  smtpUrl: string | null;
+  emailFrom: string | null;
   logLevel: LogLevel;
 }
 
@@ -120,6 +127,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     googleAuthRequired: bool(read('GOOGLE_AUTH_REQUIRED'), true),
     publicOrigin: read('PUBLIC_ORIGIN') ?? null,
     authSessionTtlMs: num(read('AUTH_SESSION_TTL_MS'), 30 * 24 * 60 * 60 * 1000),
+    vapidPublicKey: read('VAPID_PUBLIC_KEY')?.trim() || null,
+    vapidPrivateKey: read('VAPID_PRIVATE_KEY')?.trim() || null,
+    vapidSubject: read('VAPID_SUBJECT')?.trim() || null,
+    smtpUrl: read('SMTP_URL')?.trim() || null,
+    emailFrom: read('EMAIL_FROM')?.trim() || null,
     logLevel: (read('LOG_LEVEL') as LogLevel | undefined) ?? (isProd ? 'info' : 'debug'),
   };
 }

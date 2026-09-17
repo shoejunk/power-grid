@@ -17,15 +17,17 @@ import type {
   GameAuditEventInput,
   GameStore,
   PersistedGame,
+  PushSubscriptionRecord,
   SessionRecord,
 } from './types.js';
 
 interface FileShape {
-  version: 1 | 2 | 3 | 4;
+  version: 1 | 2 | 3 | 4 | 5;
   games: PersistedGame[];
   sessions: SessionRecord[];
   accounts?: AccountRecord[];
   authSessions?: AuthSessionRecord[];
+  pushSubscriptions?: PushSubscriptionRecord[];
   auditEvents?: Record<string, GameAuditEvent[]>;
 }
 
@@ -36,6 +38,7 @@ export class JsonFileGameStore implements GameStore {
   private sessions = new Map<string, SessionRecord>();
   private accounts = new Map<string, AccountRecord>();
   private authSessions = new Map<string, AuthSessionRecord>();
+  private pushSubscriptions = new Map<string, PushSubscriptionRecord>();
   private auditEvents = new Map<string, GameAuditEvent[]>();
   private closed = false;
 
@@ -53,6 +56,9 @@ export class JsonFileGameStore implements GameStore {
       for (const s of parsed.sessions ?? []) this.sessions.set(s.token, s);
       for (const account of parsed.accounts ?? []) this.accounts.set(account.accountId, account);
       for (const session of parsed.authSessions ?? []) this.authSessions.set(session.token, session);
+      for (const subscription of parsed.pushSubscriptions ?? []) {
+        this.pushSubscriptions.set(subscription.subscriptionId, subscription);
+      }
       for (const [gameId, events] of Object.entries(parsed.auditEvents ?? {})) {
         this.auditEvents.set(gameId, structuredClone(events));
       }
@@ -70,11 +76,12 @@ export class JsonFileGameStore implements GameStore {
   private flush(): void {
     if (this.closed) return;
     const payload: FileShape = {
-      version: 4,
+      version: 5,
       games: [...this.games.values()],
       sessions: [...this.sessions.values()],
       accounts: [...this.accounts.values()],
       authSessions: [...this.authSessions.values()],
+      pushSubscriptions: [...this.pushSubscriptions.values()],
       auditEvents: Object.fromEntries(
         [...this.auditEvents.entries()].map(([gameId, events]) => [gameId, structuredClone(events)]),
       ),
@@ -167,6 +174,20 @@ export class JsonFileGameStore implements GameStore {
 
   deleteAuthSession(token: string): void {
     this.authSessions.delete(token);
+    this.flush();
+  }
+
+  loadPushSubscriptions(): PushSubscriptionRecord[] {
+    return [...this.pushSubscriptions.values()].map((subscription) => ({ ...subscription }));
+  }
+
+  savePushSubscription(subscription: PushSubscriptionRecord): void {
+    this.pushSubscriptions.set(subscription.subscriptionId, { ...subscription });
+    this.flush();
+  }
+
+  deletePushSubscription(subscriptionId: string): void {
+    this.pushSubscriptions.delete(subscriptionId);
     this.flush();
   }
 
