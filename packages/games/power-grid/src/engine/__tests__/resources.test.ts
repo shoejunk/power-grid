@@ -27,6 +27,15 @@ const buy = (resource: string, count: number) =>
   ({ type: 'buyResources', purchases: [{ resource, count }] }) as never;
 
 describe('§1 storage capacity', () => {
+  it('counts existing hybrid fuel and duplicate purchase rows against the same capacity', () => {
+    const { state, actor } = shopping([5]);
+    state.players[actor]!.plants[0]!.stored.coal = 2;
+    expect(validateAction(state, actor, {
+      type: 'buyResources', purchases: [{ resource: 'oil', count: 1 }, { resource: 'oil', count: 2 }],
+    })).toEqual({ ok: false, reason: 'Your plants cannot store that many tokens' });
+    const next = act(state, actor, buy('oil', 2));
+    expect(storedPool(next, actor)).toMatchObject({ coal: 2, oil: 2 });
+  });
   it('a plant stores at most twice its fuel requirement', () => {
     const { state, actor } = shopping([8]); // coal, fuel 3 → capacity 6
     expect(validateAction(state, actor, buy('coal', 6)).ok).toBe(true);
@@ -82,7 +91,7 @@ describe('§1 storage capacity', () => {
     expect(freeStorage(state, actor).coal).toBe(6);
     expect(freeStorage(state, actor).garbage).toBe(4);
     expect(freeStorage(state, actor).oil).toBe(0);
-    const t = act(state, actor, buy('coal', 6));
+    const t = enterPhase(act(state, actor, buy('coal', 6)), 'resources', actor);
     expect(t.players[actor]!.plants.find((p) => p.plantId === 8)!.stored.coal).toBe(6);
   });
 });
@@ -162,7 +171,7 @@ describe('§12 USA separate coal storage', () => {
     expect(t.usaCoalStorage).toBe(2);
     expect(t.players[actor]!.money).toBe(50 - 24);
     expect(
-      legalActions(t, actor).resourceOptions.find((o) => o.resource === 'coal')!.fromUsaCoalStorage,
+      legalActions(s, actor).resourceOptions.find((o) => o.resource === 'coal')!.fromUsaCoalStorage,
     ).toBe(true);
   });
 
@@ -182,7 +191,7 @@ describe('§12 USA separate coal storage', () => {
 describe('§7 rearranging stored tokens', () => {
   it('accepts a legal reassignment and rejects one that breaks a limit', () => {
     const { state, actor } = shopping([5, 8]); // hybrid cap 4, coal cap 6
-    const t = act(state, actor, buy('coal', 6));
+    const t = enterPhase(act(state, actor, buy('coal', 6)), 'resources', actor);
     const total = storedPool(t, actor).coal;
     expect(total).toBe(6);
 
@@ -219,13 +228,11 @@ describe('§7 rearranging stored tokens', () => {
 });
 
 describe('§7 turn handling', () => {
-  it('a player may buy repeatedly before passing', () => {
+  it('a successful purchase finishes the resource turn immediately', () => {
     const { state, actor } = shopping([31]);
-    let t = act(state, actor, buy('coal', 2));
-    t = act(t, actor, buy('coal', 2));
-    expect(storedPool(t, actor).coal).toBe(4);
-    expect(t.activePlayerId).toBe(actor);
-    t = act(t, actor, { type: 'passResources' });
+    const t = act(state, actor, buy('coal', 2));
+    expect(storedPool(t, actor).coal).toBe(2);
+    expect(validateAction(t, actor, buy('coal', 2)).ok).toBe(false);
     expect(t.phase).toBe('building');
   });
 

@@ -35,7 +35,7 @@ describe('§2 setup — acceptance 1: every player count on either map', () => {
         // Zone size and contiguity.
         const map = getMap(mapId);
         expect(s.zone).toHaveLength(ZONE_AREA_COUNT[playerCount]!);
-        expect(s.zone).toHaveLength(playerCount);
+        expect(s.zone).toHaveLength(({ 2: 3, 3: 3, 4: 4, 5: 5, 6: 5 } as Record<number, number>)[playerCount]!);
         expect(isZoneContiguous(map, s.zone)).toBe(true);
 
         // 8. Opening market: 8 plug plants, four lowest current.

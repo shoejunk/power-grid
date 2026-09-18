@@ -71,6 +71,18 @@ export function ResourcePanel({ draft, setDraft }: ResourcePanelProps): JSX.Elem
   const setCount = (type: ResourceType, value: number): void =>
     setDraft({ ...draft, [type]: value });
 
+  const basketLimit = (option: ResourceOption): number => {
+    const candidate = { ...pool };
+    let max = 0;
+    for (let n = 0; n <= option.maxCount; n++) {
+      candidate[option.resource] = pool[option.resource] - (draft[option.resource] ?? 0) + n;
+      const cost = total - (purchaseCost(state, option.resource, draft[option.resource] ?? 0) ?? 0)
+        + (purchaseCost(state, option.resource, n) ?? Infinity);
+      if (cost <= me.money && poolStorable(state, meId, candidate)) max = n;
+    }
+    return max;
+  };
+
   return (
     <PhaseShell
       title="Buy Resources"
@@ -91,7 +103,7 @@ export function ResourcePanel({ draft, setDraft }: ResourcePanelProps): JSX.Elem
               net.action({ type: 'passResources' });
             }}
           >
-            Done
+            Skip purchase
           </Button>
           <Tooltip
             placement="top"
@@ -117,7 +129,7 @@ export function ResourcePanel({ draft, setDraft }: ResourcePanelProps): JSX.Elem
                   setDraft(emptyResources());
                 }}
               >
-                Buy for {total}₤
+                Buy & finish for {total}₤
               </Button>
             </span>
           </Tooltip>
@@ -128,7 +140,7 @@ export function ResourcePanel({ draft, setDraft }: ResourcePanelProps): JSX.Elem
         {legal.resourceOptions.map((option) => (
           <ResourceRow
             key={option.resource}
-            option={option}
+            option={{ ...option, maxCount: basketLimit(option) }}
             value={draft[option.resource] ?? 0}
             onChange={(v) => setCount(option.resource, v)}
             costOf={(n) => purchaseCost(state, option.resource, n) ?? 0}

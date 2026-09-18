@@ -124,8 +124,8 @@ function CityNodeImpl({
 
         {/*
           Experienced-start markers belong to the city pool, never to the
-          player who selected them. The dashed graphite keyline deliberately
-          uses no seat colour and disappears as soon as a house claims the
+          player who selected them. The solid gold keyline
+          disappears as soon as a house claims the
           10-Elektro slot.
         */}
         {view.startingCityMarked ? (
@@ -137,11 +137,10 @@ function CityNodeImpl({
               width={w + h * 0.5}
               height={h + h * 0.5}
               rx={r + h * 0.18}
-              fill="none"
-              stroke={theme.textMuted}
-              strokeOpacity={0.92}
-              strokeWidth={h * 0.06}
-              strokeDasharray={`${h * 0.19} ${h * 0.13}`}
+              fill="#ffd166"
+              fillOpacity={0.3}
+              stroke="#ffd166"
+              strokeWidth={h * 0.13}
             />
           </g>
         ) : null}

@@ -337,7 +337,7 @@ describe('§2 experienced-player starting cities', () => {
   });
 
   it('keeps a marker available when the Trust occupies its 15-Elektro slot', () => {
-    const trustZone = ['west', 'southwest'];
+    const trustZone = ['west', 'southwest', 'east'];
     const s = deepClone(
       start({
         playerCount: 2,

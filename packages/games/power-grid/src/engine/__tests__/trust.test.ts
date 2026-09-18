@@ -82,7 +82,7 @@ describe('§13 Trust setup', () => {
 
   it('uses the two-player zone', () => {
     const s = trustGame();
-    expect(s.zone).toHaveLength(2);
+    expect(s.zone).toHaveLength(3);
   });
 
   it('alternates the placing human A, B, B, A, A, B', () => {
