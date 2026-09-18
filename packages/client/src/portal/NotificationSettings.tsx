@@ -18,6 +18,8 @@ interface NotificationConfig {
   vapidPublicKey: string | null;
 }
 
+const browserNotificationsBlockedMessage = 'Notifications are blocked for this site. Select the site information icon beside the address bar → Permissions for this site → Notifications → Allow, then try again.';
+
 const decodeVapidKey = (value: string): ArrayBuffer => {
   const base64 = value.replace(/-/gu, '+').replace(/_/gu, '/');
   const raw = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '='));
@@ -46,6 +48,7 @@ export function NotificationSettings(): JSX.Element | null {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const canManage = auth.authenticated || hasSeat;
+  const browserNotificationsBlocked = 'Notification' in window && Notification.permission === 'denied';
 
   const refresh = async (): Promise<void> => {
     const data = await postJson<NotificationSettingsData>('/api/notifications/settings', {
@@ -85,10 +88,13 @@ export function NotificationSettings(): JSX.Element | null {
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
       throw new Error('This browser does not support push notifications.');
     }
-    const permission = Notification.permission === 'granted'
-      ? 'granted'
-      : await Notification.requestPermission();
-    if (permission !== 'granted') throw new Error('Allow notifications in your browser to receive turn alerts.');
+    if (Notification.permission === 'denied') throw new Error(browserNotificationsBlockedMessage);
+    const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (permission !== 'granted') {
+      throw new Error(permission === 'denied'
+        ? browserNotificationsBlockedMessage
+        : 'Choose Allow in the browser prompt to receive turn alerts.');
+    }
 
     const configResponse = await fetch('/api/notifications/config', { credentials: 'same-origin' });
     const config = await configResponse.json() as NotificationConfig;
@@ -163,6 +169,7 @@ export function NotificationSettings(): JSX.Element | null {
             <div className="tt-alerts-section">
               <strong>Browser push</strong>
               <p>{settings.pushEnabled ? 'Get an alert on this device, including when the game is closed.' : 'Browser push is not configured on this server yet.'}</p>
+              {settings.pushEnabled && !settings.pushSubscribed && browserNotificationsBlocked && message !== browserNotificationsBlockedMessage && <p>{browserNotificationsBlockedMessage}</p>}
               <button type="button" disabled={busy || (!settings.pushEnabled && !settings.pushSubscribed)} onClick={() => void run(settings.pushSubscribed ? disablePush : enablePush)}>
                 {settings.pushSubscribed ? 'Turn off browser alerts' : 'Enable browser alerts on this device'}
               </button>
