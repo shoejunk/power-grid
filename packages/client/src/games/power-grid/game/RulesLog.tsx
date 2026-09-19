@@ -32,7 +32,17 @@ export function RulesLog(): JSX.Element {
   // Follow the tail unless the player has scrolled up to read history.
   useLayoutEffect(() => {
     const node = bodyRef.current;
-    if (node && followTail.current) node.scrollTop = node.scrollHeight;
+    if (!node || !followTail.current) return;
+
+    // The surrounding game grid can finish sizing one frame after this
+    // component mounts. Scroll again then so the initial position is the
+    // actual bottom, not the bottom of the pre-layout height.
+    node.scrollTop = node.scrollHeight;
+    const frame = requestAnimationFrame(() => {
+      if (followTail.current && bodyRef.current === node) node.scrollTop = node.scrollHeight;
+    });
+
+    return () => cancelAnimationFrame(frame);
   }, [entries]);
 
   return (
