@@ -8,8 +8,13 @@
  */
 
 import { startServer } from './server.js';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { SERVER_ROOT } from './config.js';
 
 async function main(): Promise<void> {
+  const envPath = path.resolve(SERVER_ROOT, '../../.env');
+  if (existsSync(envPath)) process.loadEnvFile(envPath);
   const server = await startServer();
 
   let shuttingDown = false;

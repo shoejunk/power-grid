@@ -580,8 +580,8 @@ export const net = {
     socket.send({ t: 'updateSettings', settings });
   },
 
-  addBot(): void {
-    socket.send({ t: 'addBot' });
+  addBot(botKind: "standard" | "jev" = "standard"): void {
+    socket.send({ t: 'addBot', botKind });
   },
 
   removePlayer(playerId: PlayerId): void {

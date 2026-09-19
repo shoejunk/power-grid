@@ -28,6 +28,7 @@ import type {
 import type { Connection } from './wire.js';
 import type { TurnBeganEvent } from './notifications.js';
 import { CLOSE } from './wire.js';
+import { chooseJev } from './jev.js';
 import { hashReplayState } from './persistence/replay.js';
 
 /** The `chat` variant of the outbound union, named for readability. */
@@ -97,6 +98,7 @@ export class GameRoom {
   /** State at the last replay checkpoint, excluding live presence changes. */
   private auditState: unknown | null;
   private disposed = false;
+  private jevPending = false;
 
   constructor(
     private readonly deps: RoomDeps,
@@ -279,6 +281,7 @@ export class GameRoom {
         color: s.color,
         isHost: s.playerId === this.hostId,
         isBot: s.isBot,
+        botKind: s.botKind,
         ready: s.ready,
         connected: this.isConnected(s.playerId),
       })),
@@ -467,7 +470,8 @@ export class GameRoom {
     return done;
   }
 
-  addBot(playerId: PlayerId): RoomResult {
+  addBot(playerId: PlayerId, botKind: "standard" | "jev" = "standard"): RoomResult {
+    if (botKind === "jev" && (!this.deps.config.jevApiKey || !this.plugin.externalBotChoices)) return fail("jevUnavailable", "Jev needs a server API key and a supported game.");
     if (playerId !== this.hostId) return fail('notHost', 'Only the host can add bots.');
     if (this.started) return fail('gameStarted', 'The game has already started.');
     if (!this.plugin.descriptor.supportsBots) {
@@ -477,11 +481,12 @@ export class GameRoom {
     const index = this.seats.filter((s) => s.isBot).length + 1;
     const seat = this.addSeat({
       playerId: `bot-${this.gameId.slice(0, 8)}-${Date.now().toString(36)}-${index}`,
-      name: `Bot ${index}`,
+      name: `${botKind === "jev" ? "Jev" : "Bot"} ${index}`,
       isBot: true,
       ready: true,
     });
     if (!seat) return fail('noColors', 'No colours left.');
+    seat.botKind = botKind;
     return done;
   }
 
@@ -839,7 +844,7 @@ export class GameRoom {
     const active = this.plugin.activePlayerOf(this.state as never);
     if (!active) return;
     const seat = this.seat(active);
-    if (!seat?.isBot) return;
+    if (!seat?.isBot || this.jevPending) return;
 
     this.turnTimer = setTimeout(() => this.takeAutoAction(active), this.deps.config.botDelayMs);
     this.turnTimer.unref?.();
@@ -853,12 +858,32 @@ export class GameRoom {
   }
 
   /** Asks the game for a safe move, applies it, and says so loudly. */
-  private takeAutoAction(playerId: PlayerId): void {
+  private async takeAutoAction(playerId: PlayerId): Promise<void> {
     this.turnTimer = null;
     if (this.disposed || this.state == null || !this.started) return;
     if (this.plugin.activePlayerOf(this.state as never) !== playerId) return;
 
     const candidates = this.findSafeActions(playerId);
+    if (this.seat(playerId)?.botKind === 'jev' && this.deps.config.jevApiKey && !this.jevPending) {
+      const snapshot = this.state;
+      this.jevPending = true;
+      try {
+        const choices = (this.plugin.externalBotChoices?.(snapshot as never, playerId) ?? [])
+          .filter(action => this.plugin.validateAction(snapshot as never, playerId, action).ok).slice(0, 255);
+        const selected = await chooseJev({ apiKey: this.deps.config.jevApiKey, model: this.deps.config.jevModel, timeoutMs: this.deps.config.jevTimeoutMs },
+          this.plugin.externalBotContext?.(snapshot as never, playerId), choices);
+        if (selected !== null) candidates.unshift(selected);
+        else this.deps.logger.warn('Jev unavailable; using local bot', { gameId: this.gameId });
+      } catch {
+        this.deps.logger.warn('Jev choice generation failed; using local bot', { gameId: this.gameId });
+      } finally { this.jevPending = false; }
+      // Another sealed bidder, a departing seat, or shutdown may change the
+      // table while the request is in flight. Never apply a stale decision.
+      if (this.disposed) return;
+      if (this.state !== snapshot || this.plugin.activePlayerOf(this.state as never) !== playerId || !this.seat(playerId)?.isBot) {
+        this.rescheduleAutoAction(); return;
+      }
+    }
     if (candidates.length === 0) {
       this.deps.logger.warn('No safe bot action available; turn is stalled', {
         gameId: this.gameId,

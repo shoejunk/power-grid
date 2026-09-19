@@ -128,7 +128,8 @@ export function parseClientMessage(raw: string): ParseResult {
       return { ok: true, message: { t: 'updateSettings', settings: parsed.settings } };
 
     case 'addBot':
-      return { ok: true, message: { t: 'addBot' } };
+      if (parsed.botKind !== undefined && parsed.botKind !== 'standard' && parsed.botKind !== 'jev') return bad('badMessage', 'Unknown bot kind.');
+      return { ok: true, message: { t: 'addBot', botKind: parsed.botKind } };
 
     case 'removePlayer':
       if (!isString(parsed.playerId)) return bad('badMessage', 'removePlayer requires a playerId.');

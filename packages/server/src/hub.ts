@@ -367,7 +367,7 @@ export class GameHub {
         this.applyLobbyChange(conn, room, room.updateSettings(playerId, message.settings));
         return;
       case 'addBot':
-        this.applyLobbyChange(conn, room, room.addBot(playerId));
+        this.applyLobbyChange(conn, room, room.addBot(playerId, message.botKind));
         return;
       case 'removePlayer': {
         const target = message.playerId;

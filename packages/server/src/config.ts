@@ -32,6 +32,9 @@ export interface ServerConfig {
   clientDist: string;
   /** Think-time for bot seats, purely cosmetic pacing. */
   botDelayMs: number;
+  jevApiKey: string | null;
+  jevModel: string;
+  jevTimeoutMs: number;
   /** WebSocket ping interval; two missed pongs terminate the socket. */
   heartbeatMs: number;
   /** Hard cap on a single inbound WebSocket frame. */
@@ -114,6 +117,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
       ? path.resolve(clientDistRaw)
       : path.join(PACKAGES_ROOT, 'client', 'dist'),
     botDelayMs: num(read('BOT_DELAY_MS'), 600),
+    jevApiKey: env.JEV_API_KEY?.trim() || env.TYPESAFE_API_KEY?.trim() || null,
+    jevModel: env.JEV_MODEL?.trim() || 'jev-latest',
+    jevTimeoutMs: Math.max(100, Math.min(30000, num(env.JEV_TIMEOUT_MS, 5000))),
     heartbeatMs: num(read('HEARTBEAT_MS'), 30_000),
     maxPayloadBytes: num(read('MAX_PAYLOAD'), 64 * 1024),
     maxBufferedBytes: num(read('MAX_BUFFERED'), 4 * 1024 * 1024),

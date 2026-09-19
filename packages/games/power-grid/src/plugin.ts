@@ -389,6 +389,8 @@ const SAFE_DEFAULTS: readonly GameAction[] = [
  * The plugin
  * ------------------------------------------------------------------ */
 
+import { jevChoices, jevContext } from './engine/jev.js';
+
 export const powerGrid: GamePlugin<GameState, GameAction, GameSettings> = {
   descriptor,
 
@@ -412,6 +414,8 @@ export const powerGrid: GamePlugin<GameState, GameAction, GameSettings> = {
   applyPresence,
   applyHostChange,
 
+  externalBotChoices: jevChoices,
+  externalBotContext: jevContext,
   defaultActionFor: engineDefaultAction,
   safeDefaultActions: () => [...SAFE_DEFAULTS],
 };

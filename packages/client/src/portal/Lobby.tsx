@@ -287,6 +287,10 @@ export function Lobby(): JSX.Element {
               </Button>
             </div>
 
+            {isHost && lobby.gameKey === 'power-grid' && <Button
+              variant="secondary" disabled={seatsLeft === 0} onClick={() => net.addBot('jev')}
+            >Add Jev</Button>}
+
             <Tooltip
               placement="top"
               title={canStart ? 'Begin' : 'Not yet'}

@@ -43,6 +43,7 @@ export interface SeatSeed {
 
 /** A seat at a table. Survives disconnects, restarts and game start. */
 export interface Seat extends SeatSeed {
+  botKind?: "standard" | "jev";
   ready: boolean;
   /** Used to promote "the longest-seated connected player" to host. */
   joinedAt: number;
@@ -50,6 +51,7 @@ export interface Seat extends SeatSeed {
 
 /** Public projection of a seat, as rendered in a lobby. */
 export interface LobbySeat {
+  botKind?: "standard" | "jev";
   id: PlayerId;
   name: string;
   color: SeatColor;
