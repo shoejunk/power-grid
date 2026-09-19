@@ -120,7 +120,7 @@ export function ResourcePanel({ draft, setDraft }: ResourcePanelProps): JSX.Elem
                 disabled={blockedReason !== null}
                 onClick={() => {
                   net.action({
-                    type: 'buyResources',
+                    type: 'buyResourcesAndFinish',
                     purchases: RESOURCE_TYPES.filter((t) => (draft[t] ?? 0) > 0).map((t) => ({
                       resource: t,
                       count: draft[t]!,

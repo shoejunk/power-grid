@@ -195,6 +195,7 @@ export function createHttpApp(deps: HttpAppDeps): Express {
     res.json({
       ok: true,
       code: room.code,
+      gameName: room.gameName,
       gameKey: room.gameKey,
       started: room.started,
       players: room.seats.length,

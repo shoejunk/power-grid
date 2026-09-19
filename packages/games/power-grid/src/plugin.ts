@@ -185,7 +185,8 @@ function parseAction(raw: unknown): GameAction | null {
     case 'scrapPlant':
       return isInt(raw.plantId) ? { type: 'scrapPlant', plantId: raw.plantId } : null;
 
-    case 'buyResources': {
+    case 'buyResources':
+    case 'buyResourcesAndFinish': {
       if (!Array.isArray(raw.purchases)) return null;
       const purchases: { resource: ResourceType; count: number }[] = [];
       for (const p of raw.purchases) {
@@ -193,7 +194,7 @@ function parseAction(raw: unknown): GameAction | null {
         if (!isOneOf<ResourceType>(p.resource, RESOURCE_TYPES)) return null;
         purchases.push({ resource: p.resource, count: p.count });
       }
-      return { type: 'buyResources', purchases };
+      return { type: raw.type, purchases };
     }
     case 'redistributeResources': {
       if (!Array.isArray(raw.assignment)) return null;

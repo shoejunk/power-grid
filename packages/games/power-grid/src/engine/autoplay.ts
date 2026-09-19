@@ -100,6 +100,7 @@ function isAcceptable(state: GameState, playerId: PlayerId, action: GameAction):
     case 'scrapPlant':
       return validateScrapPlant(state, playerId, action.plantId).ok;
     case 'buyResources':
+    case 'buyResourcesAndFinish':
       return validateBuyResources(state, playerId, action.purchases).ok;
     case 'passResources':
       return state.phase === 'resources' && active;

@@ -10,6 +10,7 @@ import {
   removeAnonymousGameById,
   removeAnonymousGameByToken,
   saveLegacySessionToken,
+  sessionTokenForInvite,
   upsertAnonymousGame,
   type AnonymousGame,
 } from './socket';
@@ -415,6 +416,16 @@ export const net = {
   },
 
   async loadAuth(): Promise<void> {
+    // Anonymous game lists also need current names after another player renames a table.
+    void Promise.allSettled(loadAnonymousGames().map(async game => {
+      const response = await fetch(`/api/games/code/${encodeURIComponent(game.code)}`);
+      if (!response.ok) return;
+      const table = await response.json() as { gameName?: string; started?: boolean };
+      const current = useGameStore.getState().anonymousGames.find(g => g.gameId === game.gameId);
+      if (current && typeof table.gameName === 'string') {
+        useGameStore.setState({ anonymousGames: upsertAnonymousGame({ ...current, gameName: table.gameName, started: table.started ?? current.started }) });
+      }
+    }));
     useGameStore.setState((state) => ({ auth: { ...state.auth, loading: true } }));
     try {
       const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
@@ -513,7 +524,10 @@ export const net = {
   joinGame(code: string, name: string): void {
     useGameStore.getState().setPlayerName(name);
     useGameStore.setState({ pending: true, lastError: null });
-    socket.send({ t: 'joinGame', code: code.toUpperCase(), name });
+    const sessionToken = sessionTokenForInvite(code);
+    // A saved invite is a resume, including when hello and auto-join race.
+    // Never create a second anonymous seat in the same table.
+    socket.send(sessionToken ? { t: 'rejoin', sessionToken } : { t: 'joinGame', code: code.toUpperCase(), name });
   },
 
   rejoin(sessionToken: string): void {

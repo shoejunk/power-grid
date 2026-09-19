@@ -11,7 +11,7 @@ Work is being implemented in stages on `master`. Each implementation commit upda
 - [x] Stage 2 — lobby and navigation: immediate readiness, remove ready toggle; remove turn notifications; invite code takes precedence over existing session; creator-defined game names, including mid-game rename and invite-code fallback in game lists.
 - [x] Stage 3 — Jev bot: separate ADD JEV option, server-only .env configuration, legal move choices and bounded bidding, validated responses and safe fallback. Official TypeSafe API verified.
 - [x] Stage 4 — account achievements: persistent awards, own/other-player viewing, win without ever scrapping a plant, eligibility only with at least two humans, idempotent awarding and saved-game compatibility.
-- [ ] Stage 5 — integrated verification and final handoff; record commits, checks, limitations, and any remaining configuration.
+- [x] Stage 5 — integrated verification and final handoff; record commits, checks, limitations, and any remaining configuration.
 
 ## Verification and open questions
 
@@ -36,3 +36,22 @@ Work is being implemented in stages on `master`. Each implementation commit upda
 
 - Stage 3 committed/pushed: b0c2718. Three provider-contract tests, complete-game legal-choice/privacy test, and 233 engine regressions passed.
 - Stage 4: account-owned achievement storage in SQLite, JSON and memory; own/other-player profile browser; first finish, first win, and Built to Last (win without scrapping). Requires two original humans still human at completion; same-account duplicate seats do not count twice. Anonymous humans count and may claim awards by linking a retained audited game. Six tests cover persistence, idempotency, scrapping, eligibility and public-profile privacy.
+
+
+- Stage 4 committed/pushed: c1dcc2b.
+- Stage 5: added version-1/version-2 audited replay regressions; the new explicit buyResourcesAndFinish action gives existing games the one-click purchase flow while old audited buyResources actions retain their historical behavior. Invite resumes reuse a matching anonymous seat token. Anonymous game lists refresh renamed titles. Tightened Jev response parsing and achievement empty states.
+- Stage 5 commit: `fix: finish Power Grid compatibility checks and handoff` (find its hash with `git log --oneline`; this document is included in that commit).
+
+## Final verification
+
+- Full suites passed: Power Grid 235/235, server 83/83, client 6/6 (324 total). Includes complete bot games, Jev legal-choice/privacy checks, account achievement persistence/privacy, host-only naming, invite token routing, saved-game replay, and existing Dead of Winter server regressions.
+- Core and Power Grid builds passed. Client typecheck, server compilation into `.shots/server-build`, and Vite production client build into `.shots/client-build` passed. The ordinary workspace build/typecheck is blocked by pre-existing EPERM locks on generated Dead of Winter/server outputs; isolated outputs avoid altering these files.
+- Local browser verification with an isolated memory server: immediate-ready lobby, Add Jev missing-key error, named game creation, mid-game rename reflected in My Games, visible solid gold starting-city markers, achievement browser, and an invite to a second lobby while an unrelated saved match was active. Reloading the invite preserved one seat. No production data or paid provider calls were used.
+- Hybrid investigation: authoritative shared-capacity validation already rejected overflow. The client previously offered independently sized coal/oil selections; limits now consider the entire basket and shared hybrid storage. Mixed-resource/existing-stock regression coverage passes.
+
+## Remaining operational steps
+
+- No requested implementation remains. All stages are committed and pushed to `origin/master`.
+- Set `JEV_API_KEY` in repository-root `.env` and restart the server to enable Add Jev. See `docs/jev.md`. Live provider authentication and playing strength have not been verified; invalid responses/timeouts fall back to the local strategist.
+- Deployment was not requested and has not been performed. A future release should follow the saved-game backup/replay checks before production cutover.
+- New games use the restored zone counts. Existing games retain their original zone/rules version for audit compatibility. Existing audited games can earn achievements when eligibility is provable; legacy snapshots without a starting roster cannot establish eligibility. Awards require an account, though eligible anonymous players can link a retained game later.

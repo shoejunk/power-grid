@@ -20,7 +20,7 @@ export async function chooseJev(config: JevConfig, state: unknown, choices: read
     if (!response.ok) return null;
     const body = await response.json() as { answers?: { move?: { choice?: unknown } } };
     const choice = body.answers?.move?.choice;
-    if (typeof choice !== 'string' || !/^move_\d+$/.test(choice)) return null;
+    if (typeof choice !== 'string' || !/^move_(0|[1-9]\d*)$/.test(choice)) return null;
     return choices[Number(choice.slice(5))] ?? null;
   } catch { return null; }
 }

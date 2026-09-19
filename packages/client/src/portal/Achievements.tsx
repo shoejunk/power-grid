@@ -33,6 +33,8 @@ export function Achievements(): JSX.Element {
         <label>Find a player<input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="Player name" maxLength={80} /></label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{players.map(player => <Button key={player.id} size="sm" variant={selected === player.id ? 'primary' : 'ghost'} onClick={() => setSelected(player.id)}>{player.name}</Button>)}</div>
         <p role="status">{status}</p>
+        {!status && players.length === 0 && <p>No players found.</p>}
+        {!status && !profile && players.length > 0 && <p>Select a player to view their achievements.</p>}
         {!status && profile && <>
           <h3>{profile.name}</h3>
           {profile.achievements.length ? <ul>{profile.achievements.map(award => <li key={award.achievementId} style={{ marginBottom: 16 }}>

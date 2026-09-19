@@ -114,6 +114,7 @@ export function validateAction(
       return validateScrapPlant(state, playerId, action.plantId);
 
     case 'buyResources':
+    case 'buyResourcesAndFinish':
       return validateBuyResources(state, playerId, action.purchases);
     case 'redistributeResources':
       if (state.phase !== 'resources') return fail('Resources are rearranged during Phase 3');
@@ -198,8 +199,9 @@ function reduce(state: GameState, now: number, playerId: PlayerId, action: GameA
       return;
 
     case 'buyResources':
+    case 'buyResourcesAndFinish':
       applyBuyResources(state, now, playerId, action.purchases);
-      if (state.version >= 2) getPlayer(state, playerId).phaseStatus = 'acted';
+      if (state.version >= 2 || action.type === 'buyResourcesAndFinish') getPlayer(state, playerId).phaseStatus = 'acted';
       return;
     case 'redistributeResources':
       applyRedistribute(state, now, playerId, action.assignment);

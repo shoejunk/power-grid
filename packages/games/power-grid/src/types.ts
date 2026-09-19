@@ -413,6 +413,7 @@ export type GameAction =
   | { type: 'scrapPlant'; plantId: number }
   /* phase 3 — resources */
   | { type: 'buyResources'; purchases: { resource: ResourceType; count: number }[] }
+  | { type: 'buyResourcesAndFinish'; purchases: { resource: ResourceType; count: number }[] }
   | { type: 'redistributeResources'; assignment: { plantId: number; stored: ResourceBundle }[] }
   | { type: 'passResources' }
   /* combined phase 4 — building then production */

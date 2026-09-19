@@ -228,6 +228,14 @@ describe('§7 rearranging stored tokens', () => {
 });
 
 describe('§7 turn handling', () => {
+  it('finishes legacy-game purchases without changing historical buyResources replay', () => {
+    const { state, actor } = shopping([31]);
+    state.version = 1;
+    expect(act(state, actor, buy('coal', 2)).phase).toBe('resources');
+    const next = act(state, actor, { type: 'buyResourcesAndFinish', purchases: [{ resource: 'coal', count: 2 }] });
+    expect(next.phase).toBe('building');
+    expect(storedPool(next, actor).coal).toBe(2);
+  });
   it('a successful purchase finishes the resource turn immediately', () => {
     const { state, actor } = shopping([31]);
     const t = act(state, actor, buy('coal', 2));
