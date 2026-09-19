@@ -55,3 +55,16 @@ Work is being implemented in stages on `master`. Each implementation commit upda
 - Set `JEV_API_KEY` in repository-root `.env` and restart the server to enable Add Jev. See `docs/jev.md`. Live provider authentication and playing strength have not been verified; invalid responses/timeouts fall back to the local strategist.
 - Deployment was not requested and has not been performed. A future release should follow the saved-game backup/replay checks before production cutover.
 - New games use the restored zone counts. Existing games retain their original zone/rules version for audit compatibility. Existing audited games can earn achievements when eligibility is provable; legacy snapshots without a starting roster cannot establish eligibility. Awards require an account, though eligible anonymous players can link a retained game later.
+
+## Authorized deployment completed — September 19, 2026 UTC
+
+This section supersedes the earlier pending-key/not-deployed notes. The user supplied the local key and authorized production deployment while preserving active games.
+
+- Deployed application commit: `5184de8714bb940a8a65c4a8cf9f25e992eb9abe`; `origin/release` points to it. This deployment-record-only commit on `master` adds no application changes and needs no server restart.
+- Complete production build passed in `/opt/power-grid/releases/5184de8`. All six production game histories replayed against a SQLite copy. Only volatile connection/last-seen metadata differed from snapshots; durable game state and audited checkpoints matched. The copied server restored all six games, 22 seats and nine sessions.
+- Transferred only the Jev key over SSH into root-owned mode-600 `/etc/power-grid/jev.env`, loaded via `/etc/systemd/system/power-grid.service.d/jev.conf`. Verified the running process has the key without printing it. Never place this file or its contents in Git. Keep this systemd configuration on future releases.
+- One synthetic-state live provider request returned HTTP 200 and a valid `nominatePlant` action in 636 ms. No real player state was sent for validation.
+- Final quiesced backup: `/var/lib/power-grid/backups/pre-5184de8-20260919T004456Z.db`. Prior release `/opt/power-grid/releases/5a03409` retained for rollback. Atomically switched the symlink and restarted only `power-grid`; startup replay took about 29 seconds, causing a brief reconnect window.
+- Pre/post counts matched exactly: six games (all started), 22 seats, nine game sessions, two accounts, 46 auth sessions, 898 audit events. Verified all game/session/account identities survived and SQLite integrity was `ok`.
+- Public HTTPS 200, HTTP 301, secure WebSocket connection, localhost-only listener and exact release marker passed. Live browser showed the new achievement browser and existing account profiles. No live game was created, modified or deleted during verification.
+- No deployment steps remain. Subsequent play-quality monitoring for Jev is optional; provider failures retain the safe local fallback.
