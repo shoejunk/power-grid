@@ -74,6 +74,7 @@ export class GameRoom {
   readonly gameId: string;
   readonly gameKey: GameKey;
   code: string;
+  gameName: string;
   hostId: PlayerId;
   settings: unknown;
   seats: Seat[];
@@ -104,9 +105,10 @@ export class GameRoom {
     this.gameId = record.gameId;
     this.gameKey = record.gameKey;
     this.code = record.code;
+    this.gameName = record.gameName ?? "";
     this.hostId = record.hostId;
     this.settings = record.settings;
-    this.seats = record.seats;
+    this.seats = record.seats.map(seat => ({ ...seat, ready: true }));
     this.state = record.state;
     this.started = record.started;
     this.chat = record.chat;
@@ -202,7 +204,7 @@ export class GameRoom {
       name: opts.name,
       color,
       isBot: opts.isBot,
-      ready: opts.ready ?? false,
+      ready: true,
       joinedAt: Date.now(),
     };
     this.seats.push(seat);
@@ -267,6 +269,7 @@ export class GameRoom {
     return {
       gameKey: this.gameKey,
       code: this.code,
+      gameName: this.gameName,
       gameId: this.gameId,
       hostId: this.hostId,
       settings: this.settings,
@@ -373,6 +376,7 @@ export class GameRoom {
       gameId: this.gameId,
       gameKey: this.gameKey,
       code: this.code,
+      gameName: this.gameName,
       hostId: this.hostId,
       settings: this.settings,
       seats: this.seats,
@@ -413,7 +417,13 @@ export class GameRoom {
     if (this.started) return fail('gameStarted', 'The game has already started.');
     const seat = this.seat(playerId);
     if (!seat) return fail('notInGame', 'You are not seated at this table.');
-    seat.ready = ready;
+    seat.ready = true; // Legacy clients cannot unready an automatically ready seat.
+    return done;
+  }
+
+  setGameName(playerId: PlayerId, gameName: string): RoomResult {
+    if (playerId !== this.hostId) return fail('notHost', 'Only the host can rename this game.');
+    this.gameName = gameName;
     return done;
   }
 
@@ -517,8 +527,7 @@ export class GameRoom {
     if (this.seats.length > this.capacity) {
       return fail('tooManyPlayers', `At most ${this.capacity} players are supported.`);
     }
-    const notReady = this.seats.find((s) => !s.isBot && s.playerId !== this.hostId && !s.ready);
-    if (notReady) return fail('notReady', `${notReady.name} is not ready.`);
+
 
     const verdict = this.plugin.validateSettings(this.settings as never, this.seats.length);
     if (!verdict.ok) return fail('badSettings', verdict.reason);

@@ -116,15 +116,7 @@ export class GameHub {
       ...this.deps,
       plugin,
       logger: this.logger.child(record.code),
-      onTurnBegan: (event) => {
-        void this.deps.notifications.turnBegan(event).catch((error) => {
-          this.logger.warn('Turn alert processing failed', {
-            gameId: event.gameId,
-            playerId: event.playerId,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        });
-      },
+
     }, hydrated);
   }
 
@@ -229,6 +221,7 @@ export class GameHub {
     started: boolean;
     updatedAt: number;
     playerName: string;
+    gameName: string;
   }> {
     return [...this.sessions.values()]
       .filter((session) => session.accountId === accountId)
@@ -240,6 +233,7 @@ export class GameHub {
           gameId: room.gameId,
           gameKey: room.gameKey,
           code: room.code,
+      gameName: room.gameName,
           started: room.started,
           updatedAt: room.updatedAt,
           playerName: seat.name,
@@ -334,7 +328,7 @@ export class GameHub {
         this.onViewGames(conn);
         return;
       case 'createGame':
-        this.onCreateGame(conn, message.gameKey, message.name, message.settings);
+        this.onCreateGame(conn, message.gameKey, message.name, message.settings, message.gameName);
         return;
       case 'joinGame':
         this.onJoinGame(conn, message.code, message.name);
@@ -357,6 +351,9 @@ export class GameHub {
     const { room, playerId } = bound;
 
     switch (message.t) {
+      case 'setGameName':
+        this.applyLobbyChange(conn, room, room.setGameName(playerId, message.gameName));
+        return;
       case 'setReady':
         this.applyLobbyChange(conn, room, room.setReady(playerId, message.ready));
         return;
@@ -533,6 +530,7 @@ export class GameHub {
       gameKey: room.gameKey,
       gameId: room.gameId,
       code: room.code,
+      gameName: room.gameName,
       started: room.started,
       updatedAt: room.updatedAt,
       playerName: seat.name,
@@ -547,6 +545,7 @@ export class GameHub {
       gameId: room.gameId,
       gameKey: room.gameKey,
       code: room.code,
+      gameName: room.gameName,
       playerId: session.playerId,
       name: seat.name,
       started: room.started,
@@ -577,6 +576,7 @@ export class GameHub {
     gameKey: GameKey,
     name: string,
     rawSettings: unknown,
+    gameName = "",
   ): void {
     if (!this.canPlay(conn)) return;
     const plugin = this.deps.registry.get(gameKey);
@@ -620,6 +620,7 @@ export class GameHub {
       gameId,
       gameKey,
       code,
+      gameName,
       hostId,
       settings,
       seats: [],
@@ -655,6 +656,7 @@ export class GameHub {
       gameKey,
       gameId: room.gameId,
       code: room.code,
+      gameName: room.gameName,
       started: room.started,
       updatedAt: room.updatedAt,
       playerName: seat.name,
@@ -672,12 +674,6 @@ export class GameHub {
       conn.error('noSuchGame', `No game found with code ${code}.`);
       return;
     }
-    if (room.started) {
-      // A started game accepts reconnections by token, never brand-new joiners.
-      conn.error('gameStarted', 'That game has already started. Rejoin with your session link instead.');
-      return;
-    }
-
     // Joining from another machine should recover the account's existing
     // lobby seat instead of creating a duplicate seat at the same table.
     if (conn.accountId) {
@@ -686,6 +682,12 @@ export class GameHub {
       );
       if (existing && this.resume(conn, existing.token)) return;
     }
+    if (room.started) {
+      // A started game accepts reconnections by token, never brand-new joiners.
+      conn.error('gameStarted', 'That game has already started. Rejoin with your session link instead.');
+      return;
+    }
+
     if (room.seats.length >= room.capacity) {
       conn.error('gameFull', 'That game is full.');
       return;
@@ -711,6 +713,7 @@ export class GameHub {
       gameKey: room.gameKey,
       gameId: room.gameId,
       code: room.code,
+      gameName: room.gameName,
       started: room.started,
       updatedAt: room.updatedAt,
       playerName: seat.name,
@@ -723,6 +726,7 @@ export class GameHub {
       gameId: room.gameId,
       gameKey: room.gameKey,
       code: room.code,
+      gameName: room.gameName,
       name,
       playerId,
     });
@@ -806,6 +810,7 @@ export class GameHub {
       gameId: room.gameId,
       gameKey: room.gameKey,
       code: room.code,
+      gameName: room.gameName,
       playerId,
       started: room.started,
     });

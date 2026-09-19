@@ -67,6 +67,14 @@ export function JoinGame({ initialCode }: { initialCode: string | null }): JSX.E
     if (initialCode !== null && !nameValid) nameRef.current?.focus();
   }, [initialCode, nameValid]);
 
+  const attemptedInvite = useRef(false);
+  useEffect(() => {
+    if (initialCode && canSubmit && !attemptedInvite.current) {
+      attemptedInvite.current = true;
+      net.joinGame(initialCode, name.trim());
+    }
+  }, [initialCode, canSubmit, name]);
+
   const submit = (): void => {
     setTouched(true);
     if (!canSubmit) return;

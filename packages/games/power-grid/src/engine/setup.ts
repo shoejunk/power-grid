@@ -53,6 +53,7 @@ export interface SeatInput {
 }
 
 export interface CreateGameOptions {
+  version?: number;
   /** Timestamp stamped into `createdAt`/`updatedAt` and the setup log. §14. */
   now?: number;
   gameId?: string;
@@ -204,7 +205,7 @@ export function createGame(
   for (const c of map.cities) citySlots[c.id] = [null, null, null];
 
   const state: GameState = {
-    version: 1,
+    version: options.version ?? 2,
     gameId: options.gameId ?? `game-${code}`,
     code,
     hostId,
@@ -287,7 +288,7 @@ export function createGame(
  * ------------------------------------------------------------------ */
 
 export function requiredZoneSize(state: GameState): number {
-  return ZONE_AREA_COUNT[state.settings.playerCount] ?? 3;
+  return state.version < 2 ? state.settings.playerCount : (ZONE_AREA_COUNT[state.settings.playerCount] ?? 3);
 }
 
 /** Deterministically grows a contiguous zone of the required size. §1. */

@@ -94,6 +94,8 @@ export function replayPersistedGame(
       hostId: start.hostId,
       seed: `${record.code}-${record.createdAt}`,
       now: start.at,
+      replayVersion: (start.afterState as { version?: number } | undefined)?.version
+        ?? (record.state as { version?: number } | null)?.version ?? 1,
     },
     start.settings,
     seats,

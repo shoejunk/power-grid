@@ -139,6 +139,7 @@ interface GameRow {
   gameKey: string | null;
   code: string;
   hostId: string;
+  gameName: string | null;
   settings: string;
   seats: string;
   state: string | null;
@@ -256,6 +257,7 @@ export class SqliteGameStore implements GameStore {
         `ALTER TABLE games ADD COLUMN gameKey TEXT NOT NULL DEFAULT '${LEGACY_GAME_KEY}'`,
       );
     }
+    if (!columns.has('gameName')) this.db.exec('ALTER TABLE games ADD COLUMN gameName TEXT');
     if (!columns.has('auditSequence')) {
       // NULL marks a pre-audit snapshot. It must keep using the snapshot path
       // until a future start creates a complete stream with its setup event.
@@ -319,6 +321,7 @@ export class SqliteGameStore implements GameStore {
           gameKey: row.gameKey ?? LEGACY_GAME_KEY,
           code: row.code,
           hostId: row.hostId,
+          gameName: row.gameName ?? "",
           settings: JSON.parse(row.settings),
           seats: JSON.parse(row.seats),
           state: row.state ? JSON.parse(row.state) : null,
@@ -339,13 +342,13 @@ export class SqliteGameStore implements GameStore {
   private writeGame(game: PersistedGame): void {
     this.db
       .prepare(
-        `INSERT INTO games (gameId, gameKey, code, hostId, settings, seats, state, auditSequence, started, chat, createdAt, updatedAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO games (gameId, gameKey, code, hostId, settings, seats, state, auditSequence, started, chat, createdAt, updatedAt, gameName)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(gameId) DO UPDATE SET
            gameKey=excluded.gameKey, code=excluded.code, hostId=excluded.hostId,
            settings=excluded.settings, seats=excluded.seats, state=excluded.state,
            auditSequence=excluded.auditSequence, started=excluded.started,
-           chat=excluded.chat, updatedAt=excluded.updatedAt`,
+           chat=excluded.chat, updatedAt=excluded.updatedAt, gameName=excluded.gameName`,
       )
       .run(
         game.gameId,
@@ -360,6 +363,7 @@ export class SqliteGameStore implements GameStore {
         JSON.stringify(game.chat),
         game.createdAt,
         game.updatedAt,
+        game.gameName ?? "",
       );
   }
 

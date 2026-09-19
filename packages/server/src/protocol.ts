@@ -80,7 +80,7 @@ export function parseClientMessage(raw: string): ParseResult {
        */
       return {
         ok: true,
-        message: { t: 'createGame', gameKey: parsed.gameKey, name, settings: parsed.settings ?? {} },
+        message: { t: 'createGame', gameKey: parsed.gameKey, name, settings: parsed.settings ?? {}, gameName: typeof parsed.gameName === 'string' ? sanitiseText(parsed.gameName, 80) : '' },
       };
     }
 
@@ -101,6 +101,11 @@ export function parseClientMessage(raw: string): ParseResult {
     case 'setReady':
       if (!isBool(parsed.ready)) return bad('badMessage', 'setReady requires a boolean.');
       return { ok: true, message: { t: 'setReady', ready: parsed.ready } };
+
+    case 'setGameName': {
+      if (typeof parsed.gameName !== 'string') return bad('badMessage', 'A game name must be text.');
+      return { ok: true, message: { t: 'setGameName', gameName: sanitiseText(parsed.gameName, 80) } };
+    }
 
     case 'setName': {
       if (!isString(parsed.name)) return bad('badMessage', 'setName requires a name.');

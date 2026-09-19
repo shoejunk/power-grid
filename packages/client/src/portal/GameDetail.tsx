@@ -45,6 +45,7 @@ export function GameDetail({ gameKey }: { gameKey: string }): JSX.Element {
 
   const [name, setName] = useState(storedName || auth.account?.name || '');
   const [touched, setTouched] = useState(false);
+  const [gameName, setGameName] = useState("");
   /*
    * The draft settings, seeded from the game's own defaults the moment its
    * module lands. Held as an opaque bag: the shell merges patches into it and
@@ -95,7 +96,7 @@ export function GameDetail({ gameKey }: { gameKey: string }): JSX.Element {
   const submit = (): void => {
     setTouched(true);
     if (!canSubmit) return;
-    net.createGame(gameKey, name.trim(), draft);
+    net.createGame(gameKey, name.trim(), draft, gameName.trim());
   };
 
   const Settings = module?.Settings;
@@ -176,6 +177,10 @@ export function GameDetail({ gameKey }: { gameKey: string }): JSX.Element {
                   icon={<IconUsers />}
                   aria-label="Your display name"
                 />
+              </Panel>
+
+              <Panel title="Game name" subtitle="Optional; defaults to the invite code">
+                <TextInput aria-label="Game name" value={gameName} maxLength={80} onChange={e => setGameName(e.target.value)} />
               </Panel>
 
               {Settings ? (

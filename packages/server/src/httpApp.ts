@@ -59,6 +59,8 @@ export function createHttpApp(deps: HttpAppDeps): Express {
     res.json({ linked });
   });
 
+  app.use('/api/notifications', (_req, res) => { res.status(410).json({ message: 'Turn alerts have been removed.' }); });
+
   app.get('/api/notifications/config', (_req, res) => {
     res.json(deps.notifications.publicConfig());
   });

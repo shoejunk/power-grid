@@ -27,6 +27,7 @@ export interface ChatEntry {
 }
 
 export interface PersistedGame {
+  gameName?: string;
   gameId: string;
   /** Which game is being played. Selects the plugin on load. */
   gameKey: GameKey;

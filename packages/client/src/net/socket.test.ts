@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   loadAnonymousGames,
+  sessionTokenForInvite,
   markAnonymousGameStartedByToken,
   removeAnonymousGameById,
   removeAnonymousGameByToken,
@@ -46,6 +47,14 @@ describe('anonymous game storage', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('an invite never resumes an unrelated legacy seat', () => {
+    writeStored('tt.sessionToken', 'other-game');
+    upsertAnonymousGame(game());
+    expect(sessionTokenForInvite('ABC234')).toBe('token-a');
+    expect(sessionTokenForInvite('NEW234')).toBeNull();
+    expect(sessionTokenForInvite()).toBe('other-game');
   });
 
   it('keeps multiple games newest-first and replaces matching game ids', () => {

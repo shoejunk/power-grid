@@ -8,8 +8,8 @@ import { JoinGame } from './portal/JoinGame';
 import { Lobby } from './portal/Lobby';
 import { Portal } from './portal/Portal';
 import { GameDetail } from './portal/GameDetail';
-import { NotificationSettings } from './portal/NotificationSettings';
 import { NotFound } from './portal/NotFound';
+import { GameName } from './portal/GameName';
 import { useRoute } from './router';
 import { ErrorBoundary } from '@tt/ui';
 
@@ -99,13 +99,13 @@ export function App(): JSX.Element {
         */}
         <ErrorBoundary>
           <div key={screenKey} id="tt-main" className="tt-route">
+            {seated && !(route.name === 'join' && route.code && route.code !== lobby?.code) && <GameName />}
             <Screen />
           </div>
         </ErrorBoundary>
       </GameTheme>
 
       <Toaster />
-      <NotificationSettings />
     </MotionConfig>
   );
 }
@@ -135,7 +135,11 @@ function Screen(): JSX.Element {
   const lobby = useGameStore((s) => s.lobby);
   const state = useGameStore((s) => s.state);
 
-  /* A live match beats everything, including the URL. */
+  if (route.name === 'join' && route.code && lobby?.code !== route.code) {
+    return <JoinGame key={route.code} initialCode={route.code} />;
+  }
+
+  /* An explicit invite takes precedence over another table. */
   if (state !== null) return <Match />;
   if (lobby !== null) return <Lobby />;
 

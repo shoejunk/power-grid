@@ -36,6 +36,7 @@ export interface AuthAccount {
 }
 
 export interface AccountGame {
+  gameName?: string;
   gameId: string;
   gameKey: GameKey;
   code: string;
@@ -187,6 +188,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             gameId: message.gameId,
             gameKey: message.gameKey,
             code: message.code,
+            gameName: message.gameName,
             started: message.started,
             updatedAt: message.updatedAt,
             playerName: message.playerName,
@@ -194,6 +196,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           });
         }
         set({
+          state: null,
+          lobby: null,
           myPlayerId: message.playerId,
           gameKey: message.gameKey,
           anonymousGames,
@@ -203,6 +207,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       case 'lobby': {
         const previous = get().lobby;
+        for (const game of get().anonymousGames) {
+          if (game.gameId === message.lobby.gameId) {
+            set({ anonymousGames: upsertAnonymousGame({ ...game, gameName: message.lobby.gameName }) });
+          }
+        }
         set({
           lobby: message.lobby,
           gameKey: message.lobby.gameKey,
@@ -495,10 +504,10 @@ export const net = {
     socket.send({ t: 'hello' });
   },
 
-  createGame(gameKey: GameKey, name: string, settings: unknown): void {
+  createGame(gameKey: GameKey, name: string, settings: unknown, gameName = ""): void {
     useGameStore.getState().setPlayerName(name);
     useGameStore.setState({ pending: true, lastError: null, gameKey });
-    socket.send({ t: 'createGame', gameKey, name, settings });
+    socket.send({ t: 'createGame', gameKey, name, settings, gameName });
   },
 
   joinGame(code: string, name: string): void {
@@ -513,6 +522,7 @@ export const net = {
 
   /** Resumes one table from this browser's anonymous local game list. */
   resumeAnonymousGame(gameId: string): void {
+    navigate({ name: "portal" });
     const game = useGameStore.getState().anonymousGames.find(
       (candidate) => candidate.gameId === gameId,
     );
@@ -530,6 +540,7 @@ export const net = {
   },
 
   resumeGame(gameId: string): void {
+    navigate({ name: "portal" });
     useGameStore.setState({ pending: true, lastError: null });
     socket.send({ t: 'resumeGame', gameId });
   },
@@ -543,6 +554,8 @@ export const net = {
     useGameStore.setState({ pending: true, lastError: null });
     socket.send({ t: 'leaveGame' });
   },
+
+  setGameName(gameName: string): void { socket.send({ t: 'setGameName', gameName }); },
 
   setReady(ready: boolean): void {
     socket.send({ t: 'setReady', ready });

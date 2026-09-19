@@ -199,7 +199,7 @@ function reduce(state: GameState, now: number, playerId: PlayerId, action: GameA
 
     case 'buyResources':
       applyBuyResources(state, now, playerId, action.purchases);
-      getPlayer(state, playerId).phaseStatus = 'acted';
+      if (state.version >= 2) getPlayer(state, playerId).phaseStatus = 'acted';
       return;
     case 'redistributeResources':
       applyRedistribute(state, now, playerId, action.assignment);

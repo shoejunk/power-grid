@@ -119,7 +119,7 @@ export function Portal(): JSX.Element {
                   <span>
                     <strong>{games.find((entry) => entry.key === game.gameKey)?.name ?? game.gameKey}</strong>
                     <small>
-                      {game.code} · {game.playerName}
+                      {game.gameName || game.code} · {game.playerName}
                     </small>
                   </span>
                   <span>{game.started ? 'Resume' : 'Open lobby'}</span>

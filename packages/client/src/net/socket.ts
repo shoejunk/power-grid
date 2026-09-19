@@ -10,6 +10,7 @@ const LEGACY_SESSION_KEY = 'tt.sessionToken';
 const ANONYMOUS_GAMES_KEY = 'tt.anonymousGames';
 
 export interface AnonymousGame {
+  gameName?: string;
   gameId: string;
   gameKey: GameKey;
   code: string;
@@ -44,6 +45,10 @@ export function writeStored(key: string, value: string | null): void {
 export const loadLegacySessionToken = (): string | null => readStored(LEGACY_SESSION_KEY);
 export const clearLegacySessionToken = (): void => writeStored(LEGACY_SESSION_KEY, null);
 export const saveLegacySessionToken = (token: string | null): void => writeStored(LEGACY_SESSION_KEY, token);
+
+export function sessionTokenForInvite(invite?: string): string | null {
+  return invite ? (loadAnonymousGames().find(game => game.code === invite.toUpperCase())?.sessionToken ?? null) : loadLegacySessionToken();
+}
 
 function isAnonymousGame(value: unknown): value is AnonymousGame {
   if (!value || typeof value !== 'object') return false;
@@ -315,7 +320,8 @@ export class GameSocket {
    * HttpOnly cookie automatically attached to the WebSocket request.
    */
   private identify(): void {
-    const token = loadLegacySessionToken();
+    const invite = /^\/join\/([a-z0-9]+)\/?$/i.exec(window.location.pathname ?? '')?.[1]?.toUpperCase();
+    const token = sessionTokenForInvite(invite);
     if (token !== null && token.length > 0) {
       this.ws?.send(JSON.stringify({ t: 'rejoin', sessionToken: token } satisfies ClientMessage));
     } else {

@@ -4,7 +4,7 @@ import { boot, closeAll, createGame, joinGame, makeDataDir, removeDataDir } from
 import type { TestClient } from './testClient.js';
 
 describe('turn alert integration', () => {
-  it('notifies only the player whose turn just began, after the new state is persisted', async () => {
+  it('rejects alert subscriptions and does not deliver turn notifications', async () => {
     const dataDir = makeDataDir();
     let server: RunningServer | undefined;
     const clients: TestClient[] = [];
@@ -48,7 +48,7 @@ describe('turn alert integration', () => {
             },
           }),
         });
-        expect(response.status).toBe(200);
+        expect(response.status).toBe(410);
       }
 
       guest.client.send({ t: 'setReady', ready: true });
@@ -59,9 +59,7 @@ describe('turn alert integration', () => {
       const [hostStart, guestStart] = await Promise.all([host.client.waitAnyState(), guest.client.waitAnyState()]);
       const firstPlayer = hostStart.state.activePlayerId;
       expect(guestStart.state.activePlayerId).toBe(firstPlayer);
-      expect(delivered.map((item) => item.endpoint)).toEqual([`https://push.example.test/${firstPlayer}`]);
-      expect(delivered[0]?.persistedActivePlayerId).toBe(firstPlayer);
-      expect(JSON.parse(delivered[0]!.payload).body).toContain(host.code);
+      expect(delivered).toEqual([]);
 
       host.client.clear();
       guest.client.clear();
@@ -71,10 +69,7 @@ describe('turn alert integration', () => {
       const nextPlayer = hostNext.state.activePlayerId;
       expect(nextPlayer).not.toBe(firstPlayer);
       expect(guestNext.state.activePlayerId).toBe(nextPlayer);
-      expect(delivered.map((item) => item.endpoint)).toEqual([
-        `https://push.example.test/${firstPlayer}`,
-        `https://push.example.test/${nextPlayer}`,
-      ]);
+      expect(delivered).toEqual([]);
     } finally {
       await closeAll(...clients);
       await server?.close();

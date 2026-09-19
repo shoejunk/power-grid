@@ -34,7 +34,7 @@ describe('multiplayer server', () => {
   });
 
   /* ================================================================ *
-   * 1. Create → join by code → lobby broadcast → start
+   * 1. Create â†’ join by code â†’ lobby broadcast â†’ start
    * ================================================================ */
 
   describe('lobby lifecycle', () => {
@@ -128,16 +128,9 @@ describe('multiplayer server', () => {
       expect((await guest.client.wait('error')).code).toBe('kicked');
     });
 
-    it('refuses to start until everyone is ready, then starts and broadcasts state', async () => {
+    it('starts immediately without readiness toggles and broadcasts state', async () => {
       const host = track(await createGame(server, 'Ada'));
       const guest = track(await joinGame(server, host.code, 'Grace'));
-
-      host.client.clear();
-      host.client.send({ t: 'startGame' });
-      expect((await host.client.wait('error')).code).toBe('notReady');
-
-      guest.client.send({ t: 'setReady', ready: true });
-      await host.client.waitLobby((l) => l.players.every((p) => p.ready || p.isHost));
 
       host.client.clear();
       guest.client.clear();
@@ -189,7 +182,7 @@ describe('multiplayer server', () => {
   });
 
   /* ================================================================ *
-   * 2. Authority — out-of-turn and illegal actions
+   * 2. Authority â€” out-of-turn and illegal actions
    * ================================================================ */
 
   describe('server authority', () => {
@@ -224,7 +217,7 @@ describe('multiplayer server', () => {
       const room = server.hub.roomByCode(host.code)!;
       const state = room.state as StubState;
       // The host holds the clock, so the guest answering at all proves the
-      // out-of-turn path — and the redaction proves nobody reads the answers.
+      // out-of-turn path â€” and the redaction proves nobody reads the answers.
       state.activePlayerId = host.playerId;
       state.ballot = {
         topic: 'exile',
@@ -311,7 +304,7 @@ describe('multiplayer server', () => {
    * ================================================================ */
 
   describe('reconnection', () => {
-    it('restores a player mid-game — mid-turn — to an identical state', async () => {
+    it('restores a player mid-game â€” mid-turn â€” to an identical state', async () => {
       const host = track(await createGame(server, 'Ada'));
       const guest = track(await joinGame(server, host.code, 'Grace'));
       guest.client.send({ t: 'setReady', ready: true });
@@ -329,7 +322,7 @@ describe('multiplayer server', () => {
       guest.client.kill();
       await host.client.waitLobby((l) => l.players.some((p) => p.id === guest.playerId && !p.connected));
 
-      // …and they come back with their session token.
+      // â€¦and they come back with their session token.
       const resumed = await TestClient.connect(server.wsUrl);
       openClients.push(resumed);
       resumed.send({ t: 'rejoin', sessionToken: guest.sessionToken });
@@ -342,7 +335,7 @@ describe('multiplayer server', () => {
       expect(normaliseState(after)).toEqual(normaliseState(before));
       expect(after.activePlayerId).toBe(guest.playerId);
 
-      // And they can act immediately — the seat never lost the turn.
+      // And they can act immediately â€” the seat never lost the turn.
       resumed.clear();
       resumed.send({ t: 'action', action: { type: 'pass' } });
       const acted = await resumed.waitState((s) => s.activePlayerId === host.playerId);

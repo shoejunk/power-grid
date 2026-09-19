@@ -23,13 +23,14 @@ export type ClientMessage =
   /** Stops watching the current table without giving up its seat. */
   | { t: 'viewGames' }
   /** `settings` is opaque here and parsed by the plugin named by `gameKey`. */
-  | { t: 'createGame'; gameKey: GameKey; name: string; settings: unknown }
+  | { t: 'createGame'; gameKey: GameKey; name: string; settings: unknown; gameName?: string }
   | { t: 'joinGame'; code: string; name: string }
   | { t: 'leaveGame' }
   | { t: 'setReady'; ready: boolean }
   | { t: 'setName'; name: string }
+  | { t: 'setGameName'; gameName: string }
   | { t: 'setColor'; color: SeatColor }
-  | { t: 'updateSettings'; settings: unknown }
+  | { t: 'updateSettings'; settings: unknown; gameName?: string }
   | { t: 'addBot' }
   | { t: 'removePlayer'; playerId: PlayerId }
   | { t: 'startGame' }
@@ -53,6 +54,7 @@ export type ServerMessage =
       started: boolean;
       updatedAt: number;
       playerName: string;
+      gameName?: string;
       /** Present when this seat is associated with a Google account. */
       accountId?: string;
     }

@@ -66,6 +66,7 @@ export interface LobbySeat {
  * game package is the only thing that understands its shape.
  */
 export interface LobbyState {
+  gameName?: string;
   gameKey: GameKey;
   code: string;
   gameId: string;
@@ -102,6 +103,8 @@ export interface GameStateEnvelope {
 
 /** Context the platform supplies when a game builds its starting state. */
 export interface CreateGameContext {
+  /** Historical rules version when rebuilding an audit stream. */
+  replayVersion?: number;
   gameId: string;
   /** The shareable join code. Games may surface it, but must not mint it. */
   code: string;

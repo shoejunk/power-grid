@@ -265,7 +265,7 @@ function createGame(
     }),
     ctx.hostId,
     ctx.code,
-    { now: ctx.now, gameId: ctx.gameId },
+    { now: ctx.now, gameId: ctx.gameId, ...(ctx.replayVersion !== undefined ? { version: ctx.replayVersion } : {}) },
   );
 
   /*

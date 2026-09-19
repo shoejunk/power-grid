@@ -29,7 +29,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useGameUi } from '@/games/registry';
 import type { GameUiModule } from '@/games/types';
-import { ConnectionPill, net, selectIsHost, selectMyLobbyPlayer, useGameStore } from '@/net';
+import { ConnectionPill, net, selectIsHost, useGameStore } from '@/net';
 
 import { PortalBackdrop, PortalMark } from './Chrome';
 import { AuthControls } from './AuthControls';
@@ -50,7 +50,6 @@ export function Lobby(): JSX.Element {
   const lobby = useGameStore((s) => s.lobby);
   const myPlayerId = useGameStore((s) => s.myPlayerId);
   const isHost = useGameStore(selectIsHost);
-  const me = useGameStore(selectMyLobbyPlayer);
   const pushToast = useGameStore((s) => s.pushToast);
   const { module } = useGameUi(lobby?.gameKey ?? null);
 
@@ -106,7 +105,7 @@ export function Lobby(): JSX.Element {
     module?.seatCapacity?.(lobby.settings) ?? lobby.maxPlayers,
   );
   const seatsLeft = Math.max(0, capacity - seated);
-  const allReady = lobby.players.every((p) => p.ready || p.isBot || p.id === lobby.hostId);
+  const allReady = true;
   const canStart = isHost && seated >= lobby.minPlayers && seatsLeft === 0 && allReady;
 
   const startBlockedReason = !isHost
@@ -230,29 +229,7 @@ export function Lobby(): JSX.Element {
 
           <LobbyChat />
 
-          <div className="tt-lobby__readybar">
-            <div className="tt-lobby__readyhint">
-              <IconCheck />
-              <span className="tt-caption">
-                {allReady
-                  ? 'Everyone is ready.'
-                  : `${
-                      lobby.players.filter(
-                        (p) => !p.ready && !p.isBot && p.id !== lobby.hostId,
-                      ).length
-                    } player(s) not ready.`}
-              </span>
-            </div>
 
-            <Button
-              variant={me?.ready === true ? 'secondary' : 'live'}
-              size="lg"
-              icon={<IconCheck />}
-              onClick={() => net.setReady(!(me?.ready ?? false))}
-            >
-              {me?.ready === true ? 'Not ready' : "I'm ready"}
-            </Button>
-          </div>
         </motion.section>
 
         {/* ------------------ share + start ------------------ */}
