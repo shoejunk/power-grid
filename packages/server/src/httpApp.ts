@@ -148,6 +148,18 @@ export function createHttpApp(deps: HttpAppDeps): Express {
     });
   });
 
+  // Public profiles contain display names and awards only, never email or auth data.
+  app.get('/api/achievements', (req, res) => {
+    const accounts = store.loadAccounts();
+    const accountId = typeof req.query.accountId === 'string' ? req.query.accountId : deps.auth.accountIdForRequest(req);
+    const query = typeof req.query.q === 'string' ? req.query.q.slice(0, 80).toLowerCase() : '';
+    const account = accounts.find(a => a.accountId === accountId);
+    res.json({
+      players: accounts.filter(a => a.name.toLowerCase().includes(query)).slice(0, 50).map(a => ({ id: a.accountId, name: a.name })),
+      profile: account ? { id: account.accountId, name: account.name, achievements: store.loadAchievements(account.accountId).map(({ name, description, earnedAt, achievementId, gameKey }) => ({ name, description, earnedAt, achievementId, gameKey })) } : null,
+    });
+  });
+
   /** Liveness + a little operational insight. */
   app.get('/health', (_req: Request, res: Response) => {
     res.json({

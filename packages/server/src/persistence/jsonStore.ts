@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type {
+  AchievementRecord,
   AccountRecord,
   AuthSessionRecord,
   GameAuditEvent,
@@ -24,6 +25,7 @@ import type {
 interface FileShape {
   version: 1 | 2 | 3 | 4 | 5;
   games: PersistedGame[];
+  achievements?: AchievementRecord[];
   sessions: SessionRecord[];
   accounts?: AccountRecord[];
   authSessions?: AuthSessionRecord[];
@@ -34,6 +36,7 @@ interface FileShape {
 export class JsonFileGameStore implements GameStore {
   readonly kind = 'json' as const;
   readonly location: string;
+  private achievements: AchievementRecord[] = [];
   private games = new Map<string, PersistedGame>();
   private sessions = new Map<string, SessionRecord>();
   private accounts = new Map<string, AccountRecord>();
@@ -52,6 +55,7 @@ export class JsonFileGameStore implements GameStore {
     if (!fs.existsSync(this.location)) return;
     try {
       const parsed = JSON.parse(fs.readFileSync(this.location, 'utf8')) as FileShape;
+      this.achievements = parsed.achievements ?? [];
       for (const g of parsed.games ?? []) this.games.set(g.gameId, g);
       for (const s of parsed.sessions ?? []) this.sessions.set(s.token, s);
       for (const account of parsed.accounts ?? []) this.accounts.set(account.accountId, account);
@@ -78,6 +82,7 @@ export class JsonFileGameStore implements GameStore {
     const payload: FileShape = {
       version: 5,
       games: [...this.games.values()],
+      achievements: this.achievements,
       sessions: [...this.sessions.values()],
       accounts: [...this.accounts.values()],
       authSessions: [...this.authSessions.values()],
@@ -89,6 +94,15 @@ export class JsonFileGameStore implements GameStore {
     const tmp = `${this.location}.${process.pid}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(payload), 'utf8');
     fs.renameSync(tmp, this.location);
+  }
+
+  loadAchievements(accountId: string): AchievementRecord[] {
+    return this.achievements.filter(a => a.accountId === accountId).map(a => ({ ...a }));
+  }
+  saveAchievement(award: AchievementRecord): void {
+    if (this.achievements.some(a => a.accountId === award.accountId && a.gameKey === award.gameKey && a.achievementId === award.achievementId)) return;
+    this.achievements.push({ ...award });
+    this.flush();
   }
 
   loadGames(): PersistedGame[] {

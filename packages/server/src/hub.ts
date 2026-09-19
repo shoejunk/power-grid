@@ -26,6 +26,7 @@ import type { GameStore, PersistedGame, SessionRecord } from './persistence/type
 import { replayPersistedGame } from './persistence/replay.js';
 import { GameRoom } from './room.js';
 import type { Connection } from './wire.js';
+import { awardAchievements } from './achievements.js';
 import type { TurnNotifications } from './notifications.js';
 
 export interface HubDeps {
@@ -175,7 +176,11 @@ export class GameHub {
     });
 
     // Bot seats may already be on the clock in a restored game.
-    for (const room of this.rooms.values()) room.rescheduleAutoAction();
+    for (const room of this.rooms.values()) {
+      try { awardAchievements(this.deps.store, this.deps.registry.get(room.gameKey)!, room.toRecord()); }
+      catch { this.logger.warn('Achievement recovery deferred', { gameId: room.gameId }); }
+      room.rescheduleAutoAction();
+    }
   }
 
   /* ---------------------------------------------------------------- *
@@ -568,6 +573,7 @@ export class GameHub {
     session.lastSeen = Date.now();
     this.deps.store.saveSession(session);
     room.revokeAnonymousAccess(session.playerId);
+    awardAchievements(this.deps.store, this.deps.registry.get(room.gameKey)!, room.toRecord());
     return true;
   }
 

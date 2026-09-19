@@ -9,15 +9,15 @@ Work is being implemented in stages on `master`. Each implementation commit upda
 - [x] Stage 0 — document requested scope before implementation (`docs: track Power Grid improvements and handoff`).
 - [x] Stage 1 — rules and board: clearer starting cities; zones 2/3/4/5/6 players = 3/3/4/5/5; investigate and fix hybrid resource storage; successful resource purchase ends the player's resource turn (retain skipping without a purchase).
 - [x] Stage 2 — lobby and navigation: immediate readiness, remove ready toggle; remove turn notifications; invite code takes precedence over existing session; creator-defined game names, including mid-game rename and invite-code fallback in game lists.
-- [x] Stage 3 — Jev bot: separate ADD JEV option, server-only .env configuration, legal move choices and bounded bidding, validated responses and safe fallback. Awaiting the user's identification of Jev API/documentation.
-- [ ] Stage 4 — account achievements: persistent awards, own/other-player viewing, win without ever scrapping a plant, eligibility only with at least two humans, idempotent awarding and saved-game compatibility.
+- [x] Stage 3 — Jev bot: separate ADD JEV option, server-only .env configuration, legal move choices and bounded bidding, validated responses and safe fallback. Official TypeSafe API verified.
+- [x] Stage 4 — account achievements: persistent awards, own/other-player viewing, win without ever scrapping a plant, eligibility only with at least two humans, idempotent awarding and saved-game compatibility.
 - [ ] Stage 5 — integrated verification and final handoff; record commits, checks, limitations, and any remaining configuration.
 
 ## Verification and open questions
 
 - Initial checkout: clean `master`, tracking `origin/master`.
 - Use focused engine/server regression tests for rules, permissions, invite routing, and account persistence, then workspace typecheck/build and relevant test suites.
-- Jev provider details are not established yet. Do not invent a provider endpoint or expose its key to the client.
+- Jev uses the official TypeSafe endpoint and server-only JEV_API_KEY (or TYPESAFE_API_KEY); live access remains untested until a key is configured.
 - Push staged commits to the existing remote so another agent can pull the handoff. Do not deploy or alter production data.
 
 ## Completed commits
@@ -33,3 +33,6 @@ Work is being implemented in stages on `master`. Each implementation commit upda
 
 - Stage 2 committed/pushed: 4d3dd2d. Targeted name/restart test and all three socket-storage tests pass.
 - Stage 3: Add Jev, persisted bot kind, official TypeSafe Choice integration, validated legal move baskets and bid ranges, timeout/local fallback, stale-response rejection, and root .env loading. Provider docs verified at docs.typesafe.ai. See docs/jev.md and .env.example. No API key or live paid test used.
+
+- Stage 3 committed/pushed: b0c2718. Three provider-contract tests, complete-game legal-choice/privacy test, and 233 engine regressions passed.
+- Stage 4: account-owned achievement storage in SQLite, JSON and memory; own/other-player profile browser; first finish, first win, and Built to Last (win without scrapping). Requires two original humans still human at completion; same-account duplicate seats do not count twice. Anonymous humans count and may claim awards by linking a retained audited game. Six tests cover persistence, idempotency, scrapping, eligibility and public-profile privacy.

@@ -10,7 +10,7 @@ export function GameName(): JSX.Element | null {
   const [name, setName] = useState(lobby?.gameName ?? '');
   useEffect(() => { setName(lobby?.gameName ?? ''); }, [lobby?.gameName, lobby?.gameId]);
   if (!lobby) return null;
-  return <div className="tt-game-name" style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 16px', flexWrap: 'wrap' }}>
+  return <div className="tt-game-name" style={{ display: 'flex', flexShrink: 0, gap: 8, alignItems: 'center', padding: '8px 16px', flexWrap: 'wrap' }}>
     {editing && isHost ? <form style={{ display: 'flex', gap: 8 }} onSubmit={event => {
       event.preventDefault(); net.setGameName(name); setEditing(false);
     }}>

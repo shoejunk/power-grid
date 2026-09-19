@@ -28,6 +28,7 @@ import type {
 import type { Connection } from './wire.js';
 import type { TurnBeganEvent } from './notifications.js';
 import { CLOSE } from './wire.js';
+import { awardAchievements } from './achievements.js';
 import { chooseJev } from './jev.js';
 import { hashReplayState } from './persistence/replay.js';
 
@@ -404,6 +405,7 @@ export class GameRoom {
       this.deps.store.saveGameWithAudit(record, events);
       if (this.auditEnabled) this.auditSequence = record.auditSequence ?? this.auditSequence;
       this.pendingAudit = [];
+      awardAchievements(this.deps.store, this.plugin, record);
     } catch (err) {
       this.deps.logger.error('Failed to persist game', {
         gameId: this.gameId,

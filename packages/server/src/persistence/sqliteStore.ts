@@ -18,6 +18,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import type { DatabaseSync as DatabaseSyncType } from 'node:sqlite';
 import {
+  type AchievementRecord,
   type AccountRecord,
   type AuditActor,
   type AuthSessionRecord,
@@ -44,6 +45,11 @@ const { DatabaseSync } = nodeRequire('node:sqlite') as {
 };
 
 const SCHEMA = `
+CREATE TABLE IF NOT EXISTS achievements (
+  accountId TEXT NOT NULL, gameKey TEXT NOT NULL, achievementId TEXT NOT NULL,
+  name TEXT NOT NULL, description TEXT NOT NULL, gameId TEXT NOT NULL, earnedAt INTEGER NOT NULL,
+  PRIMARY KEY(accountId, gameKey, achievementId)
+);
 CREATE TABLE IF NOT EXISTS games (
   gameId    TEXT PRIMARY KEY,
   gameKey   TEXT NOT NULL DEFAULT '${LEGACY_GAME_KEY}',
@@ -309,6 +315,14 @@ export class SqliteGameStore implements GameStore {
     for (const [name, definition] of additions) {
       if (!auditColumns.has(name)) this.db.exec(`ALTER TABLE audit_events ADD COLUMN ${name} ${definition}`);
     }
+  }
+
+  loadAchievements(accountId: string): AchievementRecord[] {
+    return this.db.prepare('SELECT * FROM achievements WHERE accountId = ? ORDER BY earnedAt DESC').all(accountId) as unknown as AchievementRecord[];
+  }
+  saveAchievement(award: AchievementRecord): void {
+    this.db.prepare('INSERT OR IGNORE INTO achievements (accountId, gameKey, achievementId, name, description, gameId, earnedAt) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(award.accountId, award.gameKey, award.achievementId, award.name, award.description, award.gameId, award.earnedAt);
   }
 
   loadGames(): PersistedGame[] {

@@ -414,6 +414,19 @@ export const powerGrid: GamePlugin<GameState, GameAction, GameSettings> = {
   applyPresence,
   applyHostChange,
 
+  achievementAwards: state => {
+    if (state.phase !== 'gameOver') return [];
+    return Object.values(state.players).filter(p => !p.isBot && !p.isTrust).flatMap(p => {
+      const awards = [{ playerId: p.id, id: 'first-finish', name: 'On the Grid', description: 'Finish a game with at least two humans.' }];
+      if (state.winnerId === p.id) {
+        awards.push({ playerId: p.id, id: 'first-win', name: 'Power Player', description: 'Win a game with at least two humans.' });
+        if (!state.log.some(entry => entry.data?.event === 'plantScrapped' && entry.playerId === p.id)) {
+          awards.push({ playerId: p.id, id: 'win-without-scrapping', name: 'Built to Last', description: 'Win without ever scrapping a power plant, with at least two humans.' });
+        }
+      }
+      return awards;
+    });
+  },
   externalBotChoices: jevChoices,
   externalBotContext: jevContext,
   defaultActionFor: engineDefaultAction,

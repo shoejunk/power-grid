@@ -4,6 +4,7 @@
  */
 
 import type {
+  AchievementRecord,
   AccountRecord,
   AuthSessionRecord,
   GameAuditEvent,
@@ -17,12 +18,21 @@ import type {
 export class MemoryGameStore implements GameStore {
   readonly kind = 'memory' as const;
   readonly location = ':memory:';
+  private achievements: AchievementRecord[] = [];
   private games = new Map<string, PersistedGame>();
   private sessions = new Map<string, SessionRecord>();
   private accounts = new Map<string, AccountRecord>();
   private authSessions = new Map<string, AuthSessionRecord>();
   private pushSubscriptions = new Map<string, PushSubscriptionRecord>();
   private auditEvents = new Map<string, GameAuditEvent[]>();
+
+  loadAchievements(accountId: string): AchievementRecord[] {
+    return this.achievements.filter(a => a.accountId === accountId).map(a => ({ ...a }));
+  }
+  saveAchievement(award: AchievementRecord): void {
+    if (this.achievements.some(a => a.accountId === award.accountId && a.gameKey === award.gameKey && a.achievementId === award.achievementId)) return;
+    this.achievements.push({ ...award });
+  }
 
   loadGames(): PersistedGame[] {
     // Deep-copy on the way out so callers cannot mutate stored state in place —

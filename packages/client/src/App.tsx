@@ -98,9 +98,9 @@ export function App(): JSX.Element {
           (quality bar M1) — the wrapper simply cannot wedge them any more.
         */}
         <ErrorBoundary>
-          <div key={screenKey} id="tt-main" className="tt-route">
+          <div key={screenKey} id="tt-main" className="tt-route" style={{ display: 'flex', flexDirection: 'column' }}>
             {seated && !(route.name === 'join' && route.code && route.code !== lobby?.code) && <GameName />}
-            <Screen />
+            <div style={{ flex: 1, minHeight: 0 }}><Screen /></div>
           </div>
         </ErrorBoundary>
       </GameTheme>

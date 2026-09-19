@@ -224,6 +224,8 @@ export interface GamePlugin<
    * The move an automated seat should make. Returning `null` means "no
    * opinion"; the server then falls back to `safeDefaultActions`.
    */
+  achievementAwards?(state: TState): Array<{ playerId: PlayerId; id: string; name: string; description: string }>;
+
   externalBotChoices?(state: TState, playerId: PlayerId): TAction[];
   externalBotContext?(state: TState, playerId: PlayerId): unknown;
 

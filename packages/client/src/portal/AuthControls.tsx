@@ -2,6 +2,7 @@ import { Button, IconLogout, IconUsers } from '@tt/ui';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { net, useGameStore } from '@/net';
+import { Achievements } from './Achievements';
 
 export function AuthControls(): JSX.Element | null {
   const auth = useGameStore(state => state.auth);
@@ -24,6 +25,7 @@ export function AuthControls(): JSX.Element | null {
   };
   if (auth.loading || !auth.configured) return null;
   return <div className="tt-account-control">
+    <Achievements />
     {auth.account ? <>
       <span>{auth.account.name}</span>
       {localGames.length > 0 && <Button size="sm" loading={busy} onClick={() => void run(async () => {

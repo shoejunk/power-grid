@@ -182,7 +182,19 @@ export interface AuthSessionRecord {
   expiresAt: number;
 }
 
+export interface AchievementRecord {
+  accountId: string;
+  gameKey: string;
+  achievementId: string;
+  name: string;
+  description: string;
+  gameId: string;
+  earnedAt: number;
+}
+
 export interface GameStore {
+  loadAchievements(accountId: string): AchievementRecord[];
+  saveAchievement(award: AchievementRecord): void;
   /** Which backend is in use — reported on /health. */
   readonly kind: 'sqlite' | 'json' | 'memory';
   /** File path, or ':memory:'. */
