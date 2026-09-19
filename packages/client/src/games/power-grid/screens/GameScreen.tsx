@@ -97,7 +97,7 @@ const PHASE_KEYS = ['order', 'auction', 'resources', 'building'] as const;
  */
 export function GameScreen(): JSX.Element {
   const gameState = usePowerGridState();
-  const myPlayerId = useGameStore((s) => s.myPlayerId);
+  const myPlayerId = useGameStore((s) => s.lobby?.players.find(p => p.id === s.myPlayerId)?.isBot ? null : s.myPlayerId);
   const [quitDialogOpen, setQuitDialogOpen] = useState(false);
 
   const match = useMemo<MatchValue | null>(() => {

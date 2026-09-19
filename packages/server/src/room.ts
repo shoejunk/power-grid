@@ -308,7 +308,7 @@ export class GameRoom {
    */
   stateFor(playerId: PlayerId | null): unknown {
     if (this.state === null || this.state === undefined) return null;
-    return this.plugin.redactStateFor(this.state as never, playerId);
+    return this.plugin.redactStateFor(this.state as never, playerId && this.seat(playerId)?.isBot ? null : playerId);
   }
 
   /** Who is actually on a live socket right now, keyed by seat. */
@@ -475,6 +475,20 @@ export class GameRoom {
     if (!verdict.ok) return fail('badSettings', verdict.reason);
 
     this.settings = next;
+    return done;
+  }
+
+  setHostController(playerId: PlayerId, controller: 'human' | 'standard' | 'jev'): RoomResult {
+    if (playerId !== this.hostId) return fail('notHost', 'Only the host can change their controller.');
+    if (this.started) return fail('gameStarted', 'Controllers are locked once the game starts.');
+    if (this.gameKey !== 'power-grid') return fail('unsupported', 'Watching bot games is available for Power Grid.');
+    if (controller === 'jev' && (!this.deps.config.jevApiKey || !this.plugin.externalBotChoices)) return fail('jevUnavailable', 'Jev needs a server API key and a supported game.');
+    const seat = this.seat(playerId);
+    if (!seat) return fail('notInGame', 'Your seat is unavailable.');
+    seat.isBot = controller !== 'human';
+    if (controller === 'human') delete seat.botKind;
+    else seat.botKind = controller;
+    seat.ready = true;
     return done;
   }
 

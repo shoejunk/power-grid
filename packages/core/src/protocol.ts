@@ -32,6 +32,7 @@ export type ClientMessage =
   | { t: 'setColor'; color: SeatColor }
   | { t: 'updateSettings'; settings: unknown; gameName?: string }
   | { t: 'addBot'; botKind?: 'standard' | 'jev' }
+  | { t: 'setHostController'; controller: 'human' | 'standard' | 'jev' }
   | { t: 'removePlayer'; playerId: PlayerId }
   | { t: 'startGame' }
   /** `action` is opaque here and parsed by the table's plugin. */

@@ -130,6 +130,9 @@ export function parseClientMessage(raw: string): ParseResult {
     case 'addBot':
       if (parsed.botKind !== undefined && parsed.botKind !== 'standard' && parsed.botKind !== 'jev') return bad('badMessage', 'Unknown bot kind.');
       return { ok: true, message: { t: 'addBot', botKind: parsed.botKind } };
+    case 'setHostController':
+      if (!['human', 'standard', 'jev'].includes(parsed.controller as string)) return bad('badMessage', 'Unknown host controller.');
+      return { ok: true, message: { t: 'setHostController', controller: parsed.controller as 'human' | 'standard' | 'jev' } };
 
     case 'removePlayer':
       if (!isString(parsed.playerId)) return bad('badMessage', 'removePlayer requires a playerId.');

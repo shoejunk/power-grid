@@ -383,6 +383,9 @@ export class GameHub {
       case 'addBot':
         this.applyLobbyChange(conn, room, room.addBot(playerId, message.botKind));
         return;
+      case 'setHostController':
+        this.applyLobbyChange(conn, room, room.setHostController(playerId, message.controller));
+        return;
       case 'removePlayer': {
         const target = message.playerId;
         const result = room.removePlayer(playerId, target);
@@ -403,6 +406,10 @@ export class GameHub {
         return;
       }
       case 'action': {
+        if (room.seat(playerId)?.isBot) {
+          conn.send({ t: 'actionRejected', ...(message.nonce !== undefined ? { nonce: message.nonce } : {}), reason: 'You are watching an automated seat.' });
+          return;
+        }
         const result = room.applyPlayerAction(playerId, message.action);
         if (!result.ok) {
           conn.send({

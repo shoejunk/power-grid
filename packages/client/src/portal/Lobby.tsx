@@ -291,6 +291,17 @@ export function Lobby(): JSX.Element {
               variant="secondary" disabled={seatsLeft === 0} onClick={() => net.addBot('jev')}
             >Add Jev</Button>}
 
+            {isHost && lobby.gameKey === 'power-grid' && <label className="tt-field">
+              <span>Your role</span>
+              <select aria-label="Your role" value={lobby.players.find(p => p.id === myPlayerId)?.isBot ? (lobby.players.find(p => p.id === myPlayerId)?.botKind ?? 'standard') : 'human'}
+                onChange={event => net.setHostController(event.target.value as 'human' | 'standard' | 'jev')}>
+                <option value="human">Play myself</option>
+                <option value="standard">Watch a bot play my seat</option>
+                <option value="jev">Watch Jev play my seat</option>
+              </select>
+              <small>To watch an all-bot game, automate your seat and fill the other seats with bots or Jevs.</small>
+            </label>}
+
             <Tooltip
               placement="top"
               title={canStart ? 'Begin' : 'Not yet'}

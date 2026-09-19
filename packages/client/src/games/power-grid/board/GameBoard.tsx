@@ -72,7 +72,7 @@ type PendingPlacement =
 
 export function GameBoard(): JSX.Element {
   const gameState = usePowerGridState();
-  const myPlayerId = useGameStore((s) => s.myPlayerId);
+  const myPlayerId = useGameStore((s) => s.lobby?.players.find(p => p.id === s.myPlayerId)?.isBot ? null : s.myPlayerId);
   const reduced = usePrefersReducedMotion();
 
   const hostRef = useRef<HTMLDivElement | null>(null);

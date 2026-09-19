@@ -625,6 +625,9 @@ export const net = {
   addBot(botKind: "standard" | "jev" = "standard"): void {
     socket.send({ t: 'addBot', botKind });
   },
+  setHostController(controller: 'human' | 'standard' | 'jev'): void {
+    socket.send({ t: 'setHostController', controller });
+  },
 
   removePlayer(playerId: PlayerId): void {
     socket.send({ t: 'removePlayer', playerId });
