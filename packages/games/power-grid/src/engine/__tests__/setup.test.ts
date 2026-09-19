@@ -138,7 +138,42 @@ describe('§2 optional experienced-player starting cities', () => {
     expect(marked.every((c) => typeof c === 'string')).toBe(true);
     expect(new Set(marked).size).toBe(3);
     const map = getMap(s.settings.mapId);
-    expect(new Set(marked.map((id) => map.cities.find((c) => c.id === id)!.area)).size).toBe(3);
+    expect(marked.every(id => s.zone.includes(map.cities.find(c => c.id === id)!.area))).toBe(true);
+  });
+
+  for (const mapId of MAPS) {
+    for (const playerCount of COUNTS) {
+      it(`${mapId} allows all ${playerCount} starting cities in the same region`, () => {
+        let s = fresh({ mapId, playerCount, experiencedStart: true });
+        s = act(s, s.hostId, { type: 'selectZone', areas: [] });
+        const map = getMap(mapId);
+        const cities = map.cities.filter(c => c.area === s.zone[0]);
+        const outside = map.cities.find(c => !s.zone.includes(c.area))!;
+        for (let i = 0; i < playerCount; i++) {
+          const actor = s.activePlayerId!;
+          expect(validateAction(s, actor, { type: 'markStartCity', cityId: outside.id }).ok).toBe(false);
+          if (i) expect(validateAction(s, actor, { type: 'markStartCity', cityId: cities[0]!.id }).ok).toBe(false);
+          s = act(s, actor, { type: 'markStartCity', cityId: cities[i]!.id });
+        }
+        expect(s.phase).toBe('auction');
+        expect(new Set(s.playerOrder.map(id => s.players[id]!.markedStartCity)).size).toBe(playerCount);
+      });
+    }
+  }
+
+  it('unblocks a saved sixth-player turn without changing the first five markers', () => {
+    let s = fresh({ playerCount: 6, experiencedStart: true });
+    s = act(s, s.hostId, { type: 'selectZone', areas: [] });
+    const map = getMap(s.settings.mapId);
+    for (const area of s.zone) {
+      s = act(s, s.activePlayerId!, { type: 'markStartCity', cityId: map.cities.find(c => c.area === area)!.id });
+    }
+    s = JSON.parse(JSON.stringify(s));
+    const markers = s.playerOrder.slice(0, 5).map(id => s.players[id]!.markedStartCity);
+    const city = map.cities.find(c => c.area === s.zone[0] && !markers.includes(c.id))!;
+    s = act(s, s.activePlayerId!, { type: 'markStartCity', cityId: city.id });
+    expect(s.phase).toBe('auction');
+    expect(s.playerOrder.slice(0, 5).map(id => s.players[id]!.markedStartCity)).toEqual(markers);
   });
 
   it('does not ask for starting cities when the option is off', () => {

@@ -116,7 +116,7 @@ Each market space has a price. A resource purchase pays the price printed on the
 
 ### Optional experienced-player starting cities
 
-After initial player order and zone selection, let players choose future starting cities in player order and mark each temporarily with a neutral uranium token. The marked cities must be in different areas. The markers form a shared pool: when a player begins building, they may exchange any unoccupied marked city's token for their house and return the token to the supply. A marker must not use the colour of the player who selected it before a house occupies that city. Except when a player is establishing their first city, unoccupied marked starting cities cannot be connected during Step 1.
+After initial player order and zone selection, let players choose future starting cities in player order and mark each temporarily with a neutral uranium token. Choose distinct, unoccupied cities anywhere within the selected playing zone; multiple marked cities may be in the same area. The markers form a shared pool: when a player begins building, they may exchange any unoccupied marked city's token for their house and return the token to the supply. A marker must not use the colour of the player who selected it before a house occupies that city. Except when a player is establishing their first city, unoccupied marked starting cities cannot be connected during Step 1.
 
 ## 3. Round and phase state machine
 
