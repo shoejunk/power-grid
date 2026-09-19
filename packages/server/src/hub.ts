@@ -227,6 +227,7 @@ export class GameHub {
     updatedAt: number;
     playerName: string;
     gameName: string;
+    isYourTurn: boolean;
   }> {
     return [...this.sessions.values()]
       .filter((session) => session.accountId === accountId)
@@ -242,6 +243,7 @@ export class GameHub {
           started: room.started,
           updatedAt: room.updatedAt,
           playerName: seat.name,
+          isYourTurn: room.isPlayersTurn(session.playerId),
         };
       })
       .filter((game): game is NonNullable<typeof game> => game !== null)
@@ -251,6 +253,13 @@ export class GameHub {
   /* ---------------------------------------------------------------- *
    * Codes and sessions
    * ---------------------------------------------------------------- */
+
+  isSessionTurn(gameId: string, token: string, accountId: string | null = null): boolean {
+    const session = this.sessions.get(token);
+    return session?.gameId === gameId
+      && (!session.accountId || session.accountId === accountId)
+      && this.rooms.get(gameId)?.isPlayersTurn(session.playerId) === true;
+  }
 
   /**
    * Mints a join code that no live game is using — across every title, so a

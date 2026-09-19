@@ -37,6 +37,7 @@ export interface AuthAccount {
 }
 
 export interface AccountGame {
+  isYourTurn?: boolean;
   gameName?: string;
   gameId: string;
   gameKey: GameKey;
@@ -410,6 +411,33 @@ const socket = new GameSocket({
  * game UI is what supplies a real payload — this layer only routes it.
  */
 export const net = {
+  /** Refresh only list data, without flashing the account loading controls. */
+  async refreshSavedGames(signal: AbortSignal): Promise<void> {
+    const accountId = useGameStore.getState().auth.account?.id;
+    if (accountId) {
+      const response = await fetch('/api/auth/me', { credentials: 'same-origin', cache: 'no-store', signal });
+      if (!response.ok) return;
+      const payload = await response.json() as { account: AuthAccount | null; games: AccountGame[] };
+      if (!signal.aborted && payload.account?.id === accountId && useGameStore.getState().auth.account?.id === accountId) {
+        useGameStore.setState(state => ({ auth: { ...state.auth, games: payload.games } }));
+      }
+      return;
+    }
+    await Promise.allSettled(useGameStore.getState().anonymousGames.map(async game => {
+      const response = await fetch(`/api/games/code/${encodeURIComponent(game.code)}`, {
+        headers: { Authorization: `Bearer ${game.sessionToken}` }, cache: 'no-store', signal,
+      });
+      if (!response.ok) return;
+      const table = await response.json() as { gameName: string; started: boolean; isYourTurn: boolean };
+      if (signal.aborted || useGameStore.getState().auth.account) return;
+      // Turn status is transient: keep it out of local storage and retain list order.
+      useGameStore.setState(state => ({ anonymousGames: state.anonymousGames.map(current =>
+        current.gameId === game.gameId && current.sessionToken === game.sessionToken
+          ? { ...current, gameName: table.gameName, started: table.started, isYourTurn: table.isYourTurn }
+          : current) }));
+    }));
+  },
+
   /** Opens the connection. Safe to call repeatedly. */
   start(): void {
     socket.connect();

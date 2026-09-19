@@ -10,6 +10,7 @@ const LEGACY_SESSION_KEY = 'tt.sessionToken';
 const ANONYMOUS_GAMES_KEY = 'tt.anonymousGames';
 
 export interface AnonymousGame {
+  isYourTurn?: boolean;
   gameName?: string;
   gameId: string;
   gameKey: GameKey;

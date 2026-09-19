@@ -1,5 +1,6 @@
 import type { GameDescriptor } from '@tt/core';
 import {
+  Badge,
   Button,
   IconLink,
   IconPlay,
@@ -13,6 +14,7 @@ import {
   themeVars,
 } from '@tt/ui';
 import { motion } from 'framer-motion';
+import { useEffect } from 'react';
 
 import { ConnectionPill, net, useGameStore } from '@/net';
 import { hasGameUi } from '@/games/registry';
@@ -40,6 +42,28 @@ export function Portal(): JSX.Element {
   const anonymousGames = useGameStore((state) => state.anonymousGames);
   const savedGames = auth.account ? auth.games : anonymousGames;
   const latestGame = savedGames[0] ?? null;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let refreshing = false;
+    const refresh = async (): Promise<void> => {
+      if (document.hidden || refreshing) return;
+      refreshing = true;
+      try { await net.refreshSavedGames(controller.signal); }
+      catch { /* Retry on the next tick after a temporary network failure. */ }
+      finally { refreshing = false; }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 5000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [auth.account?.id]);
 
   const resumeGame = (gameId: string): void => {
     if (auth.account) net.resumeGame(gameId);
@@ -114,6 +138,7 @@ export function Portal(): JSX.Element {
                   key={game.gameId}
                   type="button"
                   className="tt-account-game"
+                  data-your-turn={game.isYourTurn === true}
                   onClick={() => resumeGame(game.gameId)}
                 >
                   <span>
@@ -122,7 +147,9 @@ export function Portal(): JSX.Element {
                       {game.gameName || game.code} · {game.playerName}
                     </small>
                   </span>
-                  <span>{game.started ? 'Resume' : 'Open lobby'}</span>
+                  <span aria-live="polite">
+                    {game.isYourTurn ? <Badge tone="success" dot>Your turn</Badge> : game.started ? 'Resume' : 'Open lobby'}
+                  </span>
                 </button>
               ))}
             </motion.div>

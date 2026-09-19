@@ -140,6 +140,7 @@ export function createHttpApp(deps: HttpAppDeps): Express {
   });
 
   app.get('/api/auth/me', (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store');
     const status = deps.auth.status(req);
     const accountId = status.account?.id;
     res.json({
@@ -186,6 +187,7 @@ export function createHttpApp(deps: HttpAppDeps): Express {
    * Returns nothing that is not already public to anyone holding the code.
    */
   app.get('/api/games/code/:code', (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store');
     const code = String(req.params.code ?? '').toUpperCase();
     const room = hub.roomByCode(code);
     if (!room) {
@@ -198,6 +200,7 @@ export function createHttpApp(deps: HttpAppDeps): Express {
       gameName: room.gameName,
       gameKey: room.gameKey,
       started: room.started,
+      isYourTurn: hub.isSessionTurn(room.gameId, req.get('Authorization')?.replace(/^Bearer /, '') ?? '', deps.auth.accountIdForRequest(req)),
       players: room.seats.length,
       minPlayers: room.minPlayers,
       maxPlayers: room.maxPlayers,

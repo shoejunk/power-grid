@@ -68,3 +68,10 @@ This section supersedes the earlier pending-key/not-deployed notes. The user sup
 - Pre/post counts matched exactly: six games (all started), 22 seats, nine game sessions, two accounts, 46 auth sessions, 898 audit events. Verified all game/session/account identities survived and SQLite integrity was `ok`.
 - Public HTTPS 200, HTTP 301, secure WebSocket connection, localhost-only listener and exact release marker passed. Live browser showed the new achievement browser and existing account profiles. No live game was created, modified or deleted during verification.
 - No deployment steps remain. Subsequent play-quality monitoring for Jev is optional; provider failures retain the safe local fallback.
+
+## Saved-game turns and sticky rules log — September 19, 2026 UTC
+
+- Your Games marks the current player's turn from authoritative game state for account and local saved games. The visible portal refreshes every five seconds and on tab focus/return, with no account-loading flicker.
+- The Power Grid rules log initially follows the bottom, stops when manually scrolled up, and resumes following when scrolled back to the bottom. Updates still follow after reaching the 120-entry display cap.
+- Verified 84 server tests and eight client tests; client typecheck and server no-output typecheck passed. Production client build passed in a fresh output directory. A local Chromium component fixture passed initial scrolling, large batches at the display cap, manual scroll-up, and sticky resume.
+- The user authorized committing all pending changes, pushing master/release, and deploying with existing games preserved. Production cutover follows a full inactive build, copied-database replay, and fresh backup with pre/post identity and count checks.

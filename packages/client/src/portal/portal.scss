@@ -145,6 +145,9 @@
 }
 
 .tt-account-game {
+  &[data-your-turn='true'] {
+    border-color: var(--tt-accent);
+  }
   display: flex;
   align-items: center;
   justify-content: space-between;

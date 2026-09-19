@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { LogEntry, ResourceType } from '@game/power-grid';
 
 import { springSoft } from '@tt/ui';
@@ -22,6 +22,7 @@ export function RulesLog(): JSX.Element {
   const { state } = useMatch();
   const [filter, setFilter] = useState<LogFilter>('all');
   const bodyRef = useRef<HTMLDivElement>(null);
+  const followTail = useRef(true);
 
   const entries = useMemo(
     () => state.log.filter((e) => matchesFilter(e.category, filter)).slice(-120),
@@ -29,12 +30,10 @@ export function RulesLog(): JSX.Element {
   );
 
   // Follow the tail unless the player has scrolled up to read history.
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = bodyRef.current;
-    if (!node) return;
-    const nearBottom = node.scrollHeight - node.scrollTop - node.clientHeight < 90;
-    if (nearBottom) node.scrollTop = node.scrollHeight;
-  }, [entries.length]);
+    if (node && followTail.current) node.scrollTop = node.scrollHeight;
+  }, [entries]);
 
   return (
     <Panel
@@ -44,7 +43,12 @@ export function RulesLog(): JSX.Element {
       subtitle="Every automatic transition, explained"
       actions={<Tabs items={LOG_FILTERS} value={filter} onChange={setFilter} label="Filter the rules log" />}
     >
-      <div className="pg-glog__body" ref={bodyRef}>
+      <div className="pg-glog__body" ref={bodyRef} onScroll={(event) => {
+        const node = event.currentTarget;
+        // Remember the player's position before new entries change the height.
+        // A small tolerance accounts for fractional scroll coordinates.
+        followTail.current = node.scrollHeight - node.scrollTop - node.clientHeight <= 2;
+      }}>
         <AnimatePresence initial={false}>
           {entries.map((entry) => (
             <motion.div

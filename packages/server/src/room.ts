@@ -138,6 +138,12 @@ export class GameRoom {
     return this.plugin.descriptor.maxPlayers;
   }
 
+  isPlayersTurn(playerId: PlayerId): boolean {
+    return this.started && this.state != null && !!this.seat(playerId)
+      && !this.plugin.isGameOver(this.state as never)
+      && this.plugin.activePlayerOf(this.state as never) === playerId;
+  }
+
   /** Dispatches turn changes only after the corresponding snapshot is durable. */
   flushTurnNotifications(): void {
     const players = this.pendingTurnStarts.splice(0);
