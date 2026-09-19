@@ -60,6 +60,23 @@ it('an earlier scrap disqualifies Built to Last even when that plant is gone', (
   expect(store.loadAchievements('account1').map(a => a.achievementId)).toEqual(['first-finish', 'first-win']);
 });
 
+it('reads only the starting roster when awarding a completed game', () => {
+  const store = new MemoryGameStore();
+  const game = finished(store);
+  const start = store.loadAuditEvents(game.gameId)[0]!;
+  let closed = false;
+  store.loadAuditEvents = () => { throw new Error('Must not materialize history'); };
+  store.iterateAuditEvents = function* () {
+    try {
+      yield start;
+      throw new Error('Must not read historical state checkpoints');
+    } finally { closed = true; }
+  };
+  awardAchievements(store, erase(powerGrid), game);
+  expect(closed).toBe(true);
+  expect(store.loadAchievements('account1')).toHaveLength(3);
+});
+
 it('serves own and other public achievement profiles without credentials or email', async () => {
   const server = await boot({ storeKind: 'memory' });
   try {

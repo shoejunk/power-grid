@@ -1,10 +1,13 @@
 import type { AnyGamePlugin } from '@tt/core';
-import type { GameStore, PersistedGame } from './persistence/types.js';
+import type { GameAuditEvent, GameStore, PersistedGame } from './persistence/types.js';
 
 /** Awards are account-owned, idempotent, and survive table cleanup. */
 export function awardAchievements(store: GameStore, plugin: AnyGamePlugin, game: PersistedGame): void {
   if (!game.started || game.state == null || !plugin.isGameOver(game.state as never) || !plugin.achievementAwards) return;
-  const start = store.loadAuditEvents(game.gameId).find(e => e.type === 'start');
+  let start: Extract<GameAuditEvent, { type: 'start' }> | undefined;
+  for (const event of store.iterateAuditEvents(game.gameId)) {
+    if (event.type === 'start') { start = event; break; }
+  }
   // Legacy snapshots without a full starting roster cannot prove eligibility.
   if (!start || start.type !== 'start') return;
   const originalHumans = new Set(start.seats.filter(s => !s.isBot).map(s => s.playerId));

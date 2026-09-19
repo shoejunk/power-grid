@@ -449,10 +449,21 @@ export class SqliteGameStore implements GameStore {
   }
 
   loadAuditEvents(gameId: string): GameAuditEvent[] {
+    return [...this.iterateAuditEvents(gameId)];
+  }
+
+  countAuditEvents(gameId: string): number {
+    const row = this.db.prepare('SELECT COUNT(*) AS count FROM audit_events WHERE gameId = ?')
+      .get(gameId) as { count: number };
+    return row.count;
+  }
+
+  *iterateAuditEvents(gameId: string): IterableIterator<GameAuditEvent> {
     const rows = this.db
       .prepare('SELECT * FROM audit_events WHERE gameId = ? ORDER BY sequence')
-      .all(gameId) as unknown as AuditRow[];
-    return rows.map((row) => {
+      .iterate(gameId);
+    for (const value of rows) {
+      const row = value as unknown as AuditRow;
       const metadata = {
         ...(row.actor !== null ? { actor: row.actor as AuditActor } : {}),
         ...(row.triggerName !== null ? { trigger: row.triggerName } : {}),
@@ -463,7 +474,7 @@ export class SqliteGameStore implements GameStore {
         ...(row.publicExplanation !== null ? { publicExplanation: row.publicExplanation } : {}),
       };
       if (row.type === 'start' && row.hostId && row.settings && row.seats) {
-        return {
+        yield {
           sequence: row.sequence,
           type: 'start',
           at: row.at,
@@ -472,9 +483,10 @@ export class SqliteGameStore implements GameStore {
           seats: JSON.parse(row.seats),
           ...metadata,
         };
+        continue;
       }
       if (row.type === 'action' && row.playerId && row.action) {
-        return {
+        yield {
           sequence: row.sequence,
           type: 'action',
           at: row.at,
@@ -482,6 +494,7 @@ export class SqliteGameStore implements GameStore {
           action: JSON.parse(row.action),
           ...metadata,
         };
+        continue;
       }
       if (
         row.type === 'automatic' &&
@@ -491,7 +504,7 @@ export class SqliteGameStore implements GameStore {
         row.afterHash !== null &&
         row.publicExplanation !== null
       ) {
-        return {
+        yield {
           sequence: row.sequence,
           type: 'automatic',
           at: row.at,
@@ -503,12 +516,14 @@ export class SqliteGameStore implements GameStore {
           ...(row.afterState !== null ? { afterState: JSON.parse(row.afterState) } : {}),
           publicExplanation: row.publicExplanation,
         };
+        continue;
       }
       if (row.type === 'hostChange' && row.hostId) {
-        return { sequence: row.sequence, type: 'hostChange', at: row.at, hostId: row.hostId, ...metadata };
+        yield { sequence: row.sequence, type: 'hostChange', at: row.at, hostId: row.hostId, ...metadata };
+        continue;
       }
       throw new Error(`Corrupt audit event ${gameId}:${row.sequence}`);
-    });
+    }
   }
 
   appendAuditEvent(gameId: string, event: GameAuditEventInput): GameAuditEvent {

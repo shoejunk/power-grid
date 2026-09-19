@@ -67,6 +67,14 @@ export class MemoryGameStore implements GameStore {
     return structuredClone(this.auditEvents.get(gameId) ?? []);
   }
 
+  *iterateAuditEvents(gameId: string): IterableIterator<GameAuditEvent> {
+    for (const event of this.auditEvents.get(gameId) ?? []) yield structuredClone(event);
+  }
+
+  countAuditEvents(gameId: string): number {
+    return this.auditEvents.get(gameId)?.length ?? 0;
+  }
+
   appendAuditEvent(gameId: string, event: GameAuditEventInput): GameAuditEvent {
     const events = this.auditEvents.get(gameId) ?? [];
     const appended = { ...structuredClone(event), sequence: events.length + 1 } as GameAuditEvent;

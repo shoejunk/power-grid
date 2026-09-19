@@ -88,18 +88,18 @@ export class GameHub {
           }
           hydrated = { ...hydrated, state: migrated };
         }
-        const events = this.deps.store.loadAuditEvents(record.gameId);
+        const eventCount = this.deps.store.countAuditEvents(record.gameId);
         const auditSequence = record.auditSequence;
-        if (auditSequence === undefined && events.length > 0) {
+        if (auditSequence === undefined && eventCount > 0) {
           throw new Error('Audit events exist without a snapshot watermark');
         }
-        if (auditSequence !== undefined && auditSequence !== events.length) {
+        if (auditSequence !== undefined && auditSequence !== eventCount) {
           throw new Error(
-            `Audit watermark mismatch: snapshot=${auditSequence}, events=${events.length}`,
+            `Audit watermark mismatch: snapshot=${auditSequence}, events=${eventCount}`,
           );
         }
-        if (events.length > 0) {
-          hydrated = { ...record, state: replayPersistedGame(plugin, record, events) };
+        if (eventCount > 0) {
+          hydrated = { ...record, state: replayPersistedGame(plugin, record, this.deps.store.iterateAuditEvents(record.gameId)) };
         }
       } catch (err) {
         // A damaged stream must fail closed. Leave the durable record intact so

@@ -208,6 +208,9 @@ export interface GameStore {
 
   /** Returns the immutable, ordered action/event stream for one table. */
   loadAuditEvents(gameId: string): GameAuditEvent[];
+  /** Reads checkpoints one at a time without retaining the entire history. */
+  iterateAuditEvents(gameId: string): Iterable<GameAuditEvent>;
+  countAuditEvents(gameId: string): number;
   /** Appends exactly one event and assigns its next per-game sequence. */
   appendAuditEvent(gameId: string, event: GameAuditEventInput): GameAuditEvent;
 
