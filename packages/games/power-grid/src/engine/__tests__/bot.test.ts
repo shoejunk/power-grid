@@ -23,6 +23,7 @@ import {
 } from '../index.js';
 import { NOW, enterPhase, fresh, grantPlant } from './helpers.js';
 import { randomZone } from '../setup.js';
+import { buildAdjacency, getMap } from '../../data/maps/index.js';
 
 function started(opts: Parameters<typeof fresh>[0] = {}): GameState {
   const s = fresh(opts);
@@ -151,6 +152,47 @@ describe('bots play the game', () => {
     const t = play(started({ playerCount: 3, seed: 'BOT-USA', mapId: 'usa', experiencedStart: true }));
     expect(t.state.phase).toBe('gameOver');
   });
+
+  for (const mapId of ['germany', 'usa'] as const) {
+    it(`spreads six experienced-start markers across the ${mapId} map`, () => {
+      let s = fresh({ playerCount: 6, seed: 'BOT-CROWDING', mapId, experiencedStart: true });
+      s = applyAction(s, s.hostId, { type: 'selectZone', areas: [] }, NOW);
+
+      while (s.phase === 'setup') {
+        const actor = s.activePlayerId!;
+        const action = defaultActionFor(s, actor);
+        expect(action?.type).toBe('markStartCity');
+        s = applyAction(s, actor, action!, NOW);
+      }
+
+      const map = getMap(mapId);
+      const areaCounts = new Map<string, number>();
+      const marked = new Set<string>();
+      for (const playerId of s.playerOrder) {
+        const cityId = s.players[playerId]!.markedStartCity!;
+        marked.add(cityId);
+        const area = map.cities.find((city) => city.id === cityId)!.area;
+        areaCounts.set(area, (areaCounts.get(area) ?? 0) + 1);
+      }
+      expect(Math.max(...areaCounts.values())).toBeLessThanOrEqual(2);
+      expect(areaCounts.size).toBeGreaterThanOrEqual(3);
+
+      const adjacency = buildAdjacency(map, s.zone);
+      const pending = new Set(marked);
+      while (pending.size > 0) {
+        const first = pending.values().next().value!;
+        const component = [first];
+        pending.delete(first);
+        for (let i = 0; i < component.length; i++) {
+          for (const edge of adjacency.get(component[i]!) ?? []) {
+            if (!pending.delete(edge.to)) continue;
+            component.push(edge.to);
+          }
+        }
+        expect(component.length).toBeLessThanOrEqual(2);
+      }
+    });
+  }
 
   it('is deterministic — the same seed produces the same game', () => {
     const a = play(started({ playerCount: 3, seed: 'BOT-DET' }));

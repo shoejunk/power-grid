@@ -52,7 +52,7 @@ import { maxFlowAssign, poolFits, slotsSaturated, type PlantSlot } from './alloc
 import { storedPool, usesCoalStorage } from './resources.js';
 import { buildTargets } from './building.js';
 import { minimumBid } from './plantMarket.js';
-import { cheapestRoutes, stateMap } from './mapAccess.js';
+import { cheapestRoutes, neighboursInZone, stateMap } from './mapAccess.js';
 import type { LegalActions } from './legal.js';
 
 /* ------------------------------------------------------------------ *
@@ -110,6 +110,12 @@ const MAX_PLANNED_BUILDS = 10;
 const SOLD_OUT_PRICE = 20;
 /** Neighbours summed when scoring a starting city for connectivity. §2. */
 const START_CITY_NEIGHBOURS = 5;
+/** Connection cost inside which another marked start creates meaningful pressure. */
+const START_CITY_SPACING_COST = 15;
+/** Extra cost assigned for each Elektro of missing space to an existing marker. */
+const START_CITY_SPACING_WEIGHT = 2;
+/** A second marker may share a strong area; a third must look elsewhere. */
+const START_CITY_AREA_LIMIT = 2;
 
 function cashValue(money: number): number {
   if (money <= WORKING_CAPITAL) return money;
@@ -856,13 +862,28 @@ function setupAction(state: GameState, legal: LegalActions): GameAction | null {
 }
 
 /**
- * The best-connected city among `choices`: the one whose nearest neighbours are
- * cheapest to reach, so the first few houses of §8 cost the least. Ties break on
- * id, keeping the choice a pure function of state (§14).
+ * The best-connected city among `choices`, tempered by the starts already on
+ * the board. A second marker may still join an exceptionally good pocket, but
+ * a third marker may not extend the same adjacent cluster or area while an
+ * uncrowded alternative exists. That prevents every standard bot from choosing
+ * the same cheap pocket and blocking one another's Step-1 expansion.
+ *
+ * Ties break on id, keeping the choice a pure function of state (§14).
  */
 function bestHub(state: GameState, choices: readonly CityId[]): CityId {
   const map = stateMap(state);
-  let best: { cityId: CityId; cost: number } | null = null;
+  const cityAreas = new Map(map.cities.map((city) => [city.id, city.area]));
+  const marked = state.playerOrder
+    .map((id) => getPlayer(state, id).markedStartCity)
+    .filter((id): id is CityId => id !== undefined);
+  const markedSet = new Set(marked);
+  const areaCounts = new Map<string, number>();
+  for (const cityId of marked) {
+    const area = cityAreas.get(cityId);
+    if (area !== undefined) areaCounts.set(area, (areaCounts.get(area) ?? 0) + 1);
+  }
+
+  const scored: { cityId: CityId; cost: number; crowded: boolean }[] = [];
   for (const cityId of [...choices].sort()) {
     const routes = cheapestRoutes(map, state.zone, [cityId]);
     const nearest = [...routes.entries()]
@@ -870,8 +891,49 @@ function bestHub(state: GameState, choices: readonly CityId[]): CityId {
       .map(([, cost]) => cost)
       .sort((a, b) => a - b)
       .slice(0, START_CITY_NEIGHBOURS);
-    const cost = nearest.reduce((s, c) => s + c, 0) + (START_CITY_NEIGHBOURS - nearest.length) * 50;
-    if (!best || cost < best.cost) best = { cityId, cost };
+    const hubCost = nearest.reduce((s, c) => s + c, 0) + (START_CITY_NEIGHBOURS - nearest.length) * 50;
+
+    const spacingCost = marked.reduce((sum, other) => {
+      const distance = routes.get(other) ?? START_CITY_SPACING_COST;
+      return sum + Math.max(0, START_CITY_SPACING_COST - distance) * START_CITY_SPACING_WEIGHT;
+    }, 0);
+    const area = cityAreas.get(cityId);
+    const areaCrowd = area === undefined ? 0 : (areaCounts.get(area) ?? 0);
+    const adjacentCluster = markedClusterSize(state, cityId, markedSet);
+    scored.push({
+      cityId,
+      cost: hubCost + spacingCost,
+      crowded: areaCrowd >= START_CITY_AREA_LIMIT || adjacentCluster >= START_CITY_AREA_LIMIT,
+    });
   }
-  return best!.cityId;
+
+  const candidates = scored.some((candidate) => !candidate.crowded)
+    ? scored.filter((candidate) => !candidate.crowded)
+    : scored;
+  candidates.sort((a, b) => a.cost - b.cost || a.cityId.localeCompare(b.cityId));
+  return candidates[0]!.cityId;
+}
+
+/** Number of existing markers joined to `candidate` through marker-to-marker edges. */
+function markedClusterSize(
+  state: GameState,
+  candidate: CityId,
+  marked: ReadonlySet<CityId>,
+): number {
+  if (marked.size === 0) return 0;
+  const map = stateMap(state);
+  const traversable = new Set(marked);
+  traversable.add(candidate);
+  const seen = new Set<CityId>([candidate]);
+  const pending: CityId[] = [candidate];
+  while (pending.length > 0) {
+    const cityId = pending.pop()!;
+    for (const neighbour of neighboursInZone(map, state.zone, cityId)) {
+      if (!traversable.has(neighbour) || seen.has(neighbour)) continue;
+      seen.add(neighbour);
+      pending.push(neighbour);
+    }
+  }
+  seen.delete(candidate);
+  return seen.size;
 }
