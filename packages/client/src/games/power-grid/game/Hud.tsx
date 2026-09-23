@@ -108,11 +108,11 @@ function HudCard({
           <Money value={player.money} size="md" label={`${player.name} balance`} />
           <Tooltip
             placement="bottom"
-            title={`${player.name}: ${score.total} points`}
+            title={`${player.name} total assets: ${score.total}`}
             content={`Elektro ${score.elektro} + cities ${score.cities} + plants ${score.plants} + stored resources ${score.resources}. Each city is worth 20; plants use their printed numbers; fuel uses its current market price.`}
           >
-            <span className="pg-ghudcard__score" tabIndex={0} aria-label={`${player.name} score: ${score.total}`}>
-              <span>Score</span>
+            <span className="pg-ghudcard__score" tabIndex={0} aria-label={`${player.name} total assets: ${score.total}`}>
+              <span>Total Assets</span>
               <strong className="tt-numeral">{score.total}</strong>
             </span>
           </Tooltip>
