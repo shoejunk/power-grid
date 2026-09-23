@@ -1050,6 +1050,23 @@
   gap: 3px;
   min-width: 0;
 }
+.pg-ghudcard__score {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  width: fit-content;
+  color: var(--tt-text-secondary);
+  font-family: var(--tt-font-display);
+  font-size: var(--tt-text-3xs);
+  letter-spacing: var(--tt-tracking-wide);
+  text-transform: uppercase;
+  cursor: help;
+
+  strong {
+    color: var(--tt-copper-bright);
+    font-size: var(--tt-text-sm);
+  }
+}
 .pg-ghudcard__cities {
   display: grid;
   grid-template-columns: auto auto;

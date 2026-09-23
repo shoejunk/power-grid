@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import type { Player } from '@game/power-grid';
-import { END_GAME_THRESHOLD, MAX_PLANTS_PER_PLAYER, STEP2_THRESHOLD } from '@game/power-grid';
+import { END_GAME_THRESHOLD, MAX_PLANTS_PER_PLAYER, STEP2_THRESHOLD, scorePlayer } from '@game/power-grid';
 
 import { springSnappy, springSoft } from '@tt/ui';
 import {
@@ -61,6 +61,7 @@ function HudCard({
   const effective = !isActing && player.phaseStatus === 'acting' ? 'eligible' : player.phaseStatus;
   const status = STATUS_META[effective];
   const cities = player.cities.length;
+  const score = scorePlayer(state, player);
 
   return (
     <motion.div
@@ -105,6 +106,16 @@ function HudCard({
       <div className="pg-ghudcard__body">
         <div className="pg-ghudcard__stats">
           <Money value={player.money} size="md" label={`${player.name} balance`} />
+          <Tooltip
+            placement="bottom"
+            title={`${player.name}: ${score.total} points`}
+            content={`Cities ${score.cities} + plants ${score.plants} + stored resources ${score.resources}. Each city is worth 20; plants use their printed numbers; fuel uses its current market price. Cash is not included.`}
+          >
+            <span className="pg-ghudcard__score" tabIndex={0} aria-label={`${player.name} score: ${score.total}`}>
+              <span>Score</span>
+              <strong className="tt-numeral">{score.total}</strong>
+            </span>
+          </Tooltip>
           <Tooltip
             placement="bottom"
             title={`${cities} connected ${plural(cities, 'city', 'cities')}`}
