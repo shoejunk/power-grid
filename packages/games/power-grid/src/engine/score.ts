@@ -2,6 +2,7 @@ import type { GameState, Player, ResourceType } from '../types.js';
 import { RESOURCE_TYPES } from '../types.js';
 
 export interface PlayerScore {
+  elektro: number;
   cities: number;
   plants: number;
   resources: number;
@@ -17,8 +18,9 @@ export function currentResourcePrice(state: GameState, type: ResourceType): numb
   return available?.price ?? spaces[spaces.length - 1]?.price ?? 0;
 }
 
-/** Visible asset score. Cash is deliberately excluded from this score. */
+/** Visible score from Elektro and the player's cities, plants, and fuel. */
 export function scorePlayer(state: GameState, player: Player): PlayerScore {
+  const elektro = player.money;
   const cities = player.cities.length * 20;
   const plants = player.plants.reduce((total, plant) => total + plant.plantId, 0);
   const prices = Object.fromEntries(
@@ -31,5 +33,5 @@ export function scorePlayer(state: GameState, player: Player): PlayerScore {
     ),
     0,
   );
-  return { cities, plants, resources, total: cities + plants + resources };
+  return { elektro, cities, plants, resources, total: elektro + cities + plants + resources };
 }
