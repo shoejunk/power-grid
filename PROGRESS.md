@@ -75,3 +75,11 @@ This section supersedes the earlier pending-key/not-deployed notes. The user sup
 - The Power Grid rules log initially follows the bottom, stops when manually scrolled up, and resumes following when scrolled back to the bottom. Updates still follow after reaching the 120-entry display cap.
 - Verified 84 server tests and eight client tests; client typecheck and server no-output typecheck passed. Production client build passed in a fresh output directory. A local Chromium component fixture passed initial scrolling, large batches at the display cap, manual scroll-up, and sticky resume.
 - The user authorized committing all pending changes, pushing master/release, and deploying with existing games preserved. Production cutover follows a full inactive build, copied-database replay, and fresh backup with pre/post identity and count checks.
+
+## Expanded Power Grid achievements — October 5, 2026
+
+- Expanded the shared catalog from three to 20 achievements: all 13 requested conditions, existing stable award IDs, plus Cash Reserve, Coast to Coast, Double Digits, and Bargain Hunter. The achievement browser lists the shared catalog.
+- Build awards ignore undone placements and neutral start markers. Win awards use final supply, actual owned plants, available regions, and a proven money tiebreaker. The requested over/under target is 17 powered cities for 2–4 players, without changing the two-player 18-built-city ending rule.
+- New games use rules version 3 to log resource exhaustion against later buyers, including usable hybrid alternatives and USA coal storage. Existing versions 1 and 2 retain their original audit output; resource-denial evidence applies to new games.
+- Verification: 280 Power Grid tests, 22 focused server persistence/replay checks, Power Grid/server/client source typechecks, and client production build passed. The last first-turn-history guard also passed all 28 achievement tests. Ordinary workspace typecheck encounters existing generated-output EPERM locks; no-output checks passed.
+- User authorized pushing master/release and deploying while preserving active games. Production validation and cutover results will be recorded after verification.

@@ -4,7 +4,7 @@ import { powerGrid } from '@game/power-grid';
 import { replayPersistedGame, hashReplayState } from '../persistence/replay.js';
 import type { GameAuditEvent, PersistedGame } from '../persistence/types.js';
 
-it.each([1, 2])('replays Power Grid rules version %i across zone selection and resource purchases', version => {
+it.each([1, 2, 3])('replays Power Grid rules version %i across zone selection and resource purchases', version => {
   const seats = ['p1', 'p2'].map((playerId, i) => ({ playerId, name: playerId, color: powerGrid.descriptor.seatColors[i]!, isBot: false, ready: true, joinedAt: 1 }));
   const settings = { ...powerGrid.defaultSettings(), playerCount: 2 };
   let state = powerGrid.createGame({ gameId: 'replay', code: 'ABC234', hostId: 'p1', seed: 'ABC234-1', now: 1, replayVersion: version }, settings, seats);

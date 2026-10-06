@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@tt/ui';
+import { POWER_GRID_ACHIEVEMENTS } from '@game/power-grid';
 import { useGameStore } from '@/net';
 
 interface Profile { id: string; name: string; achievements: { achievementId: string; name: string; description: string; earnedAt: number }[] }
@@ -41,10 +42,8 @@ export function Achievements(): JSX.Element {
             <strong>{award.name}</strong><p>{award.description}</p><small>Earned {new Date(award.earnedAt).toLocaleDateString()}</small>
           </li>)}</ul> : <p>No achievements earned yet.</p>}
         </>}
-        <details><summary>Available Power Grid awards</summary><ul>
-          <li><strong>On the Grid:</strong> Finish a game.</li>
-          <li><strong>Power Player:</strong> Win a game.</li>
-          <li><strong>Built to Last:</strong> Win without ever scrapping a plant.</li>
+        <details><summary>Available Power Grid awards ({POWER_GRID_ACHIEVEMENTS.length})</summary><ul>
+          {POWER_GRID_ACHIEVEMENTS.map(award => <li key={award.id}><strong>{award.name}:</strong> {award.description}</li>)}
         </ul><p>At least two humans must start and remain human through completion. Anonymous players count, but must link their game to an account to keep awards. Historical games need a complete audit roster.</p></details>
         <Button onClick={() => setOpen(false)}>Close</Button>
       </section>

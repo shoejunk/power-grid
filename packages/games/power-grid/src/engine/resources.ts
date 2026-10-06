@@ -17,7 +17,7 @@ import type {
 import { RESOURCE_TYPES, emptyResources } from '../types.js';
 import { getPlant } from '../data/plants.js';
 import { USA_COAL_STORAGE_PRICE } from './constants.js';
-import { fail, getPlayer, ok, pushLog } from './state.js';
+import { fail, getPlayer, ok, pushLog, reverseOrder } from './state.js';
 import { stateMap } from './mapAccess.js';
 import {
   bundleTotal,
@@ -235,6 +235,24 @@ export function applyBuyResources(
     spent += paid;
     detail[t] = wanted[t];
   }
+
+  // Versioned log evidence keeps existing audit replays byte-for-byte stable.
+  // Check after buying so USA's fallback coal storage still counts as available.
+  const exhausted = RESOURCE_TYPES.filter(t => wanted[t] > 0 && purchasableTokens(state, t) === 0);
+  const order = reverseOrder(state);
+  const blockedResourceBuyers = state.version >= 3 ? order.slice(order.indexOf(playerId) + 1).flatMap(id => {
+    const later = getPlayer(state, id);
+    if (later.isTrust || later.phaseStatus === 'acted' || later.phaseStatus === 'passed') return [];
+    const pool = storedPool(state, id);
+    return exhausted.flatMap(resource => later.plants.some(op => {
+      const plant = getPlant(op.plantId);
+      // Hybrid alternatives may be in storage or still available to buy.
+      const usable = plant.accepts.reduce((sum, t) => sum + pool[t], 0);
+      const alternatives = plant.accepts.filter(t => t !== resource).reduce((sum, t) => sum + purchasableTokens(state, t), 0);
+      return plant.accepts.includes(resource) && usable + alternatives < plant.fuel;
+    }) ? [{ playerId: id, resource }] : []);
+  }) : [];
+
   player.money -= spent;
 
   const pool = storedPool(state, playerId);
@@ -254,6 +272,7 @@ export function applyBuyResources(
       cost: spent,
       moneyAfter: player.money,
       usaCoalStorage: state.usaCoalStorage,
+      ...(state.version >= 3 ? { blockedResourceBuyers } : {}),
     },
   });
 }

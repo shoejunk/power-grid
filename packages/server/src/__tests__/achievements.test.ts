@@ -52,6 +52,29 @@ it('rejects bot-only competition, incomplete histories and two seats owned by on
   }
 });
 
+it.each(['memory', 'json', 'sqlite'] as const)('persists the expanded awards once per account in %s', backend => {
+  const dir = makeDataDir();
+  const open = (): GameStore => backend === 'sqlite' ? new SqliteGameStore(path.join(dir, 'expanded.db')) : backend === 'json' ? new JsonFileGameStore(path.join(dir, 'expanded.json')) : new MemoryGameStore();
+  let store = open();
+  try {
+    const game = finished(store);
+    const state = game.state as ReturnType<typeof powerGrid.createGame>;
+    state.log.push(
+      { id: 100, at: 2, round: 2, phase: 'auction', step: 1, category: 'auction', playerId: 'p1', message: 'Auction won', data: { event: 'plantAcquired', plantId: 21, plants: [10, 21], price: 76, via: 'auction' } },
+      { id: 101, at: 3, round: 2, phase: 'resources', step: 1, category: 'resource', playerId: 'p1', message: 'Resource market exhausted', data: { event: 'resourcesBought', blockedResourceBuyers: [{ playerId: 'p2', resource: 'coal' }] } },
+      { id: 102, at: 4, round: 2, phase: 'bureaucracy', step: 1, category: 'power', playerId: 'p1', message: 'Ten cities powered', data: { event: 'citiesPowered', citiesSupplied: 10 } },
+    );
+    awardAchievements(store, erase(powerGrid), game);
+    awardAchievements(store, erase(powerGrid), game);
+    store.deleteGame(game.gameId);
+    if (backend !== 'memory') { store.close(); store = open(); }
+    const awards = store.loadAchievements('account1');
+    expect(awards.map(a => a.achievementId).sort()).toEqual(['asshole', 'big-upgrade', 'expensive-auction', 'first-finish', 'first-win', 'power-ten', 'win-without-scrapping']);
+    expect(awards.find(a => a.achievementId === 'big-upgrade')!.name).toBe('Big Upgrade');
+    expect(store.loadAchievements('account2').map(a => a.achievementId)).toEqual(['first-finish']);
+  } finally { store.close(); removeDataDir(dir); }
+});
+
 it('an earlier scrap disqualifies Built to Last even when that plant is gone', () => {
   const store = new MemoryGameStore();
   const game = finished(store);

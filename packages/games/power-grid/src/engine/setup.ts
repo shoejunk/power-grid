@@ -205,7 +205,7 @@ export function createGame(
   for (const c of map.cities) citySlots[c.id] = [null, null, null];
 
   const state: GameState = {
-    version: options.version ?? 2,
+    version: options.version ?? 3,
     gameId: options.gameId ?? `game-${code}`,
     code,
     hostId,

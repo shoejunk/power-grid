@@ -6,3 +6,4 @@ export * from './data/maps/index.js';
 export * from './engine/index.js';
 export * from './engine/score.js';
 export * from './plugin.js';
+export * from './achievements.js';
