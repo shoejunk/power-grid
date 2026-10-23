@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { REFILL_TABLE } from '@game/power-grid';
+import { REFILL_TABLE, getFacility, industryBaseRefill, isIndustry } from '@game/power-grid';
 import type { ResourceBundle, ResourceType } from '@game/power-grid';
 
 import { springSnappy } from '@tt/ui';
@@ -82,6 +82,20 @@ function ResupplySummaryButton(): JSX.Element {
   const [open, setOpen] = useState(false);
   const refill = REFILL_TABLE[state.settings.mapId][state.settings.playerCount]!;
   const steps = [1, 2, 3] as const;
+  if (isIndustry(state)) {
+    const baseline = industryBaseRefill(state);
+    const facilities = Object.values(state.players).flatMap(p => p.facilities ?? []).map(getFacility);
+    return <><Button variant="ghost" size="sm" onClick={() => setOpen(true)}>Resupply & production</Button>
+      {open ? <Modal open onClose={() => setOpen(false)} title="Industry resupply" description="Fixed baseline plus owned facilities, every round." width="560px">
+        <div className="pg-gsheet"><table><thead><tr><th>Resource</th><th>Baseline</th><th>Facilities</th><th>Total requested</th></tr></thead>
+          <tbody>{RESOURCE_ORDER.map(type => {
+            const output = facilities.filter(f => f.resource === type).reduce((sum, f) => sum + f.output, 0);
+            return <tr key={type}><th>{RESOURCE_META[type].label}</th><td>{baseline[type]}</td><td>{output}</td><td>{baseline[type] + output}</td></tr>;
+          })}</tbody></table>
+          <p>Baseline enters first. Facilities share the remaining slot revenue after 1 Elektro handling per delivered token. Market space and reserve tokens limit actual deliveries. No Step changes these quantities.</p>
+        </div>
+      </Modal> : null}</>;
+  }
 
   return (
     <>

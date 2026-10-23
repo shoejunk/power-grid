@@ -13,6 +13,7 @@ import { END_GAME_THRESHOLD } from './constants.js';
 import { getPlayer, humanPlayers, pushLog, type FinalEvaluationRow } from './state.js';
 import { bestSupply } from './production.js';
 import { stateMap, zoneCities } from './mapAccess.js';
+import { industryMoneyTarget, isIndustry } from './industry.js';
 
 export function endGameThreshold(state: GameState): number {
   const printed = END_GAME_THRESHOLD[state.settings.playerCount] ?? 17;
@@ -24,12 +25,15 @@ export function endGameThreshold(state: GameState): number {
 
 /** §11 / §13: only human networks can trigger the end of the game. */
 export function endGameReached(state: GameState): boolean {
+  if (isIndustry(state)) return humanPlayers(state).some(p => p.money >= industryMoneyTarget(state.settings));
   const threshold = endGameThreshold(state);
   return humanPlayers(state).some((p) => p.cities.length >= threshold);
 }
 
 /** Called once Phase 4 is complete. §11. */
 export function checkEndGameTrigger(state: GameState, now: number): void {
+  // Industry evaluates only after every power payment and facility shipment.
+  if (isIndustry(state)) return;
   if (state.endGameTriggered) return;
   if (!endGameReached(state)) return;
   state.endGameTriggered = true;
@@ -110,9 +114,9 @@ export function runFinalEvaluation(state: GameState, now: number): void {
 export function finalStandings(state: GameState): FinalEvaluationRow[] {
   return (state.finalEvaluation ?? [])
     .slice()
-    .sort((a, b) => b.citiesSupplied - a.citiesSupplied || b.money - a.money);
+    .sort((a, b) => isIndustry(state) ? b.money - a.money : b.citiesSupplied - a.citiesSupplied || b.money - a.money);
 }
 
 export function isWinner(state: GameState, playerId: PlayerId): boolean {
-  return state.winnerId === playerId;
+  return state.winnerIds?.includes(playerId) ?? (state.winnerId === playerId);
 }

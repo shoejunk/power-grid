@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { NominatablePlant } from '@game/power-grid';
+import { isIndustry, getFacility } from '@game/power-grid';
 
 import { springSoft } from '@tt/ui';
 import {
@@ -65,7 +66,7 @@ export function PlantMarket({
     <Panel
       padding="tight"
       className="pg-gcard pg-gcard--plants"
-      title="Plant market"
+      title={isIndustry(state) ? 'Plants & facilities' : 'Plant market'}
       subtitle={step3 ? 'Step 3 — all six are biddable' : 'Four current, four future'}
       actions={
         <div className="pg-grow">
@@ -81,6 +82,16 @@ export function PlantMarket({
         </div>
       }
     >
+      {isIndustry(state) ? <div className="pg-gmarketrow">
+        <span className="pg-gmarketrow__tag tt-overline">Facilities<em>biddable</em></span>
+        <div className="pg-gplantrow">
+          {(state.facilityMarket ?? []).map(id => <PlantCard key={id} plantId={id} size="sm"
+            minimumBid={getFacility(id).cost} selected={selectedPlantId === id || auctionPlantId === id}
+            {...(selectable ? { onSelect: () => onSelect?.(id) } : {})}
+            disabledReason={selectable ? reasonFor(id).reason : null} />)}
+          {!state.facilityMarket?.length ? <span className="tt-caption">All 12 facilities have been sold.</span> : null}
+        </div>
+      </div> : null}
       <div className="pg-gmarketrow">
         <span className="pg-gmarketrow__tag tt-overline">
           Current

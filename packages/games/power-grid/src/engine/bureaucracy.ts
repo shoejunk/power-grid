@@ -34,6 +34,7 @@ import {
 import { applyStep3Transition, beginStep2, step2ThresholdReached } from './steps.js';
 import { trustReturnResources } from './trust.js';
 import { runFinalEvaluation } from './endgame.js';
+import { finishIndustryGame, isIndustry, refillIndustryMarket } from './industry.js';
 
 /* ------------------------------------------------------------------ *
  * Phase entry
@@ -172,6 +173,7 @@ function drawFromSource(state: GameState, type: ResourceType, n: number): void {
  * that is about to change.
  */
 export function refillMarket(state: GameState, now: number, stepOverride?: Step): void {
+  if (isIndustry(state)) { refillIndustryMarket(state, now); return; }
   const usedStep: Step = stepOverride ?? state.step;
   const row = refillFor(state.settings.mapId, state.settings.playerCount, usedStep);
   const added: Record<string, number> = {};
@@ -277,6 +279,7 @@ export function finishBureaucracy(state: GameState, now: number): void {
   const refillStep: Step = !state.step2Triggered && step3AboutToSurface ? 2 : state.step;
 
   refillMarket(state, now, refillStep);
+  if (isIndustry(state) && finishIndustryGame(state, now)) return;
   updatePlantMarket(state, now);
 
   pushLog(state, now, {

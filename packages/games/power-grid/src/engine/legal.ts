@@ -19,7 +19,9 @@ import type {
 } from '../types.js';
 import { RESOURCE_TYPES, emptyResources } from '../types.js';
 import { getPlant } from '../data/plants.js';
-import { MAX_PLANTS_PER_PLAYER, payoutFor } from './constants.js';
+import { payoutFor } from './constants.js';
+import { auctionCardIds, cardLimit, isIndustry, ownedCardIds } from './industry.js';
+import { findFacility } from '../data/facilities.js';
 import { getPlayer } from './state.js';
 import { minimumBid } from './plantMarket.js';
 import { clockwiseBidders, isEligible, mustBuyThisRound, nextNominator } from './auction.js';
@@ -163,10 +165,9 @@ export function legalActions(state: GameState, playerId: PlayerId): LegalActions
 
   if (state.phase === 'auction') {
     if (state.pendingScrap && state.pendingScrap.playerId === playerId) {
-      // §6 / §14: the newly acquired plant may never be scrapped.
-      out.scrappablePlants = player.plants
-        .map((p) => p.plantId)
-        .filter((id) => id !== state.pendingScrap!.newPlantId);
+      // Classic §6 / §14 protects the new plant; Industry allows any of the six cards.
+      out.scrappablePlants = ownedCardIds(player)
+        .filter((id) => isIndustry(state) || id !== state.pendingScrap!.newPlantId);
       return out;
     }
     if (state.auction) {
@@ -186,8 +187,8 @@ export function legalActions(state: GameState, playerId: PlayerId): LegalActions
     }
     if (nextNominator(state) === playerId && isEligible(state, playerId)) {
       const uncontested = clockwiseBidders(state, playerId, false).length === 0;
-      out.nominatablePlants = state.plantMarket.current
-        .filter((id) => !getPlant(id).isStep3)
+      out.nominatablePlants = auctionCardIds(state)
+        .filter((id) => findFacility(id) || !getPlant(id).isStep3)
         .map((id) => {
           const min = minimumBid(state, id);
           return {
@@ -354,5 +355,5 @@ export function freeStorage(state: GameState, playerId: PlayerId): Record<Resour
 
 /** True when the player already holds the maximum number of plants. §6. */
 export function atPlantLimit(state: GameState, playerId: PlayerId): boolean {
-  return getPlayer(state, playerId).plants.length >= MAX_PLANTS_PER_PLAYER;
+  return ownedCardIds(getPlayer(state, playerId)).length >= cardLimit(state);
 }

@@ -2,6 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { LogEntry } from '@game/power-grid';
+import { cardName } from '@game/power-grid';
 
 import { springBouncy, springHeavy } from '@tt/ui';
 import { useMatch } from './model';
@@ -101,7 +102,7 @@ function build(
       return {
         id: entry.id,
         kind: 'auction',
-        headline: data.winnerId === meId ? 'Plant won' : `${nameOf(data.winnerId)} takes plant ${data.plantId}`,
+        headline: data.winnerId === meId ? 'Card won' : `${nameOf(data.winnerId)} takes ${cardName(Number(data.plantId))}`,
         detail: `Sold for ${data.price}₤ — ${data.reason === 'uncontested' ? 'uncontested at the minimum bid' : 'every other bidder passed'}.`,
         color: colorOf(data.winnerId),
       };
@@ -123,7 +124,7 @@ function build(
         detail:
           data.to === 3
             ? 'All six plants are biddable, three houses per city, no future market.'
-            : 'Two houses per city, richer refills, the lowest plant leaves the market.',
+            : 'Two houses per city; the lowest plant leaves the market.',
         color: null,
       };
     case 'endGameTriggered':
@@ -138,8 +139,8 @@ function build(
       return {
         id: entry.id,
         kind: 'final',
-        headline: `${nameOf(data.winnerId)} wins`,
-        detail: 'Most suppliable cities takes the game; money broke any tie.',
+        headline: Array.isArray(data.winnerIds) && data.winnerIds.length > 1 ? `${data.winnerIds.map(nameOf).join(' and ')} win` : `${nameOf(data.winnerId)} wins`,
+        detail: data.victory === 'money' ? 'Most cash after all final-round power and facility income.' : 'Most suppliable cities takes the game; money broke any tie.',
         color: colorOf(data.winnerId),
       };
     default:

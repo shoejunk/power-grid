@@ -10,7 +10,7 @@ import {
   Tooltip,
 } from '@tt/ui';
 import { Money } from '../ui/Money';
-import { PHASE_META, STATUS_META } from './format';
+import { phaseMeta, STATUS_META } from './format';
 import { orderedPlayers, useMatch } from './model';
 
 /** Phases 3 and 4 are resolved in reverse player order. §4. */
@@ -27,7 +27,7 @@ const REVERSED: readonly Phase[] = ['resources', 'building'];
 export function TurnOrderRail(): JSX.Element {
   const { state, meId } = useMatch();
   const phase = state.phase;
-  const meta = PHASE_META[phase];
+  const meta = phaseMeta(state, phase);
   const reversed = REVERSED.includes(phase);
   const players = orderedPlayers(state).filter((p) => !p.isTrust);
   const sequence = reversed ? players.slice().reverse() : players;

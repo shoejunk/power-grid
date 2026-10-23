@@ -97,6 +97,14 @@ function defaultSettings(): GameSettings {
 function parseSettingsPatch(raw: unknown): Partial<GameSettings> | null {
   if (!isRecord(raw)) return null;
   const out: Partial<GameSettings> = {};
+  if ('rulesMode' in raw) {
+    if (raw.rulesMode !== 'classic' && raw.rulesMode !== 'industry') return null;
+    out.rulesMode = raw.rulesMode;
+  }
+  if ('moneyTarget' in raw) {
+    if (!isInt(raw.moneyTarget) || raw.moneyTarget < 100 || raw.moneyTarget > 2000) return null;
+    out.moneyTarget = raw.moneyTarget;
+  }
 
   if ('mapId' in raw) {
     if (!isOneOf<MapId>(raw.mapId, MAP_IDS)) return null;
@@ -128,6 +136,9 @@ function parseSettingsPatch(raw: unknown): Partial<GameSettings> | null {
  * a table can never begin in a configuration the engine would reject.
  */
 function validateSettings(settings: GameSettings, seatCount: number): ValidationResult {
+  if (settings.rulesMode !== undefined && !['classic', 'industry'].includes(settings.rulesMode)) return invalid('Unknown rules mode.');
+  if (settings.moneyTarget !== undefined && (!isInt(settings.moneyTarget) || settings.moneyTarget < 100 || settings.moneyTarget > 2000)) return invalid('Cash target must be 100–2000 Elektro.');
+  if (settings.rulesMode === 'industry' && settings.againstTheTrust) return invalid('Industry does not use the Trust.');
   if (settings.playerCount < MIN_PLAYERS || settings.playerCount > MAX_PLAYERS) {
     return invalid(`Player count must be between ${MIN_PLAYERS} and ${MAX_PLAYERS}.`);
   }
@@ -416,7 +427,7 @@ export const powerGrid: GamePlugin<GameState, GameAction, GameSettings> = {
   applyPresence,
   applyHostChange,
 
-  achievementAwards: powerGridAchievementAwards,
+  achievementAwards: (state) => state.settings.rulesMode === 'industry' ? [] : powerGridAchievementAwards(state),
   externalBotChoices: jevChoices,
   externalBotContext: jevContext,
   defaultActionFor: engineDefaultAction,

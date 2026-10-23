@@ -54,6 +54,8 @@ import { buildTargets } from './building.js';
 import { minimumBid } from './plantMarket.js';
 import { cheapestRoutes, neighboursInZone, stateMap } from './mapAccess.js';
 import type { LegalActions } from './legal.js';
+import { auctionCardIds, cardLimit, industryMoneyTarget, isIndustry, ownedCardIds } from './industry.js';
+import { findFacility } from '../data/facilities.js';
 
 /* ------------------------------------------------------------------ *
  * Tuning
@@ -439,7 +441,8 @@ function planRound(
       const leftover = money - spend;
       // Capacity beyond what the bot can plausibly connect soon is not income.
       const usable = Math.min(choice.capacity, ctx.network + k + FUTURE_BUILD_HEADROOM);
-      const score =
+      const score = isIndustry(ctx.state) ?
+        leftover + industryHorizon(ctx.state) * payoutFor(powered) + Math.min(usable - powered, 2) * 2 :
         INCOME_ROUNDS * payoutFor(powered) +
         POWERED_CITY_VALUE * powered +
         SPARE_CAPACITY_VALUE * usable +
@@ -478,6 +481,26 @@ function setsAfterAcquiring(owned: readonly number[], plantId: number): number[]
 }
 
 /** Value of owning `plantId` at price `price`, after the forced scrap if any. */
+function industryHorizon(state: GameState): number {
+  const leader = Math.max(...humanPlayers(state).map(p => p.money));
+  return leader >= industryMoneyTarget(state.settings) - 60 ? 1 : 3;
+}
+
+function industryUtility(ctx: BotContext, cards: readonly number[], pool: ResourceBundle, money: number): number {
+  const plants = cards.filter(id => !findFacility(id));
+  const kept = clampPool(pool, storageSlotsFor(plants));
+  const plan = planRound(ctx, plants, kept, money, true);
+  // Public prices only. This is a conservative valuation heuristic, not a promised payout.
+  let income = 0;
+  for (const id of cards) {
+    const facility = findFacility(id);
+    if (!facility) continue;
+    const price = ctx.state.resourceMarket[facility.resource].find(s => s.filled > 0)?.price ?? 8;
+    income += facility.output * Math.max(0, price - 1);
+  }
+  return plan.score + industryHorizon(ctx.state) * income;
+}
+
 function utilityAfterBuying(
   ctx: BotContext,
   owned: readonly number[],
@@ -487,6 +510,12 @@ function utilityAfterBuying(
   price: number,
 ): number {
   if (price > money) return -Infinity;
+  if (isIndustry(ctx.state)) {
+    const player = getPlayer(ctx.state, ctx.playerId);
+    const cards = [...ownedCardIds(player), plantId];
+    const sets = cards.length > cardLimit(ctx.state) ? cards.map(id => cards.filter(c => c !== id)) : [cards];
+    return Math.max(...sets.map(set => industryUtility(ctx, set, pool, money - price)));
+  }
   let best = -Infinity;
   for (const set of setsAfterAcquiring(owned, plantId)) {
     const kept = clampPool(pool, storageSlotsFor(set));
@@ -547,8 +576,8 @@ function rivalPlantUtility(
   excludePlantId: number | null,
 ): number {
   let best = -Infinity;
-  for (const id of ctx.state.plantMarket.current) {
-    if (id === excludePlantId || getPlant(id).isStep3) continue;
+  for (const id of auctionCardIds(ctx.state)) {
+    if (id === excludePlantId || (!findFacility(id) && getPlant(id).isStep3)) continue;
     const floor = minimumBid(ctx.state, id);
     if (floor > money) continue;
     const value = utilityAfterBuying(ctx, owned, pool, money, id, floor);
@@ -622,7 +651,7 @@ function nominateAction(ctx: BotContext, legal: LegalActions): GameAction | null
     .sort((a, b) => b.utility - a.utility || a.plantId - b.plantId);
 
   const best = ranked[0]!;
-  const passUtility = planRound(ctx, owned, pool, money, true).score;
+  const passUtility = isIndustry(ctx.state) ? industryUtility(ctx, ownedCardIds(player), pool, money) : planRound(ctx, owned, pool, money, true).score;
   const mustBuy = !legal.canPassNomination;
 
   // Nothing in the market beats keeping the cash — and §6 lets us say so.
@@ -665,7 +694,7 @@ function bidAction(ctx: BotContext, legal: LegalActions): GameAction {
   const money = player.money;
   const floor = bidding.minimumRaise;
 
-  const passUtility = planRound(ctx, owned, pool, money, true).score;
+  const passUtility = isIndustry(ctx.state) ? industryUtility(ctx, ownedCardIds(player), pool, money) : planRound(ctx, owned, pool, money, true).score;
   const rivalBest = rivalPlantUtility(ctx, owned, pool, money, bidding.plantId);
   const ceiling = bidCeiling(
     ctx,
@@ -695,7 +724,7 @@ function scrapAction(ctx: BotContext, legal: LegalActions): GameAction {
   for (const plantId of legal.scrappablePlants) {
     const survivors = owned.filter((id) => id !== plantId);
     const kept = clampPool(pool, storageSlotsFor(survivors));
-    const score = planRound(ctx, survivors, kept, player.money, true).score;
+    const score = isIndustry(ctx.state) ? industryUtility(ctx, ownedCardIds(player).filter(id => id !== plantId), pool, player.money) : planRound(ctx, survivors, kept, player.money, true).score;
     if (!best || score > best.score || (score === best.score && plantId < best.plantId)) {
       best = { plantId, score };
     }
@@ -786,6 +815,7 @@ function buildingAction(ctx: BotContext, legal: LegalActions): GameAction {
  */
 function closingCity(ctx: BotContext, legal: LegalActions): CityId | undefined {
   const state = ctx.state;
+  if (isIndustry(state)) return undefined;
   if (state.endGameTriggered) return undefined;
 
   const player = getPlayer(state, ctx.playerId);

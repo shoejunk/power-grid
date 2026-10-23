@@ -6,8 +6,10 @@ import { stateMap } from './mapAccess.js';
 import { buildTargets } from './building.js';
 import { operableCombinations } from './production.js';
 import { endGameThreshold } from './endgame.js';
-import { PAYMENT_TABLE, STEP2_THRESHOLD, REFILL_TABLE, MAX_PLANTS_PER_PLAYER, HOUSE_SLOT_COSTS, payoutFor } from './constants.js';
+import { PAYMENT_TABLE, STEP2_THRESHOLD, REFILL_TABLE, HOUSE_SLOT_COSTS, payoutFor } from './constants.js';
 import { JEV_RULES } from './jevRules.js';
+import { cardLimit, industryBaseRefill, industryMoneyTarget, isIndustry } from './industry.js';
+import { FACILITIES } from '../data/facilities.js';
 
 /** Finite, validated choices. Money decisions are bounded by the player's cash. */
 export function jevChoices(state: GameState, playerId: string): GameAction[] {
@@ -68,12 +70,14 @@ export function jevChoices(state: GameState, playerId: string): GameAction[] {
 /** Public game context only: no seed, deck order, logs, account data or rival bids. */
 export function jevContext(state: GameState, playerId: string) {
   return {
-    game: 'Power Grid', playerId, phase: state.phase, step: state.step, round: state.round,
+    game: isIndustry(state) ? 'Power Grid: Industry' : 'Power Grid', playerId, phase: state.phase, step: state.step, round: state.round,
+    ...(isIndustry(state) ? { facilities: FACILITIES, facilityMarket: state.facilityMarket, moneyTarget: industryMoneyTarget(state.settings), baselineRefill: industryBaseRefill(state), maxCards: cardLimit(state) } : {}),
     settings: { mapId: state.settings.mapId, playerCount: state.settings.playerCount, experiencedStart: state.settings.experiencedStart, againstTheTrust: state.settings.againstTheTrust },
     setupStage: state.setupStage, activePlayerId: state.activePlayerId,
     zone: state.zone, playerOrder: state.playerOrder, citySlots: state.citySlots,
     players: Object.values(state.players).map(p => ({
       id: p.id, money: p.money, cities: p.cities, plants: p.plants, isTrust: p.isTrust,
+      ...(isIndustry(state) ? { facilities: p.facilities } : {}),
       housesRemaining: p.housesRemaining, hasNetwork: p.hasNetwork,
       markedStartCity: p.markedStartCity, phaseStatus: p.phaseStatus,
       generationCapacity: p.plants.reduce((sum, plant) => sum + getPlant(plant.plantId).cities, 0),
@@ -94,8 +98,16 @@ export function jevContext(state: GameState, playerId: string) {
     auction: state.auction ? { plantId: state.auction.plantId, auctioneerId: state.auction.auctioneerId, eligibleBidders: state.auction.eligibleBidders } : null,
     legal: legalActions(state, playerId), map: stateMap(state),
     expansion: { explanation: 'Costs for your next single city using the current board, even outside the building phase. These are facts, not recommendations. Includes unaffordable cities. Costs and availability can change before your turn or after each build; purchases use the same cash as auctions and fuel.', targets: buildTargets(state, playerId) },
-    tables: { incomeByCitiesSupplied: PAYMENT_TABLE, step2CityThreshold: STEP2_THRESHOLD[state.settings.playerCount], endGameCityThreshold: endGameThreshold(state), maxPlants: MAX_PLANTS_PER_PLAYER, houseSlotCosts: HOUSE_SLOT_COSTS, resourceRefill: REFILL_TABLE[state.settings.mapId] },
-    rules: JEV_RULES,
+    tables: { incomeByCitiesSupplied: PAYMENT_TABLE, step2CityThreshold: STEP2_THRESHOLD[state.settings.playerCount], endGameCityThreshold: isIndustry(state) ? null : endGameThreshold(state), maxPlants: cardLimit(state), houseSlotCosts: HOUSE_SLOT_COSTS, resourceRefill: isIndustry(state) ? industryBaseRefill(state) : REFILL_TABLE[state.settings.mapId] },
+    rules: isIndustry(state) ? { ...JEV_RULES,
+      objective: 'The first round ending with anyone at moneyTarget is final. EVERY player receives power and facility income before evaluation. Most cash wins; cash ties share victory. City count does not end the game.',
+      auction: 'Buy at most one plant OR facility per round; in round one buy either. Facility IDs use the same nominatePlant and scrapPlant actions. Facility minimum bids are their cost, never their ID. Own any five cards total; a sixth requires scrapping any owned plant or facility, including the new one. Small facility offers advance to medium then large; they have no placement cost and occupy no city slot. Sealed auction rules otherwise apply.',
+      combinedTurnHouseRule: 'Everyone locks production after building. After all finish, consume fuel and pay all power income, including the last round. Zero supplied cities still earns 10.',
+      settlement: 'After power payouts, add the fixed baselineRefill (never changes by Step), then automatically deliver all owned facility output into the highest-priced empty market spaces. Each delivered token earns max(0, slot price minus 1). Producers of the same resource share total revenue proportional to output, rounded to whole Elektro. Market capacity and finite reserves limit deliveries and payment. Then check cash victory; if not over, update the plant market normally.',
+      steps: 'Steps still change city slots and the plant market, but never the resource refill or victory condition.',
+      mapRules: 'Germany has no nuclear phase-out in Industry. USA coal still circulates through coal storage and its usual purchase fallback.',
+      trust: 'The Trust is unavailable in Industry.',
+    } : JEV_RULES,
     choiceSemantics: 'Choices are unranked legal actions, not recommendations. Bids and large resource-basket spaces are sampled under the provider limit. Select using your own strategy. Buying a plant does not build a city or generate income by itself. Each buildCity adds one city and leaves your building turn open for another decision; passBuilding ends building and opens production selection.',
   };
 }

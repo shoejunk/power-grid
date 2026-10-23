@@ -8,7 +8,8 @@
 
 import type { GameState, PlayerId } from '../types.js';
 import { STEP3_PLANT_ID, emptyResources } from '../types.js';
-import { MAX_PLANTS_PER_PLAYER } from './constants.js';
+import { cardLimit, isIndustry, ownedCardIds } from './industry.js';
+import { findFacility } from '../data/facilities.js';
 import { getPlayer, pushLog } from './state.js';
 import { stateMap } from './mapAccess.js';
 import { drawReplacement, removeFromMarket, sortMarket } from './plantMarket.js';
@@ -33,6 +34,22 @@ export function acquirePlant(
   opts: AcquireOptions,
 ): boolean {
   const player = getPlayer(state, playerId);
+  const facility = isIndustry(state) ? findFacility(plantId) : undefined;
+  if (facility) {
+    const index = state.facilityMarket!.indexOf(plantId);
+    if (index < 0) throw new Error('Facility is not offered');
+    if (facility.size === 'large') state.facilityMarket!.splice(index, 1);
+    else state.facilityMarket![index] = plantId + 1;
+    player.money -= opts.price;
+    (player.facilities ??= []).push(plantId);
+    player.facilities.sort((a, b) => a - b);
+    if (!state.acquiredThisRound.includes(playerId)) state.acquiredThisRound.push(playerId);
+    player.phaseStatus = 'purchased';
+    pushLog(state, now, { category: 'auction', playerId,
+      message: `${player.name} wins ${facility.name} for ${opts.price} Elektro.`,
+      data: { event: 'facilityAcquired', playerId, facilityId: plantId, price: opts.price, moneyAfter: player.money } });
+    return ownedCardIds(player).length > cardLimit(state);
+  }
   removeFromMarket(state, plantId);
   player.money -= opts.price;
   player.plants.push({ plantId, stored: emptyResources() });
@@ -71,7 +88,7 @@ export function acquirePlant(
 
   // §9.2 / §12 Germany: the phase-out only fires when a player *buys* plant 39.
   const phaseOutPlant = stateMap(state).rules.nuclearPhaseOutPlant;
-  if (phaseOutPlant !== undefined && plantId === phaseOutPlant && !state.uraniumPhaseOut) {
+  if (!isIndustry(state) && phaseOutPlant !== undefined && plantId === phaseOutPlant && !state.uraniumPhaseOut) {
     state.uraniumPhaseOut = true;
     pushLog(state, now, {
       category: 'market',
@@ -97,7 +114,7 @@ export function acquirePlant(
   }
   sortMarket(state);
 
-  return player.plants.length > MAX_PLANTS_PER_PLAYER;
+  return ownedCardIds(player).length > cardLimit(state);
 }
 
 /**
@@ -113,6 +130,13 @@ export function scrapPlant(
   plantId: number,
 ): void {
   const player = getPlayer(state, playerId);
+  if (isIndustry(state) && player.facilities?.includes(plantId)) {
+    player.facilities = player.facilities.filter(id => id !== plantId);
+    (state.scrappedFacilities ??= []).push(plantId);
+    pushLog(state, now, { category: 'auction', playerId, message: `${player.name} scraps ${findFacility(plantId)!.name}.`,
+      data: { event: 'facilityScrapped', playerId, facilityId: plantId } });
+    return;
+  }
   const pool = storedPool(state, playerId);
   player.plants = player.plants.filter((p) => p.plantId !== plantId);
   state.plantMarket.removed.push(plantId);

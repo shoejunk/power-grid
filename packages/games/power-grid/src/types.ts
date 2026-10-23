@@ -176,6 +176,8 @@ export interface Player {
   /** Houses remaining in the player's supply. 22 for humans, 16(+1) for the Trust. */
   housesRemaining: number;
   plants: OwnedPlant[];
+  /** Industry only. Kept separate so facilities cannot store fuel or power cities. */
+  facilities?: number[];
   /** Cities where this player has a house. */
   cities: CityId[];
   /** 0-based index into `GameState.playerOrder`. */
@@ -293,6 +295,10 @@ export interface PowerDecision {
  * ------------------------------------------------------------------ */
 
 export interface GameSettings {
+  /** Omitted on existing games: classic rules. */
+  rulesMode?: 'classic' | 'industry';
+  /** Industry cash victory target; defaults to the balance table by player count. */
+  moneyTarget?: number;
   mapId: MapId;
   playerCount: number;
   /** Optional experienced-player starting-city rule. §2. */
@@ -328,6 +334,9 @@ export interface GameState {
   activePlayerId: PlayerId | null;
 
   plantMarket: PlantMarket;
+  /** Industry: one facility offer per resource, advancing small → medium → large. */
+  facilityMarket?: number[];
+  scrappedFacilities?: number[];
   resourceMarket: ResourceMarket;
   /** Tokens not on the market and not on a plant. §1. */
   supply: ResourceBundle;
@@ -351,6 +360,8 @@ export interface GameState {
   /** Set at end of Phase 4 when a player reaches the city threshold. §11. */
   endGameTriggered: boolean;
   winnerId: PlayerId | null;
+  /** Industry cash ties are shared wins. Classic retains its original winner contract. */
+  winnerIds?: PlayerId[];
 
   /** Deterministic RNG cursor — advanced on every random draw. §14. */
   rngCursor: number;

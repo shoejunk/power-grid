@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { END_GAME_THRESHOLD, finalStandings, getPlant } from '@game/power-grid';
+import { END_GAME_THRESHOLD, finalStandings, getPlant, industryMoneyTarget, isIndustry, isWinner as playerIsWinner } from '@game/power-grid';
 
 import { springSoft } from '@tt/ui';
 import {
@@ -32,6 +32,20 @@ export function EndgamePanel(): JSX.Element {
   const winner = standings[0] ?? null;
   const trigger = standings.find((row) => row.networkSize >= threshold) ?? null;
   const upset = winner !== null && trigger !== null && winner.playerId !== trigger.playerId;
+  if (isIndustry(state)) return <PhaseShell title="Industry — final standings" subtitle="Most cash wins" tone="final"
+    rules={[{ text: 'Every player receives final-round power and facility income. Cash ties share victory.', rule: 'Industry' }]}>
+    <Callout tone="info" title="All final-round income paid">The {industryMoneyTarget(state.settings)} Elektro target was met. Facilities and plants have both paid out.</Callout>
+    <div className="pg-gfinal" role="list">{standings.map(row => {
+      const player = state.players[row.playerId]!;
+      return <div key={row.playerId} className="pg-gfinal__row" role="listitem" data-player-color={player.color} data-winner={playerIsWinner(state, player.id)}>
+        <Avatar name={player.name} color={player.color} size="sm" />
+        <strong>{player.name}{player.id === meId ? ' (you)' : ''}</strong>
+        <Money value={row.money} />
+        {playerIsWinner(state, player.id) ? <Badge tone="success">Winner</Badge> : null}
+      </div>;
+    })}</div>
+    <Stat label="Rounds played" value={state.round} />
+  </PhaseShell>;
 
   return (
     <PhaseShell

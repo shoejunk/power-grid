@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { GameMap, LegalActions, MapCity } from '@game/power-grid';
-import { END_GAME_THRESHOLD, STEP2_THRESHOLD, getMap, legalActions } from '@game/power-grid';
+import { END_GAME_THRESHOLD, STEP2_THRESHOLD, getMap, legalActions, isIndustry, industryMoneyTarget } from '@game/power-grid';
 
 import { BoardSlot } from '../game/BoardSlot';
 import { PlayerHud } from '../game/Hud';
@@ -11,7 +11,7 @@ import { PhaseRail } from '../game/PhaseRail';
 import { RulesLog } from '../game/RulesLog';
 import { RulesSheet } from '../game/RulesSheet';
 import { TurnOrderRail } from '../game/TurnOrderRail';
-import { PHASE_META } from '../game/format';
+import { phaseMeta } from '../game/format';
 import { MatchProvider, noLegalActions, type MatchValue } from '../game/model';
 import '../game/game.scss';
 import { ConnectionPill, net, useGameStore } from '@/net';
@@ -144,13 +144,14 @@ export function GameScreen(): JSX.Element {
 
   return (
     <MatchProvider value={match}>
-      <div className="tt-screen pg-game">
+      <div className={`tt-screen pg-game${isIndustry(gameState) ? ' pg-game--industry' : ''}`}>
         <AmbientBackdrop grid={false} />
 
         {/* -------- chrome -------- */}
         <header className="pg-game__chrome">
           <div className="pg-game__chrome-left">
             <Wordmark compact />
+            {isIndustry(gameState) ? <Badge tone="accent">Industry</Badge> : null}
             <span className="tt-rule tt-rule--v" />
             <Badge tone="accent" size="lg">
               Round {gameState.round}
@@ -162,7 +163,7 @@ export function GameScreen(): JSX.Element {
               placement="bottom"
               title="How close is the end?"
               rule="§10 Step 2, §11 End of game"
-              content={`With ${count} players, Step 2 begins at ${step2At} connected cities and the game ends after Phase 4 once anyone reaches ${endAt}. The largest network right now is ${leader}.`}
+              content={isIndustry(gameState) ? `Step 2 begins at ${step2At} connected cities. The cash target is ${industryMoneyTarget(gameState.settings)} Elektro, checked after all round income.` : `With ${count} players, Step 2 begins at ${step2At} connected cities and the game ends after Phase 4 once anyone reaches ${endAt}. The largest network right now is ${leader}.`}
             >
               <div className="pg-gclock" tabIndex={0}>
                 <span className="pg-gclock__track" aria-hidden="true">
@@ -180,7 +181,7 @@ export function GameScreen(): JSX.Element {
                 <span className="pg-gclock__legend">
                   <b className="tt-numeral">{leader}</b>
                   <em>
-                    Step 2 at {step2At} · ends at {endAt}
+                    Step 2 at {step2At} · {isIndustry(gameState) ? `cash target ${industryMoneyTarget(gameState.settings)}₤` : `ends at ${endAt}`}
                   </em>
                 </span>
               </div>
@@ -189,7 +190,7 @@ export function GameScreen(): JSX.Element {
 
           <div className="pg-game__phaserail" role="list" aria-label="Round phases">
             {PHASE_KEYS.map((key) => {
-              const meta = PHASE_META[key];
+              const meta = phaseMeta(gameState, key);
               const active = key === gameState.phase ||
                 (key === 'building' && gameState.phase === 'bureaucracy');
               return (

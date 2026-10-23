@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { MAX_PLANTS_PER_PLAYER, getPlant } from '@game/power-grid';
+import { cardLimit, cardName, emptyResources, findFacility, getPlant, isIndustry, ownedCardIds } from '@game/power-grid';
 
 import { net } from '@/net';
 import { springSoft } from '@tt/ui';
@@ -24,6 +24,13 @@ const AUCTION_RULES: readonly RuleLine[] = [
   { text: 'After all decisions arrive, bidding is simulated clockwise without exceeding anyone’s maximum.', rule: '§6' },
   { text: 'A player may own at most three plants. Acquiring a fourth forces a scrap — never the new plant.', rule: '§6, §14' },
 ];
+const INDUSTRY_AUCTION_RULES: readonly RuleLine[] = [
+  { text: 'Buy at most one plant OR facility per round. In round 1, buy either kind.', rule: 'Industry' },
+  { text: 'Facilities produce automatically, occupy no city slots, and cost only the auction price.', rule: 'Industry' },
+  { text: 'Small facility offers are replaced by medium, then large, when bought.', rule: 'Industry' },
+  { text: 'Own any five plants and facilities. After acquiring a sixth, scrap any one of them.', rule: 'Industry' },
+  AUCTION_RULES[2]!, AUCTION_RULES[3]!,
+];
 
 export interface AuctionPanelProps {
   selectedPlantId: number | null;
@@ -44,11 +51,11 @@ export function AuctionPanel({ selectedPlantId, onSelectPlant }: AuctionPanelPro
   }
   return (
     <PhaseShell
-      title="Auction Power Plants"
+      title={isIndustry(state) ? 'Auction Plants & Facilities' : 'Auction Power Plants'}
       subtitle="Phase 2 · player order"
-      rules={AUCTION_RULES}
+      rules={isIndustry(state) ? INDUSTRY_AUCTION_RULES : AUCTION_RULES}
     >
-      <Waiting note={waitingNote(state.pendingScrap !== null)} />
+      <Waiting note={isIndustry(state) ? 'Choosing a plant or facility, or resolving a required scrap.' : waitingNote(state.pendingScrap !== null)} />
       <MyPlantLimit />
     </PhaseShell>
   );
@@ -65,7 +72,7 @@ function waitingNote(scrapPending: boolean): string {
  * ------------------------------------------------------------------ */
 
 function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): JSX.Element {
-  const { me, legal } = useMatch();
+  const { state, me, legal } = useMatch();
   const money = me?.money ?? 0;
   const options = legal.nominatablePlants;
   const chosen = options.find((o) => o.plantId === selectedPlantId) ?? null;
@@ -90,14 +97,14 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
 
   const passBlock = legal.canPassNomination
     ? null
-    : 'Every player must acquire a power plant during the first round.';
+    : isIndustry(state) ? 'Every player must acquire a plant or facility during the first round.' : 'Every player must acquire a power plant during the first round.';
 
   return (
     <PhaseShell
       title="Your turn to choose"
-      subtitle="Phase 2 · put a plant up for auction"
+      subtitle={isIndustry(state) ? 'Phase 2 · auction a plant or facility' : 'Phase 2 · put a plant up for auction'}
       tone="live"
-      rules={AUCTION_RULES}
+      rules={isIndustry(state) ? INDUSTRY_AUCTION_RULES : AUCTION_RULES}
       actions={
         <Badge tone="accent" dot>
           Acting
@@ -134,13 +141,13 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
               onSelectPlant(null);
             }}
           >
-            {chosen ? 'Submit sealed range' : 'Select a plant'}
+            {chosen ? 'Submit sealed range' : isIndustry(state) ? 'Select a card' : 'Select a plant'}
           </Button>
         </div>
       }
     >
       <p className="pg-gphase__lead">
-        Choose one of the <strong>current market</strong> plants and privately set the first amount
+        Choose one of the <strong>current market</strong> {isIndustry(state) ? 'plants or facilities' : 'plants'} and privately set the first amount
         you are willing to bid and your ceiling. Everyone answers at once; the server then simulates
         the normal clockwise auction immediately.
       </p>
@@ -150,7 +157,7 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
           <Tooltip
             key={option.plantId}
             placement="left"
-            title={`Plant ${option.plantId}`}
+            title={cardName(option.plantId)}
             rule={option.affordable ? '§6 Auction Power Plants' : '§6, §14 Legal-action validation'}
             content={
               option.affordable
@@ -173,7 +180,7 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
                 disabled={!option.affordable}
                 onClick={() => onSelectPlant(option.plantId)}
               >
-                <span className="pg-gpicker__num tt-numeral">{option.plantId}</span>
+                <span className="pg-gpicker__num tt-numeral">{findFacility(option.plantId) ? 'F' : option.plantId}</span>
                 {/*
                  * What the plant actually DOES. This chooser used to show only
                  * the number and the minimum bid ("6 / min 6₤") — the fuel it
@@ -182,6 +189,7 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
                  * had to hover each option to compare them.
                  */}
                 <span className="pg-gpicker__spec">
+                  {findFacility(option.plantId) ? <span>{findFacility(option.plantId)!.name}<br /><b>+{findFacility(option.plantId)!.output} {findFacility(option.plantId)!.resource}/round</b></span> : <>
                   {fuelText(getPlant(option.plantId))}
                   <span className="pg-gpicker__arrow" aria-hidden="true">
                     ▸
@@ -190,6 +198,7 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
                   <span className="pg-gpicker__unit">
                     {getPlant(option.plantId).cities === 1 ? 'city' : 'cities'}
                   </span>
+                  </>}
                 </span>
                 <span className="pg-gpicker__meta">
                   {option.discounted ? <Badge tone="accent">discount 1₤</Badge> : null}
@@ -245,7 +254,7 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
 
       {uncontested ? (
         <Callout tone="info" title="No one else can bid">
-          You are the last eligible player, so this plant costs exactly its minimum bid of{' '}
+          You are the last eligible player, so this card costs exactly its minimum bid of{' '}
           {chosen?.minimumBid}₤. <em>§6</em>
         </Callout>
       ) : null}
@@ -287,9 +296,9 @@ function AuctionFloor(): JSX.Element {
   return (
     <PhaseShell
       title="Sealed bids"
-      subtitle={`Plant ${auction.plantId} · ${map.name}`}
+      subtitle={`${cardName(auction.plantId)} · ${map.name}`}
       tone="live"
-      rules={AUCTION_RULES}
+      rules={isIndustry(state) ? INDUSTRY_AUCTION_RULES : AUCTION_RULES}
       actions={
         <Badge tone={bidding ? 'accent' : 'info'} dot>
           {bidding ? 'Your decision' : `${submittedCount}/${auction.eligibleBidders.length} submitted`}
@@ -300,7 +309,7 @@ function AuctionFloor(): JSX.Element {
           <div className="pg-gactions">
             <Tooltip
               placement="top"
-              title="Pass on this plant"
+              title="Pass on this card"
               rule="§6 Auction Power Plants"
               content="This sealed decision takes you out of this auction only. You may still nominate later if you have not acquired a plant."
             >
@@ -317,7 +326,7 @@ function AuctionFloor(): JSX.Element {
               content={
                 canSubmit
                   ? 'Your range stays hidden. The server will bid clockwise on your behalf, starting at your minimum and never exceeding your maximum.'
-                  : `The plant starts at ${bidding.minimumRaise}₤ and you hold ${me?.money ?? 0}₤.`
+                  : `The card starts at ${bidding.minimumRaise}₤ and you hold ${me?.money ?? 0}₤.`
               }
             >
               <span className="pg-gactions__wrap">
@@ -337,7 +346,7 @@ function AuctionFloor(): JSX.Element {
       <div className="pg-gfloor">
         <PlantCard plantId={auction.plantId} size="md" discounted={auction.discounted} />
         <div className="pg-gfloor__figures">
-          <Stat label="Plant minimum" value={`${bidding?.minimumRaise ?? auction.currentBid + 1}₤`} />
+          <Stat label="Minimum bid" value={`${bidding?.minimumRaise ?? auction.currentBid + 1}₤`} />
           <Stat label="Decisions received" value={`${submittedCount}/${auction.eligibleBidders.length}`} />
         </div>
       </div>
@@ -408,9 +417,9 @@ function AuctionFloor(): JSX.Element {
           setPassDialogOpen(false);
           net.action({ type: 'passBid' });
         }}
-        title={`Pass on Plant ${auction.plantId}?`}
-        description="Passing ends your bidding on this power plant. You will not be able to re-enter this auction."
-        confirmLabel="Pass on plant"
+        title={`Pass on ${cardName(auction.plantId)}?`}
+        description="Passing ends your bidding on this card. You will not be able to re-enter this auction."
+        confirmLabel="Pass on card"
       />
     </PhaseShell>
   );
@@ -427,10 +436,10 @@ function ScrapChooser(): JSX.Element {
 
   return (
     <PhaseShell
-      title="Scrap a plant"
-      subtitle={`You now own ${(me?.plants.length ?? 0)} — the limit is ${MAX_PLANTS_PER_PLAYER}`}
+      title={isIndustry(state) ? 'Scrap a plant or facility' : 'Scrap a plant'}
+      subtitle={`You now own ${me ? ownedCardIds(me).length : 0} — the limit is ${cardLimit(state)}`}
       tone="live"
-      rules={AUCTION_RULES}
+      rules={isIndustry(state) ? INDUSTRY_AUCTION_RULES : AUCTION_RULES}
       actions={
         <Badge tone="warning" dot>
           Required
@@ -445,19 +454,21 @@ function ScrapChooser(): JSX.Element {
               if (choice !== null) net.action({ type: 'scrapPlant', plantId: choice });
             }}
           >
-            {choice !== null ? `Scrap plant ${choice}` : 'Choose a plant'}
+            {choice !== null ? `Scrap ${cardName(choice)}` : 'Choose a card'}
           </Button>
         </div>
       }
     >
-      <Callout tone="warning" title="The new plant cannot be scrapped">
+      {isIndustry(state) ? <Callout tone="warning" title="Five cards total">
+        Choose any plant or facility to remove, including the new card. Fuel from scrapped plants transfers where storage permits.
+      </Callout> : <Callout tone="warning" title="The new plant cannot be scrapped">
         Plant {pending.newPlantId} was just acquired, so §6 forbids scrapping it. Resources move from the
         scrapped plant onto your remaining plants where they fit; anything that will not fit goes back to
         the supply, never to the market.
-      </Callout>
+      </Callout>}
 
       <div className="pg-gscrap">
-        {(me?.plants ?? [])
+        {[...(me?.plants ?? []), ...(me?.facilities ?? []).map(plantId => ({ plantId, stored: emptyResources() }))]
           .slice()
           .sort((a, b) => a.plantId - b.plantId)
           .map((owned) => {
@@ -492,9 +503,8 @@ function ScrapChooser(): JSX.Element {
       </div>
 
       {choice !== null ? (
-        <Callout tone="danger" title={`Plant ${choice} leaves the game`}>
-          It supplies {getPlant(choice).cities} cities. Scrapped plants are removed from the game entirely
-          and never return to the market.
+        <Callout tone="danger" title={`${cardName(choice)} leaves the game`}>
+          {findFacility(choice) ? `It produces ${findFacility(choice)!.output} ${findFacility(choice)!.resource} per round.` : `It supplies ${getPlant(choice).cities} cities.`} Scrapped cards never return to the market.
         </Callout>
       ) : null}
     </PhaseShell>
@@ -513,10 +523,11 @@ function MyPlantLimit(): JSX.Element | null {
 
   return (
     <div className="pg-glimit">
-      <span className="tt-overline">Your plants</span>
+      <span className="tt-overline">{isIndustry(state) ? 'Your plants & facilities' : 'Your plants'}</span>
       <div className="pg-glimit__slots">
-        {Array.from({ length: MAX_PLANTS_PER_PLAYER }, (_, i) => {
-          const owned = me.plants.slice().sort((a, b) => a.plantId - b.plantId)[i];
+        {Array.from({ length: cardLimit(state) }, (_, i) => {
+          const id = ownedCardIds(me).sort((a, b) => a - b)[i];
+          const owned = id === undefined ? undefined : me.plants.find(p => p.plantId === id) ?? { plantId: id, stored: emptyResources() };
           return owned ? (
             <PlantCard key={owned.plantId} plantId={owned.plantId} size="xs" owned={owned} />
           ) : (

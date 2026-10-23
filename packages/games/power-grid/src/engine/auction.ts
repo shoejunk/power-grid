@@ -10,7 +10,8 @@
 
 import type { GameState, PlayerId, ValidationResult } from '../types.js';
 import { getPlant } from '../data/plants.js';
-import { MAX_PLANTS_PER_PLAYER } from './constants.js';
+import { auctionCardIds, cardLimit, isIndustry, ownedCardIds } from './industry.js';
+import { cardName, findFacility } from '../data/facilities.js';
 import { fail, getPlayer, ok, pushLog, setAllPhaseStatus } from './state.js';
 import {
   minimumBid,
@@ -36,7 +37,7 @@ export function beginAuctionPhase(state: GameState, now: number): void {
   placeDiscountToken(state, now);
   pushLog(state, now, {
     category: 'auction',
-    message: 'Phase 2 — Auction Power Plants.',
+    message: isIndustry(state) ? 'Phase 2 — Auction Plants and Facilities.' : 'Phase 2 — Auction Power Plants.',
     data: {
       event: 'phaseStart',
       phase: 'auction',
@@ -88,7 +89,7 @@ export function mustBuyThisRound(state: GameState, playerId: PlayerId): boolean 
   if (player.isTrust) return false;
   // A player who genuinely cannot meet any minimum bid is released from the
   // requirement — otherwise the phase would deadlock.
-  return state.plantMarket.current.some((id) => minimumBid(state, id) <= player.money);
+  return auctionCardIds(state).some((id) => minimumBid(state, id) <= player.money);
 }
 
 /* ------------------------------------------------------------------ *
@@ -108,15 +109,15 @@ export function validateNominatePlant(
   if (nextNominator(state) !== playerId) return fail('It is not your turn to choose a plant');
   const player = getPlayer(state, playerId);
   if (player.isTrust) return fail('The Trust does not auction plants');
-  if (state.acquiredThisRound.includes(playerId)) return fail('You already bought a plant this round');
+  if (state.acquiredThisRound.includes(playerId)) return fail(isIndustry(state) ? 'You already bought a plant or facility this round' : 'You already bought a plant this round');
   // §6 / §14: "Bidding on a future-market plant in Steps 1-2."
-  if (!state.plantMarket.current.includes(plantId)) {
-    return fail('Only plants in the current market may be auctioned');
+  if (!auctionCardIds(state).includes(plantId)) {
+    return fail(isIndustry(state) ? 'Only current plants and offered facilities may be auctioned' : 'Only plants in the current market may be auctioned');
   }
-  if (getPlant(plantId).isStep3) return fail('The Step 3 card cannot be auctioned');
+  if (!findFacility(plantId) && getPlant(plantId).isStep3) return fail('The Step 3 card cannot be auctioned');
   const min = minimumBid(state, plantId);
   if (Number.isInteger(minBid) && minBid < min) {
-    return fail(`The minimum bid for plant ${plantId} is ${min}`);
+    return fail(`The minimum bid for ${cardName(plantId)} is ${min}`);
   }
   const range = validateBidRange(minBid, maxBid, min, player.money);
   if (!range.ok) return range;
@@ -124,7 +125,7 @@ export function validateNominatePlant(
   // for the plant they choose, because no later eligible player remains to
   // create a higher bid."
   if (clockwiseBidders(state, playerId, false).length === 0 && (minBid !== min || maxBid !== min)) {
-    return fail(`No one else can bid, so plant ${plantId} costs exactly ${min}`);
+    return fail(`No one else can bid, so ${cardName(plantId)} costs exactly ${min}`);
   }
   return ok;
 }
@@ -144,7 +145,7 @@ export function applyNominatePlant(
   pushLog(state, now, {
     category: 'auction',
     playerId,
-    message: `${player.name} puts plant ${plantId} up for auction.`,
+    message: `${player.name} puts ${cardName(plantId)} up for auction.`,
     data: {
       event: 'plantNominated',
       playerId,
@@ -189,7 +190,7 @@ export function validatePassNomination(state: GameState, playerId: PlayerId): Va
   if (state.auction) return fail('An auction is running — pass the bid instead');
   if (nextNominator(state) !== playerId) return fail('It is not your turn');
   if (mustBuyThisRound(state, playerId)) {
-    return fail('Every player must buy a power plant in the first round');
+    return fail(isIndustry(state) ? 'Every player must buy a plant or facility in the first round' : 'Every player must buy a power plant in the first round');
   }
   return ok;
 }
@@ -346,7 +347,7 @@ function simulateAuction(state: GameState, now: number): void {
       pushLog(state, now, {
         category: 'bid',
         playerId: bidderId,
-        message: `${getPlayer(state, bidderId).name} passes on plant ${a.plantId}.`,
+        message: `${getPlayer(state, bidderId).name} passes on ${cardName(a.plantId)}.`,
         data: { event: 'bidPassed', playerId: bidderId, plantId: a.plantId, currentBid },
       });
       cursor = index % active.length;
@@ -366,7 +367,7 @@ function pushSimulatedBid(
   pushLog(state, now, {
     category: 'bid',
     playerId,
-    message: `${getPlayer(state, playerId).name} bids ${amount} Elektro for plant ${plantId}.`,
+    message: `${getPlayer(state, playerId).name} bids ${amount} Elektro for ${cardName(plantId)}.`,
     data: { event: 'bidPlaced', playerId, plantId, amount, simulated: true },
   });
 }
@@ -383,7 +384,7 @@ function finishAuction(
   pushLog(state, now, {
     category: 'auction',
     playerId: winnerId,
-    message: `Plant ${plantId} is sold for ${price} Elektro.`,
+    message: findFacility(plantId) ? `${cardName(plantId)} is sold for ${price} Elektro.` : `Plant ${plantId} is sold for ${price} Elektro.`,
     data: { event: 'auctionResolved', plantId, winnerId, price, reason },
   });
   const needsScrap = acquirePlant(state, now, winnerId, plantId, { price, via: 'auction' });
@@ -392,12 +393,13 @@ function finishAuction(
     pushLog(state, now, {
       category: 'auction',
       playerId: winnerId,
-      message: `${getPlayer(state, winnerId).name} owns four plants and must scrap one.`,
+      message: isIndustry(state) ? `${getPlayer(state, winnerId).name} owns six cards and must scrap a plant or facility.` : `${getPlayer(state, winnerId).name} owns four plants and must scrap one.`,
       data: {
         event: 'scrapRequired',
         playerId: winnerId,
         newPlantId: plantId,
         plants: getPlayer(state, winnerId).plants.map((p) => p.plantId),
+        ...(isIndustry(state) ? { facilities: getPlayer(state, winnerId).facilities } : {}),
       },
     });
   }
@@ -417,8 +419,8 @@ export function validateScrapPlant(
   if (pending.playerId !== playerId) return fail('It is not your plant to scrap');
   // §14: "Scrapping the newly acquired plant when a player exceeds the
   // three-plant limit."
-  if (plantId === pending.newPlantId) return fail('The newly acquired plant cannot be scrapped');
-  if (!getPlayer(state, playerId).plants.some((p) => p.plantId === plantId)) {
+  if (!isIndustry(state) && plantId === pending.newPlantId) return fail('The newly acquired plant cannot be scrapped');
+  if (!ownedCardIds(getPlayer(state, playerId)).includes(plantId)) {
     return fail('You do not own that plant');
   }
   return ok;
@@ -433,7 +435,7 @@ export function applyScrapPlant(
   scrapPlant(state, now, playerId, plantId);
   state.pendingScrap = null;
   const player = getPlayer(state, playerId);
-  if (player.plants.length > MAX_PLANTS_PER_PLAYER) {
+  if (ownedCardIds(player).length > cardLimit(state)) {
     /* istanbul ignore next — unreachable with a single acquisition per round */
     state.pendingScrap = { playerId, newPlantId: plantId };
   }

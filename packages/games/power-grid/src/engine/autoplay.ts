@@ -30,6 +30,7 @@ import type { CityId, GameAction, GameState, PlayerId } from '../types.js';
 import { legalActions, type LegalActions } from './legal.js';
 import { getPlayer } from './state.js';
 import { getPlant } from '../data/plants.js';
+import { findFacility } from '../data/facilities.js';
 import { botActionFor } from './bot.js';
 import {
   validateNominatePlant,
@@ -154,8 +155,8 @@ function auctionDefault(legal: LegalActions): GameAction | null {
      automatic choice is defensible rather than arbitrary. §6. */
   if (legal.scrappablePlants.length > 0) {
     const worst = [...legal.scrappablePlants].sort((a, b) => {
-      const pa = getPlant(a);
-      const pb = getPlant(b);
+      const pa = findFacility(a) ? { cities: 0, id: a } : getPlant(a);
+      const pb = findFacility(b) ? { cities: 0, id: b } : getPlant(b);
       return pa.cities - pb.cities || pa.id - pb.id;
     })[0]!;
     return { type: 'scrapPlant', plantId: worst };

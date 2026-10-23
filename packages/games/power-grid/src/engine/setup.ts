@@ -44,6 +44,7 @@ import {
 import { isZoneContiguous } from '../data/maps/index.js';
 import { neighboursInZone, resolveMap, zoneCities } from './mapAccess.js';
 import { sortMarket, withRng } from './plantMarket.js';
+import { initializeIndustry, isIndustry } from './industry.js';
 
 export interface SeatInput {
   id: PlayerId;
@@ -134,6 +135,9 @@ export function createGame(
   code: string,
   options: CreateGameOptions = {},
 ): GameState {
+  if (settings.rulesMode !== undefined && !['classic', 'industry'].includes(settings.rulesMode)) throw new Error('Unknown rules mode');
+  if (settings.moneyTarget !== undefined && (!Number.isInteger(settings.moneyTarget) || settings.moneyTarget < 100 || settings.moneyTarget > 2000)) throw new Error('Cash target must be 100–2000 Elektro');
+  if (settings.rulesMode === 'industry' && settings.againstTheTrust) throw new Error('Industry does not use the Trust');
   const now = options.now ?? 0;
   const humanCount = seats.length;
   if (settings.againstTheTrust) {
@@ -205,7 +209,7 @@ export function createGame(
   for (const c of map.cities) citySlots[c.id] = [null, null, null];
 
   const state: GameState = {
-    version: options.version ?? 3,
+    version: options.version ?? (settings.rulesMode === 'industry' ? 4 : 3),
     gameId: options.gameId ?? `game-${code}`,
     code,
     hostId,
@@ -262,6 +266,7 @@ export function createGame(
   };
 
   syncOrderIndices(state);
+  if (isIndustry(state)) initializeIndustry(state);
 
   pushLog(state, now, {
     category: 'setup',

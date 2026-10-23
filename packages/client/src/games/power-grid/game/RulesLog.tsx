@@ -8,6 +8,7 @@ import {
   Tabs,
 } from '@tt/ui';
 import { CATEGORY_LABEL, LOG_FILTERS, RESOURCE_META, matchesFilter, type LogFilter } from './format';
+import { isIndustry } from '@game/power-grid';
 import { playerName, useMatch } from './model';
 
 /**
@@ -76,8 +77,8 @@ export function RulesLog(): JSX.Element {
               <span className="pg-glog__cat">{CATEGORY_LABEL[entry.category]}</span>
               <span className="pg-glog__text">
                 {entry.message}
-                {detailFor(entry, (id) => playerName(state, id)) ? (
-                  <em className="pg-glog__detail">{detailFor(entry, (id) => playerName(state, id))}</em>
+                {detailFor(entry, (id) => playerName(state, id), isIndustry(state)) ? (
+                  <em className="pg-glog__detail">{detailFor(entry, (id) => playerName(state, id), isIndustry(state))}</em>
                 ) : null}
               </span>
             </motion.div>
@@ -113,12 +114,16 @@ function bundleText(value: unknown): string {
  * The second line under a log message: the arithmetic behind an automatic
  * transition, so a player can audit it rather than trust it.
  */
-function detailFor(entry: LogEntry, nameOf: (id: string) => string): string | null {
+function detailFor(entry: LogEntry, nameOf: (id: string) => string, industry = false): string | null {
   const data = entry.data;
   if (!data) return null;
   const event = str(data.event);
 
   switch (event) {
+    case 'industryBaseRefill':
+      return `${bundleText(data.added) || 'No tokens available'}. Fixed baseline before facility production; unchanged by Step.`;
+    case 'facilityIncome':
+      return `${num(data.delivered) ?? 0} of ${num(data.requested) ?? 0} total ${str(data.resource) ?? ''} delivered. Your ${num(data.output) ?? 0} output shares ${num(data.totalRevenue) ?? 0} Elektro after handling; paid ${num(data.paid) ?? 0}.`;
     case 'marketRefilled': {
       const added = bundleText(data.added);
       const shortfall = bundleText(data.shortfall);
@@ -129,7 +134,7 @@ function detailFor(entry: LogEntry, nameOf: (id: string) => string): string | nu
       return `${parts.join(' · ')}. Filled from the most expensive empty space downward (§9.2).`;
     }
     case 'stepChange':
-      return `Step ${num(data.from) ?? '?'} → Step ${num(data.to) ?? '?'}. City capacity, building costs and refill values all change (§10).`;
+      return industry ? `Step ${num(data.from) ?? '?'} → Step ${num(data.to) ?? '?'}. City slots and plant market change; resource refills remain fixed.` : `Step ${num(data.from) ?? '?'} → Step ${num(data.to) ?? '?'}. City capacity, building costs and refill values all change (§10).`;
     case 'highestPlantBuried':
       return 'Phase 5 in Steps 1–2 buries the highest future plant under the stack, then draws a replacement (§9.3).';
     case 'lowestPlantRemoved':
@@ -142,10 +147,10 @@ function detailFor(entry: LogEntry, nameOf: (id: string) => string): string | nu
       return 'An unsold discounted plant leaves the game at the end of Phase 2 and is replaced (§6).';
     case 'auctionResolved':
       return str(data.reason) === 'uncontested'
-        ? 'No other eligible bidder remained, so the plant went for exactly the minimum bid (§6).'
+        ? 'No other eligible bidder remained, so the card went for exactly the minimum bid (§6).'
         : `Every other bidder passed, so ${nameOf(str(data.winnerId) ?? '')} pays ${num(data.price) ?? 0}₤ (§6).`;
     case 'scrapRequired':
-      return 'A player may own at most three plants; the newly acquired plant cannot be the one scrapped (§6).';
+      return industry ? 'Own at most five plants and facilities combined. Scrap any one of the six, including the newly acquired card.' : 'A player may own at most three plants; the newly acquired plant cannot be the one scrapped (§6).';
     case 'citiesPowered': {
       const capacity = num(data.capacity) ?? 0;
       const supplied = num(data.citiesSupplied) ?? 0;
@@ -163,7 +168,7 @@ function detailFor(entry: LogEntry, nameOf: (id: string) => string): string | nu
     case 'winnerEvaluation':
       return `Using plants ${(Array.isArray(data.operatePlantIds) ? data.operatePlantIds : []).join(', ') || '—'} and the fuel already on them (§11).`;
     case 'gameOver':
-      return 'Most suppliable cities wins, even if someone else triggered the end. Money breaks ties (§11).';
+      return industry ? 'Most cash wins after every player receives final-round power and facility income. Cash ties share victory.' : 'Most suppliable cities wins, even if someone else triggered the end. Money breaks ties (§11).';
     case 'uraniumPhaseOut':
       return 'Plant 39 was bought, so uranium is never resupplied again on the Germany map (§12).';
     case 'playerOrder':

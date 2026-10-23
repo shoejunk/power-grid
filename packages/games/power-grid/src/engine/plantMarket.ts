@@ -11,6 +11,8 @@ import type { GameState } from '../types.js';
 import { STEP3_PLANT_ID } from '../types.js';
 import { Rng } from '@tt/core';
 import { pushLog, minOf, maxOf } from './state.js';
+import { findFacility } from '../data/facilities.js';
+import { isIndustry } from './industry.js';
 
 /* ------------------------------------------------------------------ *
  * RNG plumbing (§14 determinism)
@@ -168,6 +170,10 @@ export function placeDiscountToken(state: GameState, now: number): void {
 
 /** Minimum opening bid for a plant. §6. */
 export function minimumBid(state: GameState, plantId: number): number {
+  if (isIndustry(state)) {
+    const facility = findFacility(plantId);
+    if (facility) return facility.cost;
+  }
   return state.plantMarket.discountPlantId === plantId ? 1 : plantId;
 }
 

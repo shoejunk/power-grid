@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
 import type { OwnedPlant } from '@game/power-grid';
-import { getPlant, isEcological, isHybrid } from '@game/power-grid';
+import { findFacility, getPlant, isEcological, isHybrid } from '@game/power-grid';
+import { FacilityCard } from './FacilityCard';
 
 import { springSnappy } from '@tt/ui';
 import {
@@ -59,6 +60,8 @@ export function PlantCard({
   badge,
   className,
 }: PlantCardProps): JSX.Element {
+  if (findFacility(plantId)) return <FacilityCard plantId={plantId} size={size} minimumBid={minimumBid}
+    selected={selected} onSelect={onSelect} disabledReason={disabledReason} badge={badge} className={className} />;
   const def = getPlant(plantId);
   const art = plantArtFor(def);
   const disabled = disabledReason !== null;

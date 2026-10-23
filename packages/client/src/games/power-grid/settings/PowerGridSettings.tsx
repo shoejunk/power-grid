@@ -1,4 +1,4 @@
-import { MAP_IDS, type GameSettings, type MapId } from '@game/power-grid';
+import { MAP_IDS, industryMoneyTarget, type GameSettings, type MapId } from '@game/power-grid';
 import {
   Badge,
   Hint,
@@ -91,15 +91,26 @@ export function PowerGridSettings({
       },
       {
         label: 'Game ends at',
-        value: `${END_GAME_CITIES[draft.playerCount] ?? 17} cities`,
-        note: 'Then final scoring',
+        value: draft.rulesMode === 'industry' ? `${industryMoneyTarget(draft)} Elektro` : `${END_GAME_CITIES[draft.playerCount] ?? 17} cities`,
+        note: draft.rulesMode === 'industry' ? 'Finish the round; most cash wins' : 'Then final scoring',
       },
     ],
-    [draft.playerCount, zoneAreas],
+    [draft.playerCount, draft.rulesMode, draft.moneyTarget, zoneAreas],
   );
 
   return (
     <>
+      <Panel title="Rules mode" subtitle="Classic Power Grid or a facility economy">
+        <Toggle checked={draft.rulesMode === 'industry'} disabled={disabled}
+          onChange={enabled => onChange({ rulesMode: enabled ? 'industry' : 'classic', ...(enabled ? { againstTheTrust: false } : {}) })}
+          label="Power Grid: Industry"
+          description="Auction plants or facilities. Own any five cards. Sell resources automatically; finish the round at the cash target and most money wins." />
+        {draft.rulesMode === 'industry' ? <>
+          <Slider label="Cash victory target" value={industryMoneyTarget(draft)} min={100} max={2000} step={25}
+            disabled={disabled} onChange={moneyTarget => onChange({ moneyTarget })} unit="Elektro" format={String} />
+          <p className="tt-caption">Initial victory target: 250 Elektro for every table size. Refills depend on player count, never Step. Facilities cost only their winning auction bid and occupy no city slots. Germany’s nuclear phase-out is disabled in Industry.</p>
+        </> : null}
+      </Panel>
       <Panel
         title="Map"
         subtitle="42 cities across 6 areas"
@@ -157,7 +168,7 @@ export function PowerGridSettings({
         </div>
 
         <div className="pg-setup__rules">
-          {map.specialRules.map((rule) => (
+          {(draft.rulesMode === 'industry' && draft.mapId === 'germany' ? [] : map.specialRules).map((rule) => (
             <div key={rule.title} className="pg-setup__rule">
               <IconBolt />
               <div>
@@ -236,7 +247,7 @@ export function PowerGridSettings({
           <div>
             <Toggle
               checked={TRUST_AVAILABLE && draft.againstTheTrust}
-              disabled={disabled || !TRUST_AVAILABLE || draft.playerCount !== 2}
+              disabled={disabled || !TRUST_AVAILABLE || draft.playerCount !== 2 || draft.rulesMode === 'industry'}
               onChange={(againstTheTrust) => onChange({ againstTheTrust })}
               label="Against the Trust"
               description="An automated third faction blocks cities and takes plants for free — and cannot win."
@@ -292,6 +303,7 @@ export function PowerGridSettingsSummary({ settings }: { settings: unknown }): J
       </div>
 
       <dl className="tt-summary">
+        <SummaryRow label="Rules mode" value={draft.rulesMode === 'industry' ? 'Power Grid: Industry' : 'Classic Power Grid'} />
         <SummaryRow label="Players" value={String(draft.playerCount)} />
         <SummaryRow
           label="Playing zone"
@@ -300,7 +312,7 @@ export function PowerGridSettingsSummary({ settings }: { settings: unknown }): J
         <SummaryRow label="Step 2 at" value={`${STEP2_CITIES[draft.playerCount] ?? 7} cities`} />
         <SummaryRow
           label="Game ends at"
-          value={`${END_GAME_CITIES[draft.playerCount] ?? 17} cities`}
+          value={draft.rulesMode === 'industry' ? `${industryMoneyTarget(draft)} Elektro · finish the round` : `${END_GAME_CITIES[draft.playerCount] ?? 17} cities`}
         />
         <SummaryRow
           label="Experienced start"
@@ -315,7 +327,7 @@ export function PowerGridSettingsSummary({ settings }: { settings: unknown }): J
       </dl>
 
       <div className="pg-lobby__specials">
-        {map.specialRules.map((rule) => (
+        {(draft.rulesMode === 'industry' && draft.mapId === 'germany' ? [] : map.specialRules).map((rule) => (
           <div key={rule.title} className="pg-setup__rule">
             <IconBolt />
             <div>
