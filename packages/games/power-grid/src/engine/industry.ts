@@ -42,7 +42,7 @@ function deliver(state: GameState, resource: ResourceType, requested: number): {
     space.filled += count;
     remaining -= count;
     delivered += count;
-    revenue += count * Math.max(0, space.price - 1);
+    revenue += count * Math.max(0, space.price - (state.version >= 8 ? 0 : 1));
   }
   if (usaCoal) state.usaCoalStorage -= delivered;
   else state.supply[resource] -= delivered;
@@ -84,7 +84,7 @@ export function refillIndustryMarket(state: GameState, now: number): void {
       const paid = payouts[i]!;
       player.money += paid;
       pushLog(state, now, { category: 'payment', playerId: player.id,
-        message: `${player.name}'s ${resource} facilities earn ${paid} Elektro after handling.`,
+        message: `${player.name}'s ${resource} facilities earn ${paid} Elektro${state.version >= 8 ? '' : ' after handling'}.`,
         data: { event: 'facilityIncome', playerId: player.id, resource, output, requested, delivered,
           totalRevenue: revenue, paid, moneyAfter: player.money } });
     }

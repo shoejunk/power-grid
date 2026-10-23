@@ -68,7 +68,7 @@ try {
       assert.equal(card.overflow, false, row.size);
       assert.notEqual(card.art, 'none');
     }
-    for (const [start, outputs] of [[0, [1, 2, 3, 4, 5, 6]], [7, [1, 2, 3, 4, 5, 6]], [14, [2, 3, 4, 5]], [19, [1, 2, 3]]]) {
+    for (const [start, outputs] of [[0, [3, 4, 5, 6, 7, 8]], [7, [2, 3, 4, 5, 6, 7]], [14, [2, 3, 4, 5]], [19, [2, 3, 4]]]) {
       assert.equal(row.cards[start].factory, false);
       for (let offset = 1; offset <= outputs.length; offset++) {
         assert.equal(row.cards[start + offset].factory, true);
@@ -92,7 +92,7 @@ try {
   assert.ok(await page.$('.pg-facility .pg-gplant__discount'));
   assert.ok(await page.$('.pg-gmarketrow--future .pg-facility.is-muted'));
   assert.equal(await page.$('.pg-gmarketrow--future button.pg-facility'), null);
-  await page.click('button.pg-facility[aria-label="Coal Mine (1)"]');
+  await page.click('button.pg-facility[aria-label="Coal Mine (3)"]');
   await clickText('Submit sealed range');
   await page.waitForFunction(() => window.industryFixture.state().auction?.plantId === 301);
   await page.screenshot({ path: resolve(out, 'facility-auction.png') });
@@ -101,8 +101,8 @@ try {
   await open('scrap');
   await page.waitForSelector('.pg-gscrap .pg-facility');
   await page.screenshot({ path: resolve(out, 'six-card-scrap.png') });
-  await page.click('.pg-gscrap .pg-facility[aria-label="Oil Refinery (1)"]');
-  await clickText('Scrap Oil Refinery (1)');
+  await page.click('.pg-gscrap .pg-facility[aria-label="Oil Refinery (2)"]');
+  await clickText('Scrap Oil Refinery (2)');
   await page.waitForFunction(() => window.industryFixture.state().scrappedFacilities?.includes(311));
   await open('end');
   assert.match(await page.$eval('body', el => el.innerText), /No cash paid|This phase pays nothing/);

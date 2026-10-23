@@ -123,7 +123,7 @@ function detailFor(entry: LogEntry, nameOf: (id: string) => string, industry = f
     case 'industryBaseRefill':
       return `${bundleText(data.added) || 'No tokens available'}. Fixed baseline before facility production; unchanged by Step.`;
     case 'facilityIncome':
-      return `${num(data.delivered) ?? 0} of ${num(data.requested) ?? 0} total ${str(data.resource) ?? ''} delivered. Your ${num(data.output) ?? 0} output shares ${num(data.totalRevenue) ?? 0} Elektro after handling; paid ${num(data.paid) ?? 0}.`;
+      return `${num(data.delivered) ?? 0} of ${num(data.requested) ?? 0} total ${str(data.resource) ?? ''} delivered. Your ${num(data.output) ?? 0} output shares ${num(data.totalRevenue) ?? 0} Elektro${version >= 8 ? '' : ' after handling'}; paid ${num(data.paid) ?? 0}.`;
     case 'marketRefilled': {
       const added = bundleText(data.added);
       const shortfall = bundleText(data.shortfall);

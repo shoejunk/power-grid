@@ -34,7 +34,7 @@ export function acquirePlant(
   opts: AcquireOptions,
 ): boolean {
   const player = getPlayer(state, playerId);
-  const facility = isIndustry(state) ? findFacility(plantId) : undefined;
+  const facility = isIndustry(state) ? findFacility(plantId, state.version) : undefined;
   if (facility && isLegacyIndustry(state)) {
     const index = state.facilityMarket!.indexOf(plantId);
     if (index < 0) throw new Error('Facility is not offered');
@@ -140,7 +140,7 @@ export function scrapPlant(
     player.facilities = player.facilities.filter(id => id !== plantId);
     (state.scrappedFacilities ??= []).push(plantId);
     if (usesMixedMarket(state)) state.plantMarket.removed.push(plantId);
-    pushLog(state, now, { category: 'auction', playerId, message: `${player.name} scraps ${findFacility(plantId)!.name}.`,
+    pushLog(state, now, { category: 'auction', playerId, message: `${player.name} scraps ${findFacility(plantId, state.version)!.name}.`,
       data: { event: 'facilityScrapped', playerId, facilityId: plantId } });
     return;
   }

@@ -497,7 +497,7 @@ function industryUtility(ctx: BotContext, cards: readonly number[], pool: Resour
     const facility = findFacility(id, ctx.state.version);
     if (!facility) continue;
     const price = ctx.state.resourceMarket[facility.resource].find(s => s.filled > 0)?.price ?? 8;
-    income += facility.output * Math.max(0, price - 1);
+    income += facility.output * Math.max(0, price - (ctx.state.version >= 8 ? 0 : 1));
   }
   return plan.score + industryHorizon(ctx.state) * income;
 }

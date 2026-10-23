@@ -87,12 +87,12 @@ function ResupplySummaryButton(): JSX.Element {
     const facilities = Object.values(state.players).flatMap(p => p.facilities ?? []).map(id => getFacility(id, state.version));
     return <><Button variant="ghost" size="sm" onClick={() => setOpen(true)}>Resupply & production</Button>
       {open ? <Modal open onClose={() => setOpen(false)} title="Industry resupply" description="Fixed baseline plus owned facilities, every round." width="560px">
-        <div className="pg-gsheet"><table><thead><tr><th>Resource</th><th>Baseline</th><th>Facilities</th><th>Total requested</th></tr></thead>
+        <div className="pg-gsheet"><table className="pg-grefill__industry"><thead><tr><th>Resource</th><th>Baseline</th><th>Facilities</th><th>Total requested</th></tr></thead>
           <tbody>{RESOURCE_ORDER.map(type => {
             const output = facilities.filter(f => f.resource === type).reduce((sum, f) => sum + f.output, 0);
             return <tr key={type}><th>{RESOURCE_META[type].label}</th><td>{baseline[type]}</td><td>{output}</td><td>{baseline[type] + output}</td></tr>;
           })}</tbody></table>
-          <p>Baseline enters first. Facilities share the remaining slot revenue after 1 Elektro handling per delivered token. Market space and reserve tokens limit actual deliveries. No Step changes these quantities.</p>
+          <p>Baseline enters first. Facilities share the remaining slot revenue{state.version >= 8 ? ' at full market prices, with no handling fee' : ' after 1 Elektro handling per delivered token'}. Market space and reserve tokens limit actual deliveries. No Step changes these quantities.</p>
         </div>
       </Modal> : null}</>;
   }

@@ -89,11 +89,13 @@ it('limits doubled five-token output to the remaining finite reserves', () => {
 it('uses nineteen unique facilities with the requested output tiers', () => {
   expect(FACILITIES).toHaveLength(19);
   expect(new Set(FACILITIES.map(f => f.id)).size).toBe(19);
-  expect(FACILITIES.filter(f => f.resource === 'coal').map(f => f.output)).toEqual([1, 2, 3, 4, 5, 6]);
-  expect(FACILITIES.filter(f => f.resource === 'oil').map(f => f.output)).toEqual([1, 2, 3, 4, 5, 6]);
+  expect(FACILITIES.filter(f => f.resource === 'coal').map(f => f.output)).toEqual([3, 4, 5, 6, 7, 8]);
+  expect(FACILITIES.filter(f => f.resource === 'oil').map(f => f.output)).toEqual([2, 3, 4, 5, 6, 7]);
   expect(FACILITIES.filter(f => f.resource === 'garbage').map(f => f.output)).toEqual([2, 3, 4, 5]);
-  expect(FACILITIES.filter(f => f.resource === 'uranium').map(f => f.output)).toEqual([1, 2, 3]);
-  expect(jevContext(industry(7), 'p1').facilities).toEqual(FACILITIES);
+  expect(FACILITIES.filter(f => f.resource === 'uranium').map(f => f.output)).toEqual([2, 3, 4]);
+  expect(jevContext(industry(8), 'p1').facilities).toEqual(FACILITIES);
+  expect(FACILITIES.map(f => [f.id, f.cost])).toEqual(facilitiesForVersion(7).map(f => [f.id, f.cost]));
+  expect(createGame({ ...settingsFor({ playerCount: 2 }), rulesMode: 'industry' }, seats(2), 'p1', 'NEW001', { now: NOW }).version).toBe(8);
   expect(jevContext(industry(6), 'p1').facilities).toEqual(VERSION_6_FACILITIES);
   for (const id of [109, 112, ...VERSION_6_FACILITIES.filter(f => f.id >= 200).map(f => f.id)]) {
     expect(findFacility(id, 7)).toBeUndefined();
@@ -119,4 +121,56 @@ it.each([1, 2, 3] as const)('delivers the revised garbage and uranium output wit
   expect(state.supply.garbage).toBe(17); // six produced plus the one-token baseline
   expect(state.supply.uranium).toBe(8); // four produced, no two-player uranium baseline
   expect(state.players.p1!.money + state.players.p2!.money).toBe(185);
+});
+
+
+it.each([1, 2, 3] as const)('delivers increased version-8 production at full slot prices in Step %i', step => {
+  const state = industry(8); state.step = step;
+  state.players.p1!.facilities = [306, 316, 324, 333];
+  for (const resource of RESOURCE_TYPES) {
+    for (const slot of state.resourceMarket[resource]) slot.filled = 0;
+    state.supply[resource] = resource === 'uranium' ? 12 : 24;
+  }
+  refillMarket(state, NOW);
+  const payments = state.log.filter(e => e.data?.event === 'facilityIncome').map(e => e.data!);
+  expect(payments.map(p => [p.resource, p.output, p.delivered, p.paid])).toEqual([
+    ['coal', 8, 8, 55], ['oil', 7, 7, 49], ['garbage', 5, 5, 37], ['uranium', 4, 4, 52],
+  ]);
+  expect(state.players.p1!.money).toBe(243);
+  expect(state.supply).toMatchObject({ coal: 15, oil: 16, garbage: 18, uranium: 8 });
+});
+
+it('preserves version-7 outputs and names for saved-game production and logs', () => {
+  const expected = { coal: [1, 2, 3, 4, 5, 6], oil: [1, 2, 3, 4, 5, 6], garbage: [2, 3, 4, 5], uranium: [1, 2, 3] };
+  for (const resource of RESOURCE_TYPES) {
+    expect(facilitiesForVersion(7).filter(f => f.resource === resource).map(f => f.output)).toEqual(expected[resource]);
+  }
+  const state = industry(7);
+  expect(jevContext(state, 'p1').facilities).toEqual(facilitiesForVersion(7));
+  state.plantMarket.current = [301]; state.plantMarket.future = []; state.plantMarket.stack = [];
+  state.plantMarket.discountPlantId = null;
+  acquirePlant(state, NOW, 'p1', 301, { via: 'auction', price: 9 });
+  expect(state.log.some(e => e.message.includes('wins Coal Mine (1)'))).toBe(true);
+  scrapPlant(state, NOW, 'p1', 301);
+  expect(state.log.at(-1)?.message).toContain('scraps Coal Mine (1)');
+});
+
+
+it('pays full price for cheap slots and nothing for undelivered version-8 output', () => {
+  const state = industry(8);
+  state.players.p1!.facilities = [301, 331];
+  for (const slot of state.resourceMarket.coal) slot.filled = slot.capacity;
+  state.resourceMarket.coal[0]!.filled = 0; // three slots at price 1; baseline fills one
+  state.supply.coal = 3;
+  for (const slot of state.resourceMarket.uranium) slot.filled = 0;
+  state.supply.uranium = 1; // two requested, only one available, at price 16
+  refillMarket(state, NOW);
+  const payments = state.log.filter(e => e.data?.event === 'facilityIncome').map(e => e.data!);
+  expect(payments.map(p => [p.resource, p.requested, p.delivered, p.paid]))
+    .toEqual([['coal', 3, 2, 2], ['uranium', 2, 1, 16]]);
+  expect(state.players.p1!.money).toBe(68);
+  expect(jevContext(state, 'p1').rules.settlement).toContain('full slot price with no handling fee');
+  expect(state.log.filter(e => e.data?.event === 'facilityIncome').every(e => !e.message.includes('handling'))).toBe(true);
+  refillMarket(state, NOW);
+  expect(state.players.p1!.money).toBe(68); // full coal market and empty uranium reserve
 });

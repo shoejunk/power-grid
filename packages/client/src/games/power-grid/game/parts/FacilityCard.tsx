@@ -7,7 +7,7 @@ import { Token } from './Tokens';
 
 const RESOURCE_ART = { coal: 4, oil: 3, garbage: 6, uranium: 11 } as const;
 
-export function FacilityCard({ plantId, rulesVersion = 7, size = 'sm', minimumBid, discounted = false, muted = false,
+export function FacilityCard({ plantId, rulesVersion = 8, size = 'sm', minimumBid, discounted = false, muted = false,
   selected = false, onSelect, disabledReason = null, badge, className }: PlantCardProps): JSX.Element {
   const facility = getFacility(plantId, rulesVersion);
   const art = plantArtFor(getPlant(RESOURCE_ART[facility.resource]));
@@ -32,7 +32,7 @@ export function FacilityCard({ plantId, rulesVersion = 7, size = 'sm', minimumBi
     {badge}
   </>;
   return <Tooltip title={facility.name} rule="Industry" placement="left"
-    content={`${facility.output} ${facility.resource} produced per round. The factory symbol marks a facility: it supplies resources, not cities. Minimum bid ${discounted ? 1 : facility.cost} Elektro. Sales earn filled-slot prices less 1 Elektro per delivered token. ${disabledReason ?? ''}`}>
+    content={`${facility.output} ${facility.resource} produced per round. The factory symbol marks a facility: it supplies resources, not cities. Minimum bid ${discounted ? 1 : facility.cost} Elektro. Sales earn ${rulesVersion >= 8 ? 'full filled-slot prices with no handling fee' : 'filled-slot prices less 1 Elektro per delivered token'}. ${disabledReason ?? ''}`}>
     {onSelect ? <motion.button type="button" className={classes} data-kind={facility.resource} aria-label={facility.name}
       aria-pressed={selected} aria-disabled={disabled} onClick={disabled ? undefined : onSelect}
       whileHover={disabled ? undefined : { y: -2 }} whileTap={disabled ? undefined : { scale: .97 }} transition={springSnappy}>{content}</motion.button>

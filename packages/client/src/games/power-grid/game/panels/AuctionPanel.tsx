@@ -192,7 +192,7 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
                  * had to hover each option to compare them.
                  */}
                 <span className="pg-gpicker__spec">
-                  {findFacility(option.plantId) ? <span>{findFacility(option.plantId)!.name}<br /><b>+{findFacility(option.plantId, state.version)!.output} {findFacility(option.plantId)!.resource}/round</b></span> : <>
+                  {findFacility(option.plantId) ? <span>{findFacility(option.plantId, state.version)!.name}<br /><b>+{findFacility(option.plantId, state.version)!.output} {findFacility(option.plantId)!.resource}/round</b></span> : <>
                   {fuelText(getPlant(option.plantId))}
                   <span className="pg-gpicker__arrow" aria-hidden="true">
                     ▸

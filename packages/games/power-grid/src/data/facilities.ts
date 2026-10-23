@@ -48,22 +48,28 @@ const facilitySpecs = FACILITY_TIERS.flatMap(tier => tier.outputs.map((output, i
 const pricedDeck = [...PLANTS.filter(p => !p.isStep3).map(p => ({ id: p.id, anchor: p.id })), ...facilitySpecs]
   .sort((a, b) => a.anchor - b.anchor || a.id - b.id);
 const INDUSTRY_CARD_COSTS = new Map(pricedDeck.map((card, i) => [card.id, i + 3]));
-export const FACILITIES: readonly Facility[] = facilitySpecs.map(({ anchor: _anchor, ...facility }) =>
+const VERSION_7_FACILITIES: readonly Facility[] = facilitySpecs.map(({ anchor: _anchor, ...facility }) =>
   ({ ...facility, cost: INDUSTRY_CARD_COSTS.get(facility.id)! }));
+
+// Higher output keeps every physical card ID, price and market position unchanged.
+export const FACILITIES: readonly Facility[] = VERSION_7_FACILITIES.map(f => {
+  const output = f.output + ({ coal: 2, oil: 1, garbage: 0, uranium: 1 }[f.resource]);
+  return { ...f, output, name: f.name.replace(/\(\d+\)$/, `(${output})`) };
+});
 
 // Versionless lookups identify historical cards too. Production and deck membership
 // must use the saved game's version; names and costs of historical cards stay intact.
 const ALL_FACILITIES = [...FACILITIES, ...VERSION_6_FACILITIES];
 
 /** Preserve the deck and production used by existing audited games. */
-export const facilitiesForVersion = (version: number): readonly Facility[] => version < 6 ? LEGACY_FACILITIES : version === 6 ? VERSION_6_FACILITIES : FACILITIES;
+export const facilitiesForVersion = (version: number): readonly Facility[] => version < 6 ? LEGACY_FACILITIES : version === 6 ? VERSION_6_FACILITIES : version === 7 ? VERSION_7_FACILITIES : FACILITIES;
 export const findFacility = (id: number, version?: number): Facility | undefined => (version === undefined ? ALL_FACILITIES : facilitiesForVersion(version)).find(f => f.id === id);
-export function getFacility(id: number, version = 7): Facility {
+export function getFacility(id: number, version = 8): Facility {
   const facility = findFacility(id, version);
   if (!facility) throw new Error(`Unknown facility: ${id}`);
   return facility;
 }
-export const cardName = (id: number, version = 3): string => findFacility(id)?.name ?? `plant ${cardNumber(id, version)}`;
+export const cardName = (id: number, version = 3): string => (findFacility(id, version) ?? findFacility(id))?.name ?? `plant ${cardNumber(id, version)}`;
 
 /** Printed number sorts cards; stable IDs break equal-cost ties (plants first). */
 export const cardNumber = (id: number, version = 3): number =>
