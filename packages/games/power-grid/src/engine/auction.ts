@@ -11,7 +11,7 @@
 import type { GameState, PlayerId, ValidationResult } from '../types.js';
 import { getPlant } from '../data/plants.js';
 import { auctionCardIds, cardLimit, isIndustry, ownedCardIds } from './industry.js';
-import { cardName, findFacility } from '../data/facilities.js';
+import { cardNumber, cardName, findFacility } from '../data/facilities.js';
 import { fail, getPlayer, ok, pushLog, setAllPhaseStatus } from './state.js';
 import {
   minimumBid,
@@ -117,7 +117,7 @@ export function validateNominatePlant(
   if (!findFacility(plantId) && getPlant(plantId).isStep3) return fail('The Step 3 card cannot be auctioned');
   const min = minimumBid(state, plantId);
   if (Number.isInteger(minBid) && minBid < min) {
-    return fail(`The minimum bid for ${cardName(plantId)} is ${min}`);
+    return fail(`The minimum bid for ${cardName(plantId, state.version)} is ${min}`);
   }
   const range = validateBidRange(minBid, maxBid, min, player.money);
   if (!range.ok) return range;
@@ -125,7 +125,7 @@ export function validateNominatePlant(
   // for the plant they choose, because no later eligible player remains to
   // create a higher bid."
   if (clockwiseBidders(state, playerId, false).length === 0 && (minBid !== min || maxBid !== min)) {
-    return fail(`No one else can bid, so ${cardName(plantId)} costs exactly ${min}`);
+    return fail(`No one else can bid, so ${cardName(plantId, state.version)} costs exactly ${min}`);
   }
   return ok;
 }
@@ -145,7 +145,7 @@ export function applyNominatePlant(
   pushLog(state, now, {
     category: 'auction',
     playerId,
-    message: `${player.name} puts ${cardName(plantId)} up for auction.`,
+    message: `${player.name} puts ${cardName(plantId, state.version)} up for auction.`,
     data: {
       event: 'plantNominated',
       playerId,
@@ -347,7 +347,7 @@ function simulateAuction(state: GameState, now: number): void {
       pushLog(state, now, {
         category: 'bid',
         playerId: bidderId,
-        message: `${getPlayer(state, bidderId).name} passes on ${cardName(a.plantId)}.`,
+        message: `${getPlayer(state, bidderId).name} passes on ${cardName(a.plantId, state.version)}.`,
         data: { event: 'bidPassed', playerId: bidderId, plantId: a.plantId, currentBid },
       });
       cursor = index % active.length;
@@ -367,7 +367,7 @@ function pushSimulatedBid(
   pushLog(state, now, {
     category: 'bid',
     playerId,
-    message: `${getPlayer(state, playerId).name} bids ${amount} Elektro for ${cardName(plantId)}.`,
+    message: `${getPlayer(state, playerId).name} bids ${amount} Elektro for ${cardName(plantId, state.version)}.`,
     data: { event: 'bidPlaced', playerId, plantId, amount, simulated: true },
   });
 }
@@ -384,7 +384,7 @@ function finishAuction(
   pushLog(state, now, {
     category: 'auction',
     playerId: winnerId,
-    message: findFacility(plantId) ? `${cardName(plantId)} is sold for ${price} Elektro.` : `Plant ${plantId} is sold for ${price} Elektro.`,
+    message: findFacility(plantId) ? `${cardName(plantId, state.version)} is sold for ${price} Elektro.` : `Plant ${cardNumber(plantId, state.version)} is sold for ${price} Elektro.`,
     data: { event: 'auctionResolved', plantId, winnerId, price, reason },
   });
   const needsScrap = acquirePlant(state, now, winnerId, plantId, { price, via: 'auction' });

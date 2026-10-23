@@ -161,6 +161,7 @@ export const PHASE_META: Record<Phase, PhaseMeta> = {
 export function phaseMeta(state: GameState, phase: Phase): PhaseMeta {
   const base = PHASE_META[phase];
   if (!isIndustry(state)) return base;
+  if (state.version >= 7 && phase === 'order') return { ...base, rule: 'Industry', summary: 'Most connected cities goes first; the highest printed cost among owned plants and facilities breaks ties.' };
   if (phase === 'auction') return { ...base, name: 'Auction Cards', rule: 'Industry', summary: 'Buy one plant or facility per round; own any five cards total.' };
   if (isLegacyIndustry(state) && phase === 'building') return { ...base, summary: 'Build and choose power production. Everyone receives income at the end of the round, including the final round.' };
   if (isLegacyIndustry(state) && phase === 'gameOver') return { ...base, name: 'Cash Standings', rule: 'Industry', summary: 'All power and facility income has been paid. Most cash wins; ties share victory.' };

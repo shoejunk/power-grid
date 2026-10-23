@@ -51,23 +51,28 @@ try {
     cards: [...row.querySelectorAll('.pg-gplant')].map(card => ({
       width: card.getBoundingClientRect().width, height: card.getBoundingClientRect().height,
       art: getComputedStyle(card.querySelector('.pg-gplant__art')).backgroundImage,
+      cost: card.querySelector('.pg-gplant__num')?.textContent,
       output: card.querySelector('.pg-gplant__cities')?.textContent,
       factory: !!card.querySelector('.pg-facility__symbol'),
       overflow: card.querySelector('.pg-gplant__mid').scrollWidth > card.querySelector('.pg-gplant__mid').clientWidth,
     }))
   })));
   for (const row of cards) {
+    assert.equal(row.cards.length, 23);
+    assert.equal(new Set(row.cards.map(c => c.cost)).size, row.cards.length);
+    assert.equal(row.cards[20].cost, '26'); // first uranium facility, distinct from plant 11
+    assert.equal(row.cards[19].cost, '13'); // plant 11 now costs 13 in Industry
     for (const card of row.cards) {
       assert.equal(card.width, row.cards[0].width, row.size);
       assert.equal(card.height, row.cards[0].height, row.size);
       assert.equal(card.overflow, false, row.size);
       assert.notEqual(card.art, 'none');
     }
-    for (const start of [0, 4, 8, 12]) {
+    for (const [start, outputs] of [[0, [1, 2, 3, 4, 5, 6]], [7, [1, 2, 3, 4, 5, 6]], [14, [2, 3, 4, 5]], [19, [1, 2, 3]]]) {
       assert.equal(row.cards[start].factory, false);
-      for (const offset of [1, 2, 3]) {
+      for (let offset = 1; offset <= outputs.length; offset++) {
         assert.equal(row.cards[start + offset].factory, true);
-        assert.equal(row.cards[start + offset].output, String([1, 3, 5][offset - 1]));
+        assert.equal(row.cards[start + offset].output, String(outputs[offset - 1]));
         assert.equal(row.cards[start + offset].art, row.cards[start].art);
       }
     }
@@ -76,23 +81,29 @@ try {
   await open('cards&version=5');
   const oldOutputs = await page.$$eval('[data-size=sm] .pg-facility .pg-gplant__cities', nodes => nodes.map(n => n.textContent));
   assert.deepEqual(oldOutputs, [1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3].map(String));
+  await open('cards&version=6');
+  const v6Outputs = await page.$$eval('[data-size=sm] .pg-facility .pg-gplant__cities', nodes => nodes.map(n => n.textContent));
+  assert.deepEqual(v6Outputs, [1, 3, 5, 1, 3, 5, 1, 3, 5, 1, 3, 5].map(String));
+  await open('auction&version=4');
+  const legacyOffers = await page.$$eval('.pg-gplantrow .pg-facility .pg-gplant__cities', nodes => nodes.map(n => n.textContent));
+  assert.deepEqual(legacyOffers, ['3', '3', '3', '3']);
   await open('auction');
   await page.waitForSelector('button.pg-facility');
   assert.ok(await page.$('.pg-facility .pg-gplant__discount'));
   assert.ok(await page.$('.pg-gmarketrow--future .pg-facility.is-muted'));
   assert.equal(await page.$('.pg-gmarketrow--future button.pg-facility'), null);
-  await page.click('button.pg-facility[aria-label="Small Coal Mine"]');
+  await page.click('button.pg-facility[aria-label="Coal Mine (1)"]');
   await clickText('Submit sealed range');
-  await page.waitForFunction(() => window.industryFixture.state().auction?.plantId === 101);
+  await page.waitForFunction(() => window.industryFixture.state().auction?.plantId === 301);
   await page.screenshot({ path: resolve(out, 'facility-auction.png') });
   await page.evaluate(() => window.industryFixture.action({ type: 'passBid' }));
-  await page.waitForFunction(() => Object.values(window.industryFixture.state().players).some(p => p.facilities?.includes(101)));
+  await page.waitForFunction(() => Object.values(window.industryFixture.state().players).some(p => p.facilities?.includes(301)));
   await open('scrap');
   await page.waitForSelector('.pg-gscrap .pg-facility');
   await page.screenshot({ path: resolve(out, 'six-card-scrap.png') });
-  await page.click('.pg-gscrap .pg-facility[aria-label="Small Oil Refinery"]');
-  await clickText('Scrap Small Oil Refinery');
-  await page.waitForFunction(() => window.industryFixture.state().scrappedFacilities?.includes(104));
+  await page.click('.pg-gscrap .pg-facility[aria-label="Oil Refinery (1)"]');
+  await clickText('Scrap Oil Refinery (1)');
+  await page.waitForFunction(() => window.industryFixture.state().scrappedFacilities?.includes(311));
   await open('end');
   assert.match(await page.$eval('body', el => el.innerText), /No cash paid|This phase pays nothing/);
   assert.doesNotMatch(await page.$eval('body', el => el.innerText), /All final-round income paid|Most cash wins/);
@@ -107,7 +118,7 @@ try {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   assert.equal(overflow, false);
   assert.deepEqual(errors, []);
-  writeFileSync(resolve(out, 'report.json'), JSON.stringify({ passed: true, errors, overflow, checks: ['settings opt-in', 'facility nomination and sealed auction', 'facility ownership', 'six-card scrap', 'city victory', 'matching card sizes and resource art', 'versioned 1/3/5 and 1/2/3 output labels', 'facility discounts and future market', 'classic mode', '1280px viewport'] }, null, 2));
+  writeFileSync(resolve(out, 'report.json'), JSON.stringify({ passed: true, errors, overflow, checks: ['settings opt-in', 'facility nomination and sealed auction', 'facility ownership', 'six-card scrap', 'city victory', 'matching card sizes and resource art', 'resource-specific production and legacy output labels', 'facility discounts and future market', 'classic mode', '1280px viewport'] }, null, 2));
   console.log(`Industry UI smoke passed. Screenshots: ${out}`);
 } catch (error) {
   console.error('Page errors:', errors);

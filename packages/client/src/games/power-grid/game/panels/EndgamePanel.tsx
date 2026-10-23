@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { END_GAME_THRESHOLD, finalStandings, getPlant, industryMoneyTarget, isLegacyIndustry, isWinner as playerIsWinner } from '@game/power-grid';
+import { cardNumber, END_GAME_THRESHOLD, finalStandings, getPlant, industryMoneyTarget, isLegacyIndustry, isWinner as playerIsWinner } from '@game/power-grid';
 
 import { springSoft } from '@tt/ui';
 import {
@@ -98,7 +98,7 @@ export function EndgamePanel(): JSX.Element {
                     {row.plantIds.length === 0
                       ? 'no plant can be operated'
                       : row.plantIds
-                          .map((id) => `#${id} (${getPlant(id).cities})`)
+                          .map((id) => `#${cardNumber(id, state.version)} (${getPlant(id).cities})`)
                           .join(' + ')}
                   </span>
                 </span>

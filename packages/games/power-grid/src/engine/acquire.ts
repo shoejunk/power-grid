@@ -9,7 +9,7 @@
 import type { GameState, PlayerId } from '../types.js';
 import { STEP3_PLANT_ID, emptyResources } from '../types.js';
 import { cardLimit, isIndustry, isLegacyIndustry, usesMixedMarket, ownedCardIds } from './industry.js';
-import { findFacility } from '../data/facilities.js';
+import { cardNumber, findFacility } from '../data/facilities.js';
 import { getPlayer, pushLog } from './state.js';
 import { stateMap } from './mapAccess.js';
 import { drawReplacement, removeFromMarket, sortMarket } from './plantMarket.js';
@@ -68,8 +68,8 @@ export function acquirePlant(
     playerId,
     message:
       opts.via === 'trust'
-        ? `The Trust takes plant ${plantId} for free.`
-        : `${player.name} wins plant ${plantId} for ${opts.price} Elektro.`,
+        ? `The Trust takes plant ${cardNumber(plantId, state.version)} for free.`
+        : `${player.name} wins plant ${cardNumber(plantId, state.version)} for ${opts.price} Elektro.`,
     data: {
       event: 'plantAcquired',
       playerId,
@@ -99,7 +99,7 @@ export function acquirePlant(
     pushLog(state, now, {
       category: 'market',
       playerId,
-      message: `Plant ${plantId} was bought: the nuclear phase-out begins and uranium is never resupplied again.`,
+      message: `Plant ${cardNumber(plantId, state.version)} was bought: the nuclear phase-out begins and uranium is never resupplied again.`,
       data: { event: 'uraniumPhaseOut', plantId, playerId },
     });
   }
@@ -154,7 +154,7 @@ export function scrapPlant(
   pushLog(state, now, {
     category: 'auction',
     playerId,
-    message: `${player.name} scraps plant ${plantId}.`,
+    message: `${player.name} scraps plant ${cardNumber(plantId, state.version)}.`,
     data: {
       event: 'plantScrapped',
       playerId,

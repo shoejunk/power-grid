@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
 import type { OwnedPlant } from '@game/power-grid';
-import { findFacility, getPlant, isEcological, isHybrid } from '@game/power-grid';
+import { cardNumber, findFacility, getPlant, isEcological, isHybrid } from '@game/power-grid';
 import { FacilityCard } from './FacilityCard';
 
 import { springSnappy } from '@tt/ui';
@@ -49,7 +49,7 @@ export interface PlantCardProps {
  */
 export function PlantCard({
   plantId,
-  rulesVersion = 6,
+  rulesVersion = 7,
   size = 'sm',
   discounted = false,
   minimumBid,
@@ -65,6 +65,7 @@ export function PlantCard({
   if (findFacility(plantId)) return <FacilityCard rulesVersion={rulesVersion} plantId={plantId} size={size} minimumBid={minimumBid}
     selected={selected} onSelect={onSelect} disabledReason={disabledReason} badge={badge} className={className} discounted={discounted} muted={muted} />;
   const def = getPlant(plantId);
+  const number = cardNumber(plantId, rulesVersion);
   const art = plantArtFor(def);
   const disabled = disabledReason !== null;
   const interactive = onSelect !== undefined;
@@ -114,7 +115,7 @@ export function PlantCard({
         aria-hidden="true"
       />
       <span className="pg-gplant__accent" style={{ background: art.accent }} aria-hidden="true" />
-      <span className="pg-gplant__num tt-numeral">{plantId}</span>
+      <span className="pg-gplant__num tt-numeral">{number}</span>
       <span className="pg-gplant__mid">
         {/*
          * Three 13px tokens plus the arrow and the city count do not fit a
@@ -168,7 +169,7 @@ export function PlantCard({
   const tooltip = (
     <Tooltip
       placement="left"
-      title={`Plant ${plantId} — ${art.title}`}
+      title={`Plant ${number} — ${art.title}`}
       rule={disabled ? (disabledRule ?? '§14 Legal-action validation') : '§1 Power plants'}
       content={
         <>
@@ -179,7 +180,7 @@ export function PlantCard({
           {discounted ? (
             <span className="pg-gplant__tipbody">
               The discount token is on this plant, so its minimum opening bid is 1 Elektro instead of{' '}
-              {plantId}.
+              {number}.
             </span>
           ) : null}
           {disabled ? <span className="pg-gplant__tipblock">{disabledReason}</span> : null}
@@ -229,7 +230,7 @@ export function PlantCard({
   return (
     <div className="pg-gplantwrap">
       {tooltip}
-      <StorageBar plant={owned} compact />
+      <StorageBar plant={owned} rulesVersion={rulesVersion} compact />
     </div>
   );
 }

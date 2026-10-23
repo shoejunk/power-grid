@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 import type { GameState, PowerOption, ResourceBundle } from '@game/power-grid';
 import {
+  cardNumber,
   PAYMENT_TABLE,
   RESOURCE_TYPES,
   emptyResources,
@@ -142,7 +143,7 @@ export function BureaucracyPanel({ combined = false }: { combined?: boolean }): 
                 ) : (
                   o.plantIds.map((id) => (
                     <span key={id} className="pg-gcombo__chip tt-numeral">
-                      {id}
+                      {cardNumber(id, state.version)}
                     </span>
                   ))
                 )}

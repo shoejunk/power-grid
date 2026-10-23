@@ -1,9 +1,11 @@
 import { expect, it } from 'vitest';
-import { FACILITIES, facilitiesForVersion, getFacility, compareMarketCards } from '../../data/facilities.js';
+import { FACILITIES, facilitiesForVersion, findFacility, getFacility, compareMarketCards } from '../../data/facilities.js';
 import { RESOURCE_TYPES } from '../../types.js';
 import { createGame, applyAction, acquirePlant, scrapPlant, refillMarket } from '../index.js';
 import { jevContext } from '../jev.js';
 import { NOW, seats, settingsFor } from './helpers.js';
+
+const VERSION_6_FACILITIES = facilitiesForVersion(6);
 
 function industry(version = 6) {
   const state = createGame({ ...settingsFor({ playerCount: 2 }), rulesMode: 'industry' }, seats(2), 'p1', 'PROD01', { now: NOW, version });
@@ -11,11 +13,11 @@ function industry(version = 6) {
 }
 
 it('has two independently identified copies of each resource and size, producing 1/3/5 at unchanged costs', () => {
-  expect(FACILITIES).toHaveLength(24);
-  expect(new Set(FACILITIES.map(f => f.id)).size).toBe(24);
+  expect(VERSION_6_FACILITIES).toHaveLength(24);
+  expect(new Set(VERSION_6_FACILITIES.map(f => f.id)).size).toBe(24);
   for (const resource of RESOURCE_TYPES) {
     for (const [size, output] of [['small', 1], ['medium', 3], ['large', 5]] as const) {
-      const copies = FACILITIES.filter(f => f.resource === resource && f.size === size);
+      const copies = VERSION_6_FACILITIES.filter(f => f.resource === resource && f.size === size);
       expect(copies).toHaveLength(2);
       expect(copies.map(f => f.output)).toEqual([output, output]);
       expect(copies.map(f => f.cost)).toEqual([getFacility(copies[0]!.id, 5).cost, getFacility(copies[0]!.id, 5).cost]);
@@ -81,4 +83,40 @@ it('limits doubled five-token output to the remaining finite reserves', () => {
   expect(state.players.p1!.money).toBe(57);
   expect(state.players.p2!.money).toBe(57);
   expect(state.log.find(e => e.data?.event === 'facilityIncome')?.data?.delivered).toBe(2);
+});
+
+
+it('uses nineteen unique facilities with the requested output tiers', () => {
+  expect(FACILITIES).toHaveLength(19);
+  expect(new Set(FACILITIES.map(f => f.id)).size).toBe(19);
+  expect(FACILITIES.filter(f => f.resource === 'coal').map(f => f.output)).toEqual([1, 2, 3, 4, 5, 6]);
+  expect(FACILITIES.filter(f => f.resource === 'oil').map(f => f.output)).toEqual([1, 2, 3, 4, 5, 6]);
+  expect(FACILITIES.filter(f => f.resource === 'garbage').map(f => f.output)).toEqual([2, 3, 4, 5]);
+  expect(FACILITIES.filter(f => f.resource === 'uranium').map(f => f.output)).toEqual([1, 2, 3]);
+  expect(jevContext(industry(7), 'p1').facilities).toEqual(FACILITIES);
+  expect(jevContext(industry(6), 'p1').facilities).toEqual(VERSION_6_FACILITIES);
+  for (const id of [109, 112, ...VERSION_6_FACILITIES.filter(f => f.id >= 200).map(f => f.id)]) {
+    expect(findFacility(id, 7)).toBeUndefined();
+    expect(findFacility(id, 6)).toBeDefined();
+    expect(findFacility(id)).toBeDefined(); // historical cards still render, sort and auction as facilities
+  }
+});
+
+it.each([1, 2, 3] as const)('delivers the revised garbage and uranium output with handling in Step %i', step => {
+  const state = industry(7); state.step = step;
+  state.players.p1!.facilities = [321, 331];
+  state.players.p2!.facilities = [323, 333];
+  for (const resource of ['garbage', 'uranium'] as const) {
+    for (const slot of state.resourceMarket[resource]) slot.filled = 0;
+  }
+  state.supply.garbage = 24; state.supply.uranium = 12;
+  refillMarket(state, NOW);
+  const payments = state.log.filter(e => e.data?.event === 'facilityIncome').map(e => e.data!);
+  expect(payments.filter(p => p.resource === 'garbage').map(p => [p.output, p.delivered, p.totalRevenue, p.paid]))
+    .toEqual([[2, 6, 37, 12], [4, 6, 37, 25]]);
+  expect(payments.filter(p => p.resource === 'uranium').map(p => [p.output, p.delivered, p.totalRevenue, p.paid]))
+    .toEqual([[1, 4, 48, 12], [3, 4, 48, 36]]);
+  expect(state.supply.garbage).toBe(17); // six produced plus the one-token baseline
+  expect(state.supply.uranium).toBe(8); // four produced, no two-player uranium baseline
+  expect(state.players.p1!.money + state.players.p2!.money).toBe(185);
 });

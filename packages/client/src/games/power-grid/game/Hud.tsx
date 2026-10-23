@@ -83,7 +83,7 @@ function HudCard({
           placement="bottom"
           title={`Position ${position} of ${state.playerOrder.length}`}
           rule="§4 Player order"
-          content="Player order is recomputed every round: most connected cities first, with the highest-numbered owned plant breaking ties. Phases 3 and 4 run in reverse."
+          content={state.version >= 7 ? 'Player order is recomputed every round: most connected cities first, with the highest printed cost among owned plants and facilities breaking ties. Phases 3 and 4 run in reverse.' : 'Player order is recomputed every round: most connected cities first, with the highest-numbered owned plant breaking ties. Phases 3 and 4 run in reverse.'}
         >
           <span className="pg-ghudcard__pos tt-numeral" tabIndex={0}>
             {position}
@@ -109,7 +109,7 @@ function HudCard({
           <Tooltip
             placement="bottom"
             title={isLegacyIndustry(state) ? `Cash target: ${industryMoneyTarget(state.settings)} Elektro` : `${player.name} total assets: ${score.total}`}
-            content={isLegacyIndustry(state) ? 'Only cash determines the winner. Everyone receives power and facility income before final standings.' : `Elektro ${score.elektro} + cities ${score.cities} + plants ${score.plants} + stored resources ${score.resources}. Each city is worth 20; plants use their printed numbers; fuel uses its current market price.`}
+            content={isLegacyIndustry(state) ? 'Only cash determines the winner. Everyone receives power and facility income before final standings.' : `Elektro ${score.elektro} + cities ${score.cities} + ${state.version >= 7 ? 'plants and facilities' : 'plants'} ${score.plants} + stored resources ${score.resources}. Each city is worth 20; ${state.version >= 7 ? 'plants and facilities use their printed costs' : 'plants use their printed numbers'}; fuel uses its current market price.`}
           >
             <span className="pg-ghudcard__score" tabIndex={0} aria-label={isLegacyIndustry(state) ? `Cash target ${industryMoneyTarget(state.settings)}` : `${player.name} total assets: ${score.total}`}>
               <span>{isLegacyIndustry(state) ? 'Cash target' : 'Total Assets'}</span>

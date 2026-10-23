@@ -37,7 +37,7 @@ export function withRng<T>(state: GameState, fn: (rng: Rng) => T): T {
  *  - Step 3: every plant is current, there is no future row. §9.3, §10.
  */
 export function sortMarket(state: GameState): void {
-  const all = [...state.plantMarket.current, ...state.plantMarket.future].sort(usesMixedMarket(state) ? compareMarketCards : (a, b) => a - b);
+  const all = [...state.plantMarket.current, ...state.plantMarket.future].sort(usesMixedMarket(state) ? (a, b) => compareMarketCards(a, b, state.version) : (a, b) => a - b);
   if (state.step === 3) {
     state.plantMarket.current = all;
     state.plantMarket.future = [];
@@ -116,7 +116,7 @@ export function drawReplacement(state: GameState, now: number, reason: string): 
       return { kind: 'step3' };
     }
 
-    if (m.discountReplacementRuleArmed && m.discountPlantId !== null && (usesMixedMarket(state) ? cardNumber(drawn) < cardNumber(m.discountPlantId) : drawn < m.discountPlantId)) {
+    if (m.discountReplacementRuleArmed && m.discountPlantId !== null && (usesMixedMarket(state) ? cardNumber(drawn, state.version) < cardNumber(m.discountPlantId, state.version) : drawn < m.discountPlantId)) {
       m.removed.push(drawn);
       const token = m.discountPlantId;
       m.discountPlantId = null;
@@ -124,7 +124,7 @@ export function drawReplacement(state: GameState, now: number, reason: string): 
       pushLog(state, now, {
         category: 'market',
         message:
-          `${findFacility(drawn) ? cardName(drawn) : `Plant ${drawn}`} is drawn below the discounted ${cardName(token)}; it is removed from the game ` +
+          `${findFacility(drawn) ? cardName(drawn, state.version) : `Plant ${cardNumber(drawn, state.version)}`} is drawn below the discounted ${cardName(token, state.version)}; it is removed from the game ` +
           'along with the discount token, and another replacement is drawn.',
         data: { event: 'discountReplacementRemoved', removedPlantId: drawn, discountPlantId: token },
       });
@@ -135,7 +135,7 @@ export function drawReplacement(state: GameState, now: number, reason: string): 
     sortMarket(state);
     pushLog(state, now, {
       category: 'market',
-      message: `${findFacility(drawn) ? cardName(drawn) : `Plant ${drawn}`} is drawn as a replacement.`,
+      message: `${findFacility(drawn) ? cardName(drawn, state.version) : `Plant ${cardNumber(drawn, state.version)}`} is drawn as a replacement.`,
       data: {
         event: 'replacementDrawn',
         plantId: drawn,
@@ -156,13 +156,13 @@ export function drawReplacement(state: GameState, now: number, reason: string): 
 
 /** At the start of Phase 2 the token sits on the lowest current-market plant. §6. */
 export function placeDiscountToken(state: GameState, now: number): void {
-  const lowest = usesMixedMarket(state) ? state.plantMarket.current.slice().sort(compareMarketCards)[0] ?? null : minOf(state.plantMarket.current);
+  const lowest = usesMixedMarket(state) ? state.plantMarket.current.slice().sort((a, b) => compareMarketCards(a, b, state.version))[0] ?? null : minOf(state.plantMarket.current);
   state.plantMarket.discountPlantId = lowest;
   state.plantMarket.discountReplacementRuleArmed = lowest !== null;
   if (lowest !== null) {
     pushLog(state, now, {
       category: 'market',
-      message: `The discount token is placed on ${cardName(lowest)}; its minimum bid is 1 Elektro.`,
+      message: `The discount token is placed on ${cardName(lowest, state.version)}; its minimum bid is 1 Elektro.`,
       data: { event: 'discountTokenPlaced', plantId: lowest },
     });
   }
@@ -174,7 +174,7 @@ export function minimumBid(state: GameState, plantId: number): number {
     const facility = findFacility(plantId);
     if (facility) return facility.cost;
   }
-  return state.plantMarket.discountPlantId === plantId ? 1 : usesMixedMarket(state) ? cardNumber(plantId) : plantId;
+  return state.plantMarket.discountPlantId === plantId ? 1 : usesMixedMarket(state) ? cardNumber(plantId, state.version) : plantId;
 }
 
 /**
@@ -192,7 +192,7 @@ export function resolveUnsoldDiscountPlant(state: GameState, now: number): DrawO
   m.removed.push(plantId);
   pushLog(state, now, {
     category: 'market',
-    message: `Nobody bought the discounted ${cardName(plantId)}; it is removed from the game.`,
+    message: `Nobody bought the discounted ${cardName(plantId, state.version)}; it is removed from the game.`,
     data: { event: 'discountPlantRemoved', plantId },
   });
   const outcome = drawReplacement(state, now, 'discountPlantRemoved');
@@ -206,7 +206,7 @@ export function resolveUnsoldDiscountPlant(state: GameState, now: number): DrawO
 
 /** Removes the lowest-numbered current-market plant from the game. §9.3, §10. */
 export function removeLowestCurrent(state: GameState, now: number, reason: string): number | null {
-  const lowest = usesMixedMarket(state) ? state.plantMarket.current.slice().sort(compareMarketCards)[0] ?? null : minOf(state.plantMarket.current);
+  const lowest = usesMixedMarket(state) ? state.plantMarket.current.slice().sort((a, b) => compareMarketCards(a, b, state.version))[0] ?? null : minOf(state.plantMarket.current);
   if (lowest === null) return null;
   removeFromMarket(state, lowest);
   state.plantMarket.removed.push(lowest);
@@ -216,7 +216,7 @@ export function removeLowestCurrent(state: GameState, now: number, reason: strin
   }
   pushLog(state, now, {
     category: 'market',
-    message: `${findFacility(lowest) ? cardName(lowest) : `Plant ${lowest}`} is removed from the market.`,
+    message: `${findFacility(lowest) ? cardName(lowest, state.version) : `Plant ${cardNumber(lowest, state.version)}`} is removed from the market.`,
     data: { event: 'lowestPlantRemoved', plantId: lowest, reason },
   });
   return lowest;
@@ -227,7 +227,7 @@ export function removeLowestCurrent(state: GameState, now: number, reason: strin
  * and place it face down under the plant supply stack."
  */
 export function buryHighestFuture(state: GameState, now: number): number | null {
-  const highest = usesMixedMarket(state) ? state.plantMarket.future.slice().sort(compareMarketCards).at(-1) ?? null : maxOf(state.plantMarket.future);
+  const highest = usesMixedMarket(state) ? state.plantMarket.future.slice().sort((a, b) => compareMarketCards(a, b, state.version)).at(-1) ?? null : maxOf(state.plantMarket.future);
   if (highest === null) return null;
   removeFromMarket(state, highest);
   state.plantMarket.stack.push(highest);
@@ -237,7 +237,7 @@ export function buryHighestFuture(state: GameState, now: number): number | null 
   }
   pushLog(state, now, {
     category: 'market',
-    message: `${findFacility(highest) ? cardName(highest) : `Plant ${highest}`} is placed face down under the plant stack.`,
+    message: `${findFacility(highest) ? cardName(highest, state.version) : `Plant ${cardNumber(highest, state.version)}`} is placed face down under the plant stack.`,
     data: { event: 'highestPlantBuried', plantId: highest },
   });
   return highest;

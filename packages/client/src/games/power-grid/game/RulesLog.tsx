@@ -8,7 +8,7 @@ import {
   Tabs,
 } from '@tt/ui';
 import { CATEGORY_LABEL, LOG_FILTERS, RESOURCE_META, matchesFilter, type LogFilter } from './format';
-import { isIndustry } from '@game/power-grid';
+import { cardNumber, isIndustry } from '@game/power-grid';
 import { playerName, useMatch } from './model';
 
 /**
@@ -77,8 +77,8 @@ export function RulesLog(): JSX.Element {
               <span className="pg-glog__cat">{CATEGORY_LABEL[entry.category]}</span>
               <span className="pg-glog__text">
                 {entry.message}
-                {detailFor(entry, (id) => playerName(state, id), isIndustry(state)) ? (
-                  <em className="pg-glog__detail">{detailFor(entry, (id) => playerName(state, id), isIndustry(state))}</em>
+                {detailFor(entry, (id) => playerName(state, id), isIndustry(state), state.version) ? (
+                  <em className="pg-glog__detail">{detailFor(entry, (id) => playerName(state, id), isIndustry(state), state.version)}</em>
                 ) : null}
               </span>
             </motion.div>
@@ -114,7 +114,7 @@ function bundleText(value: unknown): string {
  * The second line under a log message: the arithmetic behind an automatic
  * transition, so a player can audit it rather than trust it.
  */
-function detailFor(entry: LogEntry, nameOf: (id: string) => string, industry = false): string | null {
+function detailFor(entry: LogEntry, nameOf: (id: string) => string, industry = false, version = 3): string | null {
   const data = entry.data;
   if (!data) return null;
   const event = str(data.event);
@@ -166,13 +166,13 @@ function detailFor(entry: LogEntry, nameOf: (id: string) => string, industry = f
     case 'endGameTriggered':
       return `Threshold ${num(data.threshold) ?? 0} cities. The next Phase 5 pays nothing — it only evaluates who can supply the most cities (§11).`;
     case 'winnerEvaluation':
-      return `Using plants ${(Array.isArray(data.operatePlantIds) ? data.operatePlantIds : []).join(', ') || '—'} and the fuel already on them (§11).`;
+      return `Using plants ${(Array.isArray(data.operatePlantIds) ? data.operatePlantIds : []).map(id => cardNumber(Number(id), version)).join(', ') || '—'} and the fuel already on them (§11).`;
     case 'gameOver':
       return data.victory === 'money' ? 'Most cash wins after every player receives final-round power and facility income. Cash ties share victory.' : 'Most suppliable cities wins, even if someone else triggered the end. Money breaks ties (§11).';
     case 'uraniumPhaseOut':
       return 'Plant 39 was bought, so uranium is never resupplied again on the Germany map (§12).';
     case 'playerOrder':
-      return 'Ranked by connected cities, then by highest-numbered owned plant (§4).';
+      return version >= 7 ? 'Ranked by connected cities, then by highest printed cost among owned plants and facilities (Industry).' : 'Ranked by connected cities, then by highest-numbered owned plant (§4).';
     case 'stackExhausted':
       return 'No replacement is drawn. Each later Phase 5 removes the smallest plant instead (§9.3).';
     case 'step3CardDrawn':

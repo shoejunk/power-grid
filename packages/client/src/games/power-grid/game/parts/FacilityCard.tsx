@@ -7,7 +7,7 @@ import { Token } from './Tokens';
 
 const RESOURCE_ART = { coal: 4, oil: 3, garbage: 6, uranium: 11 } as const;
 
-export function FacilityCard({ plantId, rulesVersion = 6, size = 'sm', minimumBid, discounted = false, muted = false,
+export function FacilityCard({ plantId, rulesVersion = 7, size = 'sm', minimumBid, discounted = false, muted = false,
   selected = false, onSelect, disabledReason = null, badge, className }: PlantCardProps): JSX.Element {
   const facility = getFacility(plantId, rulesVersion);
   const art = plantArtFor(getPlant(RESOURCE_ART[facility.resource]));

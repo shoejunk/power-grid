@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import type { ResourceBundle, ResourceOption, ResourceType } from '@game/power-grid';
 import {
+  cardNumber,
   RESOURCE_TYPES,
   USA_COAL_STORAGE_PRICE,
   emptyResources,
@@ -271,7 +272,7 @@ function MyStorage({ draft }: { draft: ResourceBundle | null }): JSX.Element | n
           const held = RESOURCE_TYPES.reduce((s, t) => s + (owned.stored[t] ?? 0), 0);
           return (
             <motion.div key={owned.plantId} className="pg-gstorage__row" layout transition={springSoft}>
-              <span className="pg-gstorage__id tt-numeral">{owned.plantId}</span>
+              <span className="pg-gstorage__id tt-numeral">{cardNumber(owned.plantId, state.version)}</span>
               <span className="pg-gstorage__meta">
                 <span className="pg-gstorage__fuel">
                   {def.accepts.length === 0
@@ -282,7 +283,7 @@ function MyStorage({ draft }: { draft: ResourceBundle | null }): JSX.Element | n
                   <span className="tt-numeral">{held}</span> / {plantStorage(owned.plantId)}
                 </span>
               </span>
-              <StorageBar plant={owned} {...(incoming ? { incoming } : {})} />
+              <StorageBar rulesVersion={state.version} plant={owned} {...(incoming ? { incoming } : {})} />
             </motion.div>
           );
         })}

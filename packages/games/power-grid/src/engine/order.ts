@@ -9,11 +9,14 @@
  */
 
 import type { GameState, PlayerId } from '../types.js';
+import { cardNumber } from '../data/facilities.js';
+import { ownedCardIds, usesIndustryCardCosts } from './industry.js';
 import { getPlayer, pushLog, syncOrderIndices, trustPlayer } from './state.js';
 
-/** Highest plant number a player owns, or 0. §4 tie-break. */
+/** Turn-order tie-break: highest printed card cost in new Industry, highest plant otherwise. */
 export function largestPlant(state: GameState, id: PlayerId): number {
   const p = getPlayer(state, id);
+  if (usesIndustryCardCosts(state)) return Math.max(0, ...ownedCardIds(p).map(card => cardNumber(card, state.version)));
   return p.plants.reduce((max, op) => (op.plantId > max ? op.plantId : max), 0);
 }
 

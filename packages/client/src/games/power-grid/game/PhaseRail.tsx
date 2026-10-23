@@ -101,7 +101,7 @@ function PhaseBody({
           subtitle="Phase 1 · automatic"
           rules={[
             { text: 'Players are ranked by connected cities, highest first.', rule: '§4, §5' },
-            { text: 'The highest-numbered owned plant breaks a tie.', rule: '§4' },
+            { text: state.version >= 7 ? 'The highest printed cost among owned plants and facilities breaks a tie.' : 'The highest-numbered owned plant breaks a tie.', rule: '§4' },
             { text: 'Round 1 uses the random setup order for the auctions only.', rule: '§5' },
           ]}
         >

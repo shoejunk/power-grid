@@ -44,13 +44,13 @@ export function MomentOverlay(): JSX.Element {
     seen.current = last;
 
     for (let i = fresh.length - 1; i >= 0; i--) {
-      const built = build(fresh[i]!, state.players, meId);
+      const built = build(fresh[i]!, state.players, meId, state.version);
       if (built) {
         setMoment(built);
         return;
       }
     }
-  }, [state.log, state.players, meId]);
+  }, [state.log, state.players, meId, state.version]);
 
   useEffect(() => {
     if (!moment) return undefined;
@@ -88,6 +88,7 @@ function build(
   entry: LogEntry,
   players: Record<string, { name: string; color: string } | undefined>,
   meId: string | null,
+  version: number,
 ): Moment | null {
   const data = entry.data;
   if (!data) return null;
@@ -102,7 +103,7 @@ function build(
       return {
         id: entry.id,
         kind: 'auction',
-        headline: data.winnerId === meId ? 'Card won' : `${nameOf(data.winnerId)} takes ${cardName(Number(data.plantId))}`,
+        headline: data.winnerId === meId ? 'Card won' : `${nameOf(data.winnerId)} takes ${cardName(Number(data.plantId), version)}`,
         detail: `Sold for ${data.price}₤ — ${data.reason === 'uncontested' ? 'uncontested at the minimum bid' : 'every other bidder passed'}.`,
         color: colorOf(data.winnerId),
       };

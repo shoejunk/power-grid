@@ -160,7 +160,7 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
           <Tooltip
             key={option.plantId}
             placement="left"
-            title={cardName(option.plantId)}
+            title={cardName(option.plantId, state.version)}
             rule={option.affordable ? '§6 Auction Power Plants' : '§6, §14 Legal-action validation'}
             content={
               option.affordable
@@ -183,7 +183,7 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
                 disabled={!option.affordable}
                 onClick={() => onSelectPlant(option.plantId)}
               >
-                <span className="pg-gpicker__num tt-numeral">{cardNumber(option.plantId)}</span>
+                <span className="pg-gpicker__num tt-numeral">{cardNumber(option.plantId, state.version)}</span>
                 {/*
                  * What the plant actually DOES. This chooser used to show only
                  * the number and the minimum bid ("6 / min 6₤") — the fuel it
@@ -299,7 +299,7 @@ function AuctionFloor(): JSX.Element {
   return (
     <PhaseShell
       title="Sealed bids"
-      subtitle={`${cardName(auction.plantId)} · ${map.name}`}
+      subtitle={`${cardName(auction.plantId, state.version)} · ${map.name}`}
       tone="live"
       rules={isLegacyIndustry(state) ? LEGACY_INDUSTRY_AUCTION_RULES : isIndustry(state) ? INDUSTRY_AUCTION_RULES : AUCTION_RULES}
       actions={
@@ -420,7 +420,7 @@ function AuctionFloor(): JSX.Element {
           setPassDialogOpen(false);
           net.action({ type: 'passBid' });
         }}
-        title={`Pass on ${cardName(auction.plantId)}?`}
+        title={`Pass on ${cardName(auction.plantId, state.version)}?`}
         description="Passing ends your bidding on this card. You will not be able to re-enter this auction."
         confirmLabel="Pass on card"
       />
@@ -457,7 +457,7 @@ function ScrapChooser(): JSX.Element {
               if (choice !== null) net.action({ type: 'scrapPlant', plantId: choice });
             }}
           >
-            {choice !== null ? `Scrap ${cardName(choice)}` : 'Choose a card'}
+            {choice !== null ? `Scrap ${cardName(choice, state.version)}` : 'Choose a card'}
           </Button>
         </div>
       }
@@ -506,7 +506,7 @@ function ScrapChooser(): JSX.Element {
       </div>
 
       {choice !== null ? (
-        <Callout tone="danger" title={`${cardName(choice)} leaves the game`}>
+        <Callout tone="danger" title={`${cardName(choice, state.version)} leaves the game`}>
           {findFacility(choice) ? `It produces ${findFacility(choice, state.version)!.output} ${findFacility(choice)!.resource} per round.` : `It supplies ${getPlant(choice).cities} cities.`} Scrapped cards never return to the market.
         </Callout>
       ) : null}

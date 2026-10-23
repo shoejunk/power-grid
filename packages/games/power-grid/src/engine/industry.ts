@@ -4,6 +4,7 @@ import { RESOURCE_TYPES } from '../types.js';
 import { facilitiesForVersion, getFacility } from '../data/facilities.js';
 import { humanPlayers, pushLog } from './state.js';
 
+export const usesIndustryCardCosts = (state: Pick<GameState, 'settings' | 'version'>): boolean => isIndustry(state) && state.version >= 7;
 export const isIndustry = (state: Pick<GameState, 'settings'>): boolean => state.settings.rulesMode === 'industry';
 // Saved version-4 games retain their original cash victory and separate offers.
 export const isLegacyIndustry = (state: Pick<GameState, 'settings' | 'version'>): boolean => isIndustry(state) && state.version < 5;

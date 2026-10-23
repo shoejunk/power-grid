@@ -77,7 +77,7 @@ export function PlantMarket({
             placement="left"
             title="Plant market"
             rule="§6, §9.3, §10"
-            content={isIndustry(state) && !isLegacyIndustry(state) ? 'Plants and facilities share one deck. Sort by printed cost; plants come first on ties, then coal, oil, garbage and uranium facilities. Only current cards may be auctioned. The discount token applies to both kinds. Step 3 makes all six cards current.' : "Plants are always sorted by number. In Steps 1 and 2 the four lowest form the current market and only those may be auctioned; the rest are the future market and are shown for planning only. In Step 3 all six plants are current and there is no future market."}
+            content={isIndustry(state) && !isLegacyIndustry(state) ? 'Plants and facilities share one deck. Sort by printed cost. Only current cards may be auctioned. The discount token applies to both kinds. Step 3 makes all six cards current.' : "Plants are always sorted by number. In Steps 1 and 2 the four lowest form the current market and only those may be auctioned; the rest are the future market and are shown for planning only. In Step 3 all six plants are current and there is no future market."}
           />
         </div>
       }
@@ -86,7 +86,7 @@ export function PlantMarket({
         <span className="pg-gmarketrow__tag tt-overline">Facilities<em>biddable</em></span>
         <div className="pg-gplantrow">
           {(state.facilityMarket ?? []).map(id => <PlantCard rulesVersion={state.version} key={id} plantId={id} size="sm"
-            minimumBid={getFacility(id).cost} selected={selectedPlantId === id || auctionPlantId === id}
+            minimumBid={getFacility(id, state.version).cost} selected={selectedPlantId === id || auctionPlantId === id}
             {...(selectable ? { onSelect: () => onSelect?.(id) } : {})}
             disabledReason={selectable ? reasonFor(id).reason : null} />)}
           {!state.facilityMarket?.length ? <span className="tt-caption">All 12 facilities have been sold.</span> : null}

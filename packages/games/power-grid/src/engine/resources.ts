@@ -6,6 +6,7 @@
  * area that sells at a flat 8 Elektro once the market is dry (§12).
  */
 
+import { cardNumber } from '../data/facilities.js';
 import type {
   GameState,
   OwnedPlant,
@@ -302,11 +303,11 @@ export function validateRedistribute(
     for (const t of RESOURCE_TYPES) {
       const n = a.stored[t] ?? 0;
       if (!Number.isInteger(n) || n < 0) return fail('Resource counts must be whole numbers');
-      if (n > 0 && !plant.accepts.includes(t)) return fail(`Plant ${a.plantId} cannot hold ${t}`);
+      if (n > 0 && !plant.accepts.includes(t)) return fail(`Plant ${cardNumber(a.plantId, state.version)} cannot hold ${t}`);
       onPlant += n;
       target[t] += n;
     }
-    if (onPlant > plant.fuel * 2) return fail(`Plant ${a.plantId} can only store ${plant.fuel * 2} tokens`);
+    if (onPlant > plant.fuel * 2) return fail(`Plant ${cardNumber(a.plantId, state.version)} can only store ${plant.fuel * 2} tokens`);
   }
   for (const t of RESOURCE_TYPES) {
     if (target[t] !== pool[t]) return fail('The assignment must keep every token you own');

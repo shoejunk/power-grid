@@ -1,4 +1,6 @@
 import type { GameState, Player, ResourceType } from '../types.js';
+import { cardNumber } from '../data/facilities.js';
+import { ownedCardIds, usesIndustryCardCosts } from './industry.js';
 import { RESOURCE_TYPES } from '../types.js';
 
 export interface PlayerScore {
@@ -22,7 +24,9 @@ export function currentResourcePrice(state: GameState, type: ResourceType): numb
 export function scorePlayer(state: GameState, player: Player): PlayerScore {
   const elektro = player.money;
   const cities = player.cities.length * 20;
-  const plants = player.plants.reduce((total, plant) => total + plant.plantId, 0);
+  const plants = usesIndustryCardCosts(state)
+    ? ownedCardIds(player).reduce((total, id) => total + cardNumber(id, state.version), 0)
+    : player.plants.reduce((total, plant) => total + plant.plantId, 0);
   const prices = Object.fromEntries(
     RESOURCE_TYPES.map((type) => [type, currentResourcePrice(state, type)]),
   ) as Record<ResourceType, number>;

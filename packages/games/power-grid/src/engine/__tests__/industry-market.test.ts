@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FACILITIES, compareMarketCards, findFacility } from '../../data/facilities.js';
+import { facilitiesForVersion, compareMarketCards, findFacility } from '../../data/facilities.js';
 import { STEP3_PLANT_ID, type GameAction, type GameState } from '../../types.js';
 import { acquirePlant, applyAction, botActionFor, checkEndGameTrigger, createGame, defaultActionFor,
   endGameReached, endGameThreshold, finalStandings, legalActions, validateAction } from '../index.js';
@@ -9,8 +9,8 @@ import { jevContext } from '../jev.js';
 import { ownedCardIds } from '../industry.js';
 import { NOW, finishCombinedTurn, grantPlant, seats, settingsFor } from './helpers.js';
 
-function industry(count = 2, seed = 'mixed-market'): GameState {
-  const s = createGame({ ...settingsFor({ playerCount: count, seed }), rulesMode: 'industry' }, seats(count), 'p1', 'MIX001', { now: NOW });
+function industry(count = 2, seed = 'mixed-market', version = 6): GameState {
+  const s = createGame({ ...settingsFor({ playerCount: count, seed }), rulesMode: 'industry' }, seats(count), 'p1', 'MIX001', { now: NOW, version });
   return applyAction(s, s.hostId, { type: 'selectZone', areas: [] }, NOW);
 }
 
@@ -20,21 +20,21 @@ function market(s: GameState, current = [101, 10, 107, 13], future = [18, 102, 1
 }
 
 describe('Industry shared deck and market', () => {
-  it.each([2, 3, 4, 5, 6])('shuffles facilities through normal setup for %i players', count => {
-    const s = industry(count);
-    expect(s.version).toBe(6);
+  it.each([6, 7].flatMap(version => [2, 3, 4, 5, 6].map(count => [version, count] as const)))('shuffles version %i facilities for %i players', (version, count) => {
+    const s = industry(count, 'mixed-market', version);
+    expect(s.version).toBe(version);
     expect(s.facilityMarket).toBeUndefined();
     const m = s.plantMarket;
     const all = [...m.current, ...m.future, ...m.stack, ...m.removed];
     expect(new Set(all).size).toBe(all.length);
-    expect(all.filter(id => findFacility(id)).sort()).toEqual(FACILITIES.map(f => f.id).sort());
+    expect(all.filter(id => findFacility(id)).sort()).toEqual(facilitiesForVersion(version).map(f => f.id).sort());
     expect(m.current).toHaveLength(4);
     expect(m.future).toHaveLength(4);
-    expect([...m.current, ...m.future]).toEqual([...m.current, ...m.future].sort(compareMarketCards));
+    expect([...m.current, ...m.future]).toEqual([...m.current, ...m.future].sort((a, b) => compareMarketCards(a, b, version)));
     expect(m.stack.at(-1)).toBe(STEP3_PLANT_ID);
-    expect(industry(count).plantMarket).toEqual(m);
-    expect(industry(count, 'different').plantMarket).not.toEqual(m);
-    const samples = Array.from({ length: 20 }, (_, i) => industry(count, `sample-${i}`).plantMarket);
+    expect(industry(count, 'mixed-market', version).plantMarket).toEqual(m);
+    expect(industry(count, 'different', version).plantMarket).not.toEqual(m);
+    const samples = Array.from({ length: 20 }, (_, i) => industry(count, `sample-${i}`, version).plantMarket);
     expect(samples.some(m => m.current.some(id => findFacility(id)))).toBe(true);
     expect(samples.some(m => m.future.some(id => findFacility(id)))).toBe(true);
   });
@@ -160,7 +160,7 @@ describe('Industry city victory', () => {
   });
 
   it.each([2, 3, 4, 5, 6])('completes and exactly replays a legal %i-player game', count => {
-    let s = industry(count); const initial = structuredClone(s);
+    let s = industry(count, 'mixed-market', 7); const initial = structuredClone(s);
     const actions: { id: string; action: GameAction }[] = [];
     for (let i = 0; i < 2500 && s.phase !== 'gameOver'; i++) {
       const id = s.activePlayerId!;

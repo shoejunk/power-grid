@@ -5,6 +5,7 @@
  * resource market (price-ordered and finite), then update the plant market.
  */
 
+import { cardNumber } from '../data/facilities.js';
 import type {
   GameState,
   PlayerId,
@@ -83,7 +84,7 @@ export function validatePowerCities(
   const ids = decision.operatePlantIds ?? [];
   if (new Set(ids).size !== ids.length) return fail('Duplicate plants in the operating list');
   for (const id of ids) {
-    if (!player.plants.some((p) => p.plantId === id)) return fail(`You do not own plant ${id}`);
+    if (!player.plants.some((p) => p.plantId === id)) return fail(`You do not own plant ${cardNumber(id, state.version)}`);
   }
   if (!canOperate(state, playerId, ids)) {
     return fail('You do not have the exact fuel those plants require');

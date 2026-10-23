@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import type { OwnedPlant, ResourceBundle, ResourceType } from '@game/power-grid';
-import { getPlant, isEcological, isHybrid } from '@game/power-grid';
+import { cardNumber, getPlant, isEcological, isHybrid } from '@game/power-grid';
 
 import { springSnappy } from '@tt/ui';
 import { RESOURCE_META, RESOURCE_ORDER } from '../format';
@@ -46,6 +46,7 @@ export function Token({ type, size = 'sm', ghost = false, className }: TokenProp
 
 export interface StorageBarProps {
   plant: OwnedPlant;
+  rulesVersion?: number;
   /** Tokens the player is about to add, drawn as pending sockets. */
   incoming?: ResourceBundle;
   compact?: boolean;
@@ -56,7 +57,7 @@ export interface StorageBarProps {
  * and oil, because §1 shares the capacity across the two types rather than
  * granting each its own.
  */
-export function StorageBar({ plant, incoming, compact = false }: StorageBarProps): JSX.Element {
+export function StorageBar({ plant, incoming, compact = false, rulesVersion = 3 }: StorageBarProps): JSX.Element {
   const def = getPlant(plant.plantId);
   const capacity = def.fuel * 2;
   const eco = isEcological(def);
@@ -88,7 +89,7 @@ export function StorageBar({ plant, incoming, compact = false }: StorageBarProps
   return (
     <Tooltip
       placement="left"
-      title={`Plant ${plant.plantId} storage`}
+      title={`Plant ${cardNumber(plant.plantId, rulesVersion)} storage`}
       rule="§1 Power plants"
       content={
         eco
@@ -100,7 +101,7 @@ export function StorageBar({ plant, incoming, compact = false }: StorageBarProps
         className={['pg-gstore', compact ? 'is-compact' : ''].filter(Boolean).join(' ')}
         tabIndex={0}
         role="img"
-        aria-label={`Plant ${plant.plantId}: ${held} of ${capacity} fuel stored`}
+        aria-label={`Plant ${cardNumber(plant.plantId, rulesVersion)}: ${held} of ${capacity} fuel stored`}
       >
         {eco ? (
           <span className="pg-gstore__eco">ECO</span>
