@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { NominatablePlant } from '@game/power-grid';
-import { isIndustry, getFacility } from '@game/power-grid';
+import { isIndustry, isLegacyIndustry, getFacility } from '@game/power-grid';
 
 import { springSoft } from '@tt/ui';
 import {
@@ -77,12 +77,12 @@ export function PlantMarket({
             placement="left"
             title="Plant market"
             rule="§6, §9.3, §10"
-            content="Plants are always sorted by number. In Steps 1 and 2 the four lowest form the current market and only those may be auctioned; the rest are the future market and are shown for planning only. In Step 3 all six plants are current and there is no future market."
+            content={isIndustry(state) && !isLegacyIndustry(state) ? 'Plants and facilities share one deck. Sort by printed cost; plants come first on ties, then coal, oil, garbage and uranium facilities. Only current cards may be auctioned. The discount token applies to both kinds. Step 3 makes all six cards current.' : "Plants are always sorted by number. In Steps 1 and 2 the four lowest form the current market and only those may be auctioned; the rest are the future market and are shown for planning only. In Step 3 all six plants are current and there is no future market."}
           />
         </div>
       }
     >
-      {isIndustry(state) ? <div className="pg-gmarketrow">
+      {isLegacyIndustry(state) ? <div className="pg-gmarketrow">
         <span className="pg-gmarketrow__tag tt-overline">Facilities<em>biddable</em></span>
         <div className="pg-gplantrow">
           {(state.facilityMarket ?? []).map(id => <PlantCard key={id} plantId={id} size="sm"

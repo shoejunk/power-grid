@@ -34,7 +34,7 @@ import {
 import { applyStep3Transition, beginStep2, step2ThresholdReached } from './steps.js';
 import { trustReturnResources } from './trust.js';
 import { runFinalEvaluation } from './endgame.js';
-import { finishIndustryGame, isIndustry, refillIndustryMarket } from './industry.js';
+import { finishIndustryGame, isIndustry, isLegacyIndustry, refillIndustryMarket } from './industry.js';
 
 /* ------------------------------------------------------------------ *
  * Phase entry
@@ -279,7 +279,7 @@ export function finishBureaucracy(state: GameState, now: number): void {
   const refillStep: Step = !state.step2Triggered && step3AboutToSurface ? 2 : state.step;
 
   refillMarket(state, now, refillStep);
-  if (isIndustry(state) && finishIndustryGame(state, now)) return;
+  if (isLegacyIndustry(state) && finishIndustryGame(state, now)) return;
   updatePlantMarket(state, now);
 
   pushLog(state, now, {

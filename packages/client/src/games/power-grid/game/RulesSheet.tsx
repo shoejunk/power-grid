@@ -6,7 +6,7 @@ import {
   SLOTS_OPEN_AT_STEP,
   STEP2_THRESHOLD,
   refillFor,
-  isIndustry, industryBaseRefill, industryMoneyTarget,
+  isIndustry, isLegacyIndustry, industryBaseRefill, industryMoneyTarget,
 } from '@game/power-grid';
 
 import {
@@ -53,8 +53,8 @@ export function RulesSheet(): JSX.Element {
         <div className="pg-gsheet">
           {isIndustry(state) ? <section>
             <h3 className="pg-gsheet__h">Power Grid: Industry</h3>
-            <p>Win with the most cash after a round reaches {industryMoneyTarget(state.settings)} Elektro. Everyone receives power and facility income, including in the final round. Cash ties share victory.</p>
-            <p>Buy one plant or facility per round. Facilities occupy no cities and cost only their auction price. Small offers advance to medium, then large, when bought. Own any five cards; acquiring a sixth requires scrapping any one card.</p>
+            {isLegacyIndustry(state) ? <p>Win with the most cash after a round reaches {industryMoneyTarget(state.settings)} Elektro. Everyone receives power and facility income, including in the final round. Cash ties share victory.</p> : <p>Use the normal city threshold and victory rules: the player who can power the most connected cities wins, with cash breaking ties. Final evaluation pays no power or facility income.</p>}
+            <p>Buy one plant or facility per round. Facilities occupy no cities and cost only their auction price. {isLegacyIndustry(state) ? 'Small offers advance to medium, then large, when bought.' : 'Facilities share the plant deck, current and future markets, and discount token. Sort by printed cost; plants come first on equal cost, then coal, oil, garbage, uranium facilities.'} Own any five cards; acquiring a sixth requires scrapping any one card.</p>
             <p>The fixed baseline refills first, then facilities sell automatically into the remaining slots. Each delivered token earns its slot price minus 1 Elektro (minimum zero). Producers of the same resource share total revenue in proportion to output, with whole-Elektro rounding. Empty reserves or a full market limit deliveries and income. Germany’s nuclear phase-out is disabled.</p>
           </section> : null}
           <section>
@@ -81,7 +81,7 @@ export function RulesSheet(): JSX.Element {
             <h3 className="pg-gsheet__h">Thresholds for {count} players</h3>
             <div className="pg-gsheet__facts">
               <Fact label="Step 2 begins at" value={`${STEP2_THRESHOLD[count] ?? 7} cities`} rule="§10" />
-              <Fact label="Game ends at" value={isIndustry(state) ? `${industryMoneyTarget(state.settings)} Elektro · finish the round` : `${END_GAME_THRESHOLD[count] ?? 17} cities`} rule={isIndustry(state) ? 'Industry' : '§11'} />
+              <Fact label="Game ends at" value={isLegacyIndustry(state) ? `${industryMoneyTarget(state.settings)} Elektro · finish the round` : `${END_GAME_THRESHOLD[count] ?? 17} cities`} rule={isLegacyIndustry(state) ? 'Industry' : '§11'} />
               <Fact
                 label="Houses per city now"
                 value={`${SLOTS_OPEN_AT_STEP[state.step]} — costing ${HOUSE_SLOT_COSTS.slice(0, SLOTS_OPEN_AT_STEP[state.step]).join(', ')}₤`}
@@ -134,8 +134,8 @@ export function RulesSheet(): JSX.Element {
               <li>Re-enter an auction after passing, or buy a second plant in one round <Badge>§6</Badge></li>
               <li>Buy resources your plants cannot burn or store, or a depleted type <Badge>§7</Badge></li>
               <li>Build outside the zone, in a full city, twice in the same city, or off-network <Badge>§8</Badge></li>
-              {!isIndustry(state) ? <><li>Scrap the plant you just acquired <Badge>§6</Badge></li>
-              <li>Take any cash during the end-game winner evaluation <Badge>§11</Badge></li></> : null}
+              {!isIndustry(state) ? <li>Scrap the plant you just acquired <Badge>§6</Badge></li> : null}
+              {!isLegacyIndustry(state) ? <li>Take any cash during the end-game winner evaluation <Badge>§11</Badge></li> : null}
             </ul>
           </section>
         </div>

@@ -61,7 +61,7 @@ export function PlantCard({
   className,
 }: PlantCardProps): JSX.Element {
   if (findFacility(plantId)) return <FacilityCard plantId={plantId} size={size} minimumBid={minimumBid}
-    selected={selected} onSelect={onSelect} disabledReason={disabledReason} badge={badge} className={className} />;
+    selected={selected} onSelect={onSelect} disabledReason={disabledReason} badge={badge} className={className} discounted={discounted} muted={muted} />;
   const def = getPlant(plantId);
   const art = plantArtFor(def);
   const disabled = disabledReason !== null;

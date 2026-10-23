@@ -8,7 +8,7 @@
 
 import type { GameState, PlayerId } from '../types.js';
 import { STEP3_PLANT_ID, emptyResources } from '../types.js';
-import { cardLimit, isIndustry, ownedCardIds } from './industry.js';
+import { cardLimit, isIndustry, isLegacyIndustry, usesMixedMarket, ownedCardIds } from './industry.js';
 import { findFacility } from '../data/facilities.js';
 import { getPlayer, pushLog } from './state.js';
 import { stateMap } from './mapAccess.js';
@@ -35,7 +35,7 @@ export function acquirePlant(
 ): boolean {
   const player = getPlayer(state, playerId);
   const facility = isIndustry(state) ? findFacility(plantId) : undefined;
-  if (facility) {
+  if (facility && isLegacyIndustry(state)) {
     const index = state.facilityMarket!.indexOf(plantId);
     if (index < 0) throw new Error('Facility is not offered');
     if (facility.size === 'large') state.facilityMarket!.splice(index, 1);
@@ -52,12 +52,18 @@ export function acquirePlant(
   }
   removeFromMarket(state, plantId);
   player.money -= opts.price;
-  player.plants.push({ plantId, stored: emptyResources() });
+  if (facility) {
+    (player.facilities ??= []).push(plantId);
+    player.facilities.sort((a, b) => a - b);
+  } else player.plants.push({ plantId, stored: emptyResources() });
   player.plants.sort((a, b) => a.plantId - b.plantId);
   if (!state.acquiredThisRound.includes(playerId)) state.acquiredThisRound.push(playerId);
   player.phaseStatus = 'purchased';
 
-  pushLog(state, now, {
+  if (facility) pushLog(state, now, { category: 'auction', playerId,
+    message: `${player.name} wins ${facility.name} for ${opts.price} Elektro.`,
+    data: { event: 'facilityAcquired', playerId, facilityId: plantId, price: opts.price, moneyAfter: player.money } });
+  else pushLog(state, now, {
     category: opts.via === 'trust' ? 'trust' : 'auction',
     playerId,
     message:
@@ -133,6 +139,7 @@ export function scrapPlant(
   if (isIndustry(state) && player.facilities?.includes(plantId)) {
     player.facilities = player.facilities.filter(id => id !== plantId);
     (state.scrappedFacilities ??= []).push(plantId);
+    if (usesMixedMarket(state)) state.plantMarket.removed.push(plantId);
     pushLog(state, now, { category: 'auction', playerId, message: `${player.name} scraps ${findFacility(plantId)!.name}.`,
       data: { event: 'facilityScrapped', playerId, facilityId: plantId } });
     return;

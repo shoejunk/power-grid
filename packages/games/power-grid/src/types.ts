@@ -297,7 +297,7 @@ export interface PowerDecision {
 export interface GameSettings {
   /** Omitted on existing games: classic rules. */
   rulesMode?: 'classic' | 'industry';
-  /** Industry cash victory target; defaults to the balance table by player count. */
+  /** Legacy version-4 Industry cash target; ignored by new games. */
   moneyTarget?: number;
   mapId: MapId;
   playerCount: number;
@@ -334,7 +334,7 @@ export interface GameState {
   activePlayerId: PlayerId | null;
 
   plantMarket: PlantMarket;
-  /** Industry: one facility offer per resource, advancing small → medium → large. */
+  /** Legacy version-4 Industry offers. Version 5 uses the shared plant market. */
   facilityMarket?: number[];
   scrappedFacilities?: number[];
   resourceMarket: ResourceMarket;
@@ -360,7 +360,7 @@ export interface GameState {
   /** Set at end of Phase 4 when a player reaches the city threshold. §11. */
   endGameTriggered: boolean;
   winnerId: PlayerId | null;
-  /** Industry cash ties are shared wins. Classic retains its original winner contract. */
+  /** Legacy Industry cash ties are shared wins. Classic retains its original winner contract. */
   winnerIds?: PlayerId[];
 
   /** Deterministic RNG cursor — advanced on every random draw. §14. */

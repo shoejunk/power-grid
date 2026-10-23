@@ -1,4 +1,4 @@
-import { MAP_IDS, industryMoneyTarget, type GameSettings, type MapId } from '@game/power-grid';
+import { MAP_IDS, type GameSettings, type MapId } from '@game/power-grid';
 import {
   Badge,
   Hint,
@@ -91,11 +91,11 @@ export function PowerGridSettings({
       },
       {
         label: 'Game ends at',
-        value: draft.rulesMode === 'industry' ? `${industryMoneyTarget(draft)} Elektro` : `${END_GAME_CITIES[draft.playerCount] ?? 17} cities`,
-        note: draft.rulesMode === 'industry' ? 'Finish the round; most cash wins' : 'Then final scoring',
+        value: `${END_GAME_CITIES[draft.playerCount] ?? 17} cities`,
+        note: 'Then final scoring',
       },
     ],
-    [draft.playerCount, draft.rulesMode, draft.moneyTarget, zoneAreas],
+    [draft.playerCount, zoneAreas],
   );
 
   return (
@@ -104,12 +104,7 @@ export function PowerGridSettings({
         <Toggle checked={draft.rulesMode === 'industry'} disabled={disabled}
           onChange={enabled => onChange({ rulesMode: enabled ? 'industry' : 'classic', ...(enabled ? { againstTheTrust: false } : {}) })}
           label="Power Grid: Industry"
-          description="Auction plants or facilities. Own any five cards. Sell resources automatically; finish the round at the cash target and most money wins." />
-        {draft.rulesMode === 'industry' ? <>
-          <Slider label="Cash victory target" value={industryMoneyTarget(draft)} min={100} max={2000} step={25}
-            disabled={disabled} onChange={moneyTarget => onChange({ moneyTarget })} unit="Elektro" format={String} />
-          <p className="tt-caption">Initial victory target: 250 Elektro for every table size. Refills depend on player count, never Step. Facilities cost only their winning auction bid and occupy no city slots. Germany’s nuclear phase-out is disabled in Industry.</p>
-        </> : null}
+          description="Facilities join the plant deck and market. Own any five cards and sell resources automatically. Normal city threshold and powered-city victory rules apply." />
       </Panel>
       <Panel
         title="Map"
@@ -312,7 +307,7 @@ export function PowerGridSettingsSummary({ settings }: { settings: unknown }): J
         <SummaryRow label="Step 2 at" value={`${STEP2_CITIES[draft.playerCount] ?? 7} cities`} />
         <SummaryRow
           label="Game ends at"
-          value={draft.rulesMode === 'industry' ? `${industryMoneyTarget(draft)} Elektro · finish the round` : `${END_GAME_CITIES[draft.playerCount] ?? 17} cities`}
+          value={`${END_GAME_CITIES[draft.playerCount] ?? 17} cities`}
         />
         <SummaryRow
           label="Experienced start"

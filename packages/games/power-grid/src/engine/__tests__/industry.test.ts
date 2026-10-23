@@ -8,7 +8,7 @@ import { cardLimit, industryBaseRefill, industryMoneyTarget, ownedCardIds } from
 import { NOW, enterPhase, finishCombinedTurn, grantPlant, seats, settingsFor, start } from './helpers.js';
 
 function industry(count = 2, mapId: 'germany' | 'usa' = 'germany'): GameState {
-  const s = createGame({ ...settingsFor({ playerCount: count, mapId }), rulesMode: 'industry' }, seats(count), 'p1', 'IND001', { now: NOW, gameId: 'industry-test' });
+  const s = createGame({ ...settingsFor({ playerCount: count, mapId }), rulesMode: 'industry' }, seats(count), 'p1', 'IND001', { now: NOW, gameId: 'industry-test', version: 4 });
   return applyAction(s, s.hostId, { type: 'selectZone', areas: [] }, NOW);
 }
 

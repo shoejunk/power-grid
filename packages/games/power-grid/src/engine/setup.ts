@@ -44,6 +44,7 @@ import {
 import { isZoneContiguous } from '../data/maps/index.js';
 import { neighboursInZone, resolveMap, zoneCities } from './mapAccess.js';
 import { sortMarket, withRng } from './plantMarket.js';
+import { FACILITIES, compareMarketCards } from '../data/facilities.js';
 import { initializeIndustry, isIndustry } from './industry.js';
 
 export interface SeatInput {
@@ -96,11 +97,11 @@ export interface PlantSetup {
   removed: number[];
 }
 
-export function buildPlantSetup(rng: Rng, playerCount: number): PlantSetup {
+export function buildPlantSetup(rng: Rng, playerCount: number, mixedMarket = false): PlantSetup {
   // 8. Shuffle the plug-backed plants 03–15, draw 8, sort, split 4/4,
   //    then set one more plug-backed plant aside face down.
-  const plugs = rng.shuffle(PLUG_PLANT_IDS);
-  const opening = plugs.slice(0, 8).sort((a, b) => a - b);
+  const plugs = rng.shuffle([...PLUG_PLANT_IDS, ...(mixedMarket ? FACILITIES.filter(f => f.cost <= 15).map(f => f.id) : [])]);
+  const opening = plugs.slice(0, 8).sort(mixedMarket ? compareMarketCards : (a, b) => a - b);
   const setAside = plugs[8]!;
   const remainingPlugs = plugs.slice(9);
 
@@ -108,7 +109,7 @@ export function buildPlantSetup(rng: Rng, playerCount: number): PlantSetup {
   const removals = SETUP_REMOVALS[playerCount] ?? SETUP_REMOVALS_FALLBACK;
   const plugPool = remainingPlugs.slice();
   const removedPlugs = rng.takeRandom(plugPool, removals.plug);
-  const socketPool = rng.shuffle(SOCKET_PLANT_IDS);
+  const socketPool = rng.shuffle([...SOCKET_PLANT_IDS, ...(mixedMarket ? FACILITIES.filter(f => f.cost > 15).map(f => f.id) : [])]);
   const removedSockets = rng.takeRandom(socketPool, removals.socket);
 
   // Shuffle all remaining plant cards together into a face-down supply stack,
@@ -201,7 +202,8 @@ export function createGame(
     playerOrder = [humanOrder[0]!, TRUST_PLAYER_ID, humanOrder[1]!];
   }
 
-  const plantSetup = buildPlantSetup(rng, settings.playerCount);
+  const version = options.version ?? (settings.rulesMode === 'industry' ? 5 : 3);
+  const plantSetup = buildPlantSetup(rng, settings.playerCount, settings.rulesMode === 'industry' && version >= 5);
   const { market, supply } = buildResourceMarket();
   const map = resolveMap(settings.mapId);
 
@@ -209,7 +211,7 @@ export function createGame(
   for (const c of map.cities) citySlots[c.id] = [null, null, null];
 
   const state: GameState = {
-    version: options.version ?? (settings.rulesMode === 'industry' ? 4 : 3),
+    version,
     gameId: options.gameId ?? `game-${code}`,
     code,
     hostId,

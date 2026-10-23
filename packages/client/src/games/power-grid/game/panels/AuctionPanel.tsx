@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { cardLimit, cardName, emptyResources, findFacility, getPlant, isIndustry, ownedCardIds } from '@game/power-grid';
+import { cardLimit, cardName, cardNumber, emptyResources, findFacility, getPlant, isIndustry, isLegacyIndustry, ownedCardIds } from '@game/power-grid';
 
 import { net } from '@/net';
 import { springSoft } from '@tt/ui';
@@ -24,13 +24,16 @@ const AUCTION_RULES: readonly RuleLine[] = [
   { text: 'After all decisions arrive, bidding is simulated clockwise without exceeding anyone’s maximum.', rule: '§6' },
   { text: 'A player may own at most three plants. Acquiring a fourth forces a scrap — never the new plant.', rule: '§6, §14' },
 ];
-const INDUSTRY_AUCTION_RULES: readonly RuleLine[] = [
+const LEGACY_INDUSTRY_AUCTION_RULES: readonly RuleLine[] = [
   { text: 'Buy at most one plant OR facility per round. In round 1, buy either kind.', rule: 'Industry' },
   { text: 'Facilities produce automatically, occupy no city slots, and cost only the auction price.', rule: 'Industry' },
   { text: 'Small facility offers are replaced by medium, then large, when bought.', rule: 'Industry' },
   { text: 'Own any five plants and facilities. After acquiring a sixth, scrap any one of them.', rule: 'Industry' },
   AUCTION_RULES[2]!, AUCTION_RULES[3]!,
 ];
+
+const INDUSTRY_AUCTION_RULES: readonly RuleLine[] = LEGACY_INDUSTRY_AUCTION_RULES.map((line, i) => i === 2
+  ? { text: 'Plants and facilities share one deck, current and future markets, sorted by printed cost. Only current cards may be auctioned; the discount token opens either kind at 1 Elektro.', rule: 'Industry' } : line);
 
 export interface AuctionPanelProps {
   selectedPlantId: number | null;
@@ -53,7 +56,7 @@ export function AuctionPanel({ selectedPlantId, onSelectPlant }: AuctionPanelPro
     <PhaseShell
       title={isIndustry(state) ? 'Auction Plants & Facilities' : 'Auction Power Plants'}
       subtitle="Phase 2 · player order"
-      rules={isIndustry(state) ? INDUSTRY_AUCTION_RULES : AUCTION_RULES}
+      rules={isLegacyIndustry(state) ? LEGACY_INDUSTRY_AUCTION_RULES : isIndustry(state) ? INDUSTRY_AUCTION_RULES : AUCTION_RULES}
     >
       <Waiting note={isIndustry(state) ? 'Choosing a plant or facility, or resolving a required scrap.' : waitingNote(state.pendingScrap !== null)} />
       <MyPlantLimit />
@@ -104,7 +107,7 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
       title="Your turn to choose"
       subtitle={isIndustry(state) ? 'Phase 2 · auction a plant or facility' : 'Phase 2 · put a plant up for auction'}
       tone="live"
-      rules={isIndustry(state) ? INDUSTRY_AUCTION_RULES : AUCTION_RULES}
+      rules={isLegacyIndustry(state) ? LEGACY_INDUSTRY_AUCTION_RULES : isIndustry(state) ? INDUSTRY_AUCTION_RULES : AUCTION_RULES}
       actions={
         <Badge tone="accent" dot>
           Acting
@@ -180,7 +183,7 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
                 disabled={!option.affordable}
                 onClick={() => onSelectPlant(option.plantId)}
               >
-                <span className="pg-gpicker__num tt-numeral">{findFacility(option.plantId) ? 'F' : option.plantId}</span>
+                <span className="pg-gpicker__num tt-numeral">{cardNumber(option.plantId)}</span>
                 {/*
                  * What the plant actually DOES. This chooser used to show only
                  * the number and the minimum bid ("6 / min 6₤") — the fuel it
@@ -298,7 +301,7 @@ function AuctionFloor(): JSX.Element {
       title="Sealed bids"
       subtitle={`${cardName(auction.plantId)} · ${map.name}`}
       tone="live"
-      rules={isIndustry(state) ? INDUSTRY_AUCTION_RULES : AUCTION_RULES}
+      rules={isLegacyIndustry(state) ? LEGACY_INDUSTRY_AUCTION_RULES : isIndustry(state) ? INDUSTRY_AUCTION_RULES : AUCTION_RULES}
       actions={
         <Badge tone={bidding ? 'accent' : 'info'} dot>
           {bidding ? 'Your decision' : `${submittedCount}/${auction.eligibleBidders.length} submitted`}
@@ -439,7 +442,7 @@ function ScrapChooser(): JSX.Element {
       title={isIndustry(state) ? 'Scrap a plant or facility' : 'Scrap a plant'}
       subtitle={`You now own ${me ? ownedCardIds(me).length : 0} — the limit is ${cardLimit(state)}`}
       tone="live"
-      rules={isIndustry(state) ? INDUSTRY_AUCTION_RULES : AUCTION_RULES}
+      rules={isLegacyIndustry(state) ? LEGACY_INDUSTRY_AUCTION_RULES : isIndustry(state) ? INDUSTRY_AUCTION_RULES : AUCTION_RULES}
       actions={
         <Badge tone="warning" dot>
           Required

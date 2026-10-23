@@ -13,7 +13,7 @@ import type {
   PowerPlant,
   ResourceType,
 } from '@game/power-grid';
-import { getPlant, isEcological, isHybrid, isIndustry, type GameState } from '@game/power-grid';
+import { getPlant, isEcological, isHybrid, isIndustry, isLegacyIndustry, type GameState } from '@game/power-grid';
 import { plantArt, type PlantArt } from '@/games/power-grid/art';
 
 /* ------------------------------------------------------------------ *
@@ -162,8 +162,8 @@ export function phaseMeta(state: GameState, phase: Phase): PhaseMeta {
   const base = PHASE_META[phase];
   if (!isIndustry(state)) return base;
   if (phase === 'auction') return { ...base, name: 'Auction Cards', rule: 'Industry', summary: 'Buy one plant or facility per round; own any five cards total.' };
-  if (phase === 'building') return { ...base, summary: 'Build and choose power production. Everyone receives income at the end of the round, including the final round.' };
-  if (phase === 'gameOver') return { ...base, name: 'Cash Standings', rule: 'Industry', summary: 'All power and facility income has been paid. Most cash wins; ties share victory.' };
+  if (isLegacyIndustry(state) && phase === 'building') return { ...base, summary: 'Build and choose power production. Everyone receives income at the end of the round, including the final round.' };
+  if (isLegacyIndustry(state) && phase === 'gameOver') return { ...base, name: 'Cash Standings', rule: 'Industry', summary: 'All power and facility income has been paid. Most cash wins; ties share victory.' };
   return base;
 }
 

@@ -32,3 +32,7 @@ export function getFacility(id: number): Facility {
   return facility;
 }
 export const cardName = (id: number): string => findFacility(id)?.name ?? `plant ${id}`;
+
+/** Printed number sorts cards; stable IDs break equal-cost ties (plants first). */
+export const cardNumber = (id: number): number => findFacility(id)?.cost ?? id;
+export const compareMarketCards = (a: number, b: number): number => cardNumber(a) - cardNumber(b) || a - b;

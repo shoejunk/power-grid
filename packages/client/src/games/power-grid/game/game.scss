@@ -2633,25 +2633,10 @@
     max-height: clamp(150px, 34vh, 300px);
   }
 }
-/* Industry facilities use resource tokens and explicit production labels. */
-.pg-facility {
-  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 3px; width: 56px; min-height: 104px; padding: 6px 2px; flex-shrink: 0;
-  border: 1px solid #79989b; border-radius: 8px; color: #eef3f8;
-  background: linear-gradient(145deg, #233d43, #14242d); font: inherit;
-  &.is-selected { outline: 2px solid #f0b429; outline-offset: 2px; }
-  &[aria-disabled='true'] { opacity: .5; }
-  &:is(button):not([aria-disabled='true']) { cursor: pointer; }
-  &--md { width: 120px; min-height: 160px; }
-  &--xs { width: 46px; min-height: 70px; gap: 1px; padding: 4px 2px; }
-  &__size { font-size: 9px; text-transform: uppercase; letter-spacing: .05em; }
-  &__output { font-size: 16px; white-space: nowrap; small { font-size: 9px; font-weight: 400; } }
-  &__name { font-size: 10px; text-transform: capitalize; }
-  &__price { font-size: 11px; color: #f0cf7a; }
-  &--xs &__output { font-size: 14px; }
-  &--xs &__size, &--xs &__name { font-size: 8px; }
-  &--xs .pg-gtok { display: none; }
-}
+/* Facilities share every plant-card size and state; the factory marks production. */
+.pg-facility__symbol { position: absolute; top: 6px; left: 4px; width: 10px; height: 10px; fill: rgba(7, 11, 17, .85); stroke: var(--tt-cyan); stroke-width: 1.5; }
+.pg-gplant--xs .pg-facility__symbol { top: 5px; left: 3px; width: 8px; height: 8px; }
+.pg-facility .pg-gplant__mid { gap: 2px; }
 .pg-game--industry .pg-ghudcard__body { flex-wrap: wrap; }
 .pg-game--industry .pg-ghudcard__plants { flex-wrap: wrap; max-width: 100%; }
 .pg-game--industry .pg-gpicker { grid-template-columns: repeat(auto-fit, minmax(126px, 1fr)); }

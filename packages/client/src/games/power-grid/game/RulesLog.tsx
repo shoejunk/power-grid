@@ -168,7 +168,7 @@ function detailFor(entry: LogEntry, nameOf: (id: string) => string, industry = f
     case 'winnerEvaluation':
       return `Using plants ${(Array.isArray(data.operatePlantIds) ? data.operatePlantIds : []).join(', ') || '—'} and the fuel already on them (§11).`;
     case 'gameOver':
-      return industry ? 'Most cash wins after every player receives final-round power and facility income. Cash ties share victory.' : 'Most suppliable cities wins, even if someone else triggered the end. Money breaks ties (§11).';
+      return data.victory === 'money' ? 'Most cash wins after every player receives final-round power and facility income. Cash ties share victory.' : 'Most suppliable cities wins, even if someone else triggered the end. Money breaks ties (§11).';
     case 'uraniumPhaseOut':
       return 'Plant 39 was bought, so uranium is never resupplied again on the Germany map (§12).';
     case 'playerOrder':

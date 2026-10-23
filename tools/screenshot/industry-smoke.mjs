@@ -44,8 +44,38 @@ try {
   });
   await page.waitForFunction(() => window.industryFixture.settings.rulesMode === 'industry');
   await page.screenshot({ path: resolve(out, 'settings.png'), fullPage: true });
+  assert.doesNotMatch(await page.$eval('body', el => el.innerText), /Cash target/);
+  await open('cards');
+  const cards = await page.evaluate(() => [...document.querySelectorAll('[data-size]')].map(row => ({
+    size: row.dataset.size,
+    cards: [...row.querySelectorAll('.pg-gplant')].map(card => ({
+      width: card.getBoundingClientRect().width, height: card.getBoundingClientRect().height,
+      art: getComputedStyle(card.querySelector('.pg-gplant__art')).backgroundImage,
+      factory: !!card.querySelector('.pg-facility__symbol'),
+      overflow: card.querySelector('.pg-gplant__mid').scrollWidth > card.querySelector('.pg-gplant__mid').clientWidth,
+    }))
+  })));
+  for (const row of cards) {
+    for (const card of row.cards) {
+      assert.equal(card.width, row.cards[0].width, row.size);
+      assert.equal(card.height, row.cards[0].height, row.size);
+      assert.equal(card.overflow, false, row.size);
+      assert.notEqual(card.art, 'none');
+    }
+    for (const start of [0, 4, 8, 12]) {
+      assert.equal(row.cards[start].factory, false);
+      for (const offset of [1, 2, 3]) {
+        assert.equal(row.cards[start + offset].factory, true);
+        assert.equal(row.cards[start + offset].art, row.cards[start].art);
+      }
+    }
+  }
+  await page.screenshot({ path: resolve(out, 'facility-card-sizes.png'), fullPage: true });
   await open('auction');
   await page.waitForSelector('button.pg-facility');
+  assert.ok(await page.$('.pg-facility .pg-gplant__discount'));
+  assert.ok(await page.$('.pg-gmarketrow--future .pg-facility.is-muted'));
+  assert.equal(await page.$('.pg-gmarketrow--future button.pg-facility'), null);
   await page.click('button.pg-facility[aria-label="Small Coal Mine"]');
   await clickText('Submit sealed range');
   await page.waitForFunction(() => window.industryFixture.state().auction?.plantId === 101);
@@ -59,9 +89,10 @@ try {
   await clickText('Scrap Small Oil Refinery');
   await page.waitForFunction(() => window.industryFixture.state().scrappedFacilities?.includes(104));
   await open('end');
-  assert.match(await page.$eval('body', el => el.innerText), /All final-round income paid/);
-  assert.doesNotMatch(await page.$eval('body', el => el.innerText), /No cash paid|This phase pays nothing/);
-  await page.screenshot({ path: resolve(out, 'cash-victory.png') });
+  assert.match(await page.$eval('body', el => el.innerText), /No cash paid|This phase pays nothing/);
+  assert.doesNotMatch(await page.$eval('body', el => el.innerText), /All final-round income paid|Most cash wins/);
+  assert.equal(await page.evaluate(() => window.industryFixture.state().winnerId), 'p2');
+  await page.screenshot({ path: resolve(out, 'city-victory.png') });
   await open('classic');
   assert.equal(await page.$('.pg-facility'), null);
   await page.screenshot({ path: resolve(out, 'classic.png') });
@@ -71,7 +102,7 @@ try {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   assert.equal(overflow, false);
   assert.deepEqual(errors, []);
-  writeFileSync(resolve(out, 'report.json'), JSON.stringify({ passed: true, errors, overflow, checks: ['settings opt-in', 'facility nomination and sealed auction', 'facility ownership', 'six-card scrap', 'cash victory', 'classic mode', '1280px viewport'] }, null, 2));
+  writeFileSync(resolve(out, 'report.json'), JSON.stringify({ passed: true, errors, overflow, checks: ['settings opt-in', 'facility nomination and sealed auction', 'facility ownership', 'six-card scrap', 'city victory', 'matching card sizes and resource art', 'facility discounts and future market', 'classic mode', '1280px viewport'] }, null, 2));
   console.log(`Industry UI smoke passed. Screenshots: ${out}`);
 } catch (error) {
   console.error('Page errors:', errors);

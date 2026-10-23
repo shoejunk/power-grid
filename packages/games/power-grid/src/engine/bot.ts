@@ -54,7 +54,7 @@ import { buildTargets } from './building.js';
 import { minimumBid } from './plantMarket.js';
 import { cheapestRoutes, neighboursInZone, stateMap } from './mapAccess.js';
 import type { LegalActions } from './legal.js';
-import { auctionCardIds, cardLimit, industryMoneyTarget, isIndustry, ownedCardIds } from './industry.js';
+import { auctionCardIds, cardLimit, industryMoneyTarget, isIndustry, isLegacyIndustry, ownedCardIds } from './industry.js';
 import { findFacility } from '../data/facilities.js';
 
 /* ------------------------------------------------------------------ *
@@ -441,7 +441,7 @@ function planRound(
       const leftover = money - spend;
       // Capacity beyond what the bot can plausibly connect soon is not income.
       const usable = Math.min(choice.capacity, ctx.network + k + FUTURE_BUILD_HEADROOM);
-      const score = isIndustry(ctx.state) ?
+      const score = isLegacyIndustry(ctx.state) ?
         leftover + industryHorizon(ctx.state) * payoutFor(powered) + Math.min(usable - powered, 2) * 2 :
         INCOME_ROUNDS * payoutFor(powered) +
         POWERED_CITY_VALUE * powered +
@@ -482,6 +482,7 @@ function setsAfterAcquiring(owned: readonly number[], plantId: number): number[]
 
 /** Value of owning `plantId` at price `price`, after the forced scrap if any. */
 function industryHorizon(state: GameState): number {
+  if (!isLegacyIndustry(state)) return Math.max(...humanPlayers(state).map(p => p.cities.length)) >= endGameThreshold(state) - 3 ? 1 : 3;
   const leader = Math.max(...humanPlayers(state).map(p => p.money));
   return leader >= industryMoneyTarget(state.settings) - 60 ? 1 : 3;
 }
@@ -815,7 +816,7 @@ function buildingAction(ctx: BotContext, legal: LegalActions): GameAction {
  */
 function closingCity(ctx: BotContext, legal: LegalActions): CityId | undefined {
   const state = ctx.state;
-  if (isIndustry(state)) return undefined;
+  if (isLegacyIndustry(state)) return undefined;
   if (state.endGameTriggered) return undefined;
 
   const player = getPlayer(state, ctx.playerId);

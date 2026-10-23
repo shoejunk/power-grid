@@ -5,7 +5,10 @@ import { FACILITIES, getFacility } from '../data/facilities.js';
 import { humanPlayers, pushLog } from './state.js';
 
 export const isIndustry = (state: Pick<GameState, 'settings'>): boolean => state.settings.rulesMode === 'industry';
-// Deliberately explicit per count: tune from playtests without changing classic rules.
+// Saved version-4 games retain their original cash victory and separate offers.
+export const isLegacyIndustry = (state: Pick<GameState, 'settings' | 'version'>): boolean => isIndustry(state) && state.version < 5;
+export const usesMixedMarket = (state: GameState): boolean => isIndustry(state) && !isLegacyIndustry(state);
+/** Legacy replay values, not the victory condition for new Industry games. */
 export const INDUSTRY_MONEY_TARGETS: Readonly<Record<number, number>> = { 2: 250, 3: 250, 4: 250, 5: 250, 6: 250 };
 export const industryMoneyTarget = (settings: GameSettings): number => settings.moneyTarget ?? INDUSTRY_MONEY_TARGETS[settings.playerCount] ?? 250;
 export const INDUSTRY_BASE_REFILL: Readonly<Record<number, ResourceBundle>> = {
@@ -18,10 +21,10 @@ export const INDUSTRY_BASE_REFILL: Readonly<Record<number, ResourceBundle>> = {
 export const industryBaseRefill = (state: GameState): ResourceBundle => ({ ...INDUSTRY_BASE_REFILL[state.settings.playerCount]! });
 export const ownedCardIds = (player: Player): number[] => [...player.plants.map(p => p.plantId), ...(player.facilities ?? [])];
 export const cardLimit = (state: GameState): number => isIndustry(state) ? 5 : 3;
-export const auctionCardIds = (state: GameState): number[] => [...state.plantMarket.current, ...(isIndustry(state) ? state.facilityMarket ?? [] : [])];
+export const auctionCardIds = (state: GameState): number[] => [...state.plantMarket.current, ...(isLegacyIndustry(state) ? state.facilityMarket ?? [] : [])];
 
 export function initializeIndustry(state: GameState): void {
-  state.facilityMarket = FACILITIES.filter(f => f.size === 'small').map(f => f.id);
+  if (isLegacyIndustry(state)) state.facilityMarket = FACILITIES.filter(f => f.size === 'small').map(f => f.id);
   state.scrappedFacilities = [];
   for (const player of humanPlayers(state)) player.facilities = [];
 }

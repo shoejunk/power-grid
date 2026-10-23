@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import type { Player } from '@game/power-grid';
-import { END_GAME_THRESHOLD, cardLimit, industryMoneyTarget, isIndustry, ownedCardIds, STEP2_THRESHOLD, scorePlayer } from '@game/power-grid';
+import { END_GAME_THRESHOLD, cardLimit, industryMoneyTarget, isLegacyIndustry, ownedCardIds, STEP2_THRESHOLD, scorePlayer } from '@game/power-grid';
 
 import { springSnappy, springSoft } from '@tt/ui';
 import {
@@ -108,19 +108,19 @@ function HudCard({
           <Money value={player.money} size="md" label={`${player.name} balance`} />
           <Tooltip
             placement="bottom"
-            title={isIndustry(state) ? `Cash target: ${industryMoneyTarget(state.settings)} Elektro` : `${player.name} total assets: ${score.total}`}
-            content={isIndustry(state) ? 'Only cash determines the winner. Everyone receives power and facility income before final standings.' : `Elektro ${score.elektro} + cities ${score.cities} + plants ${score.plants} + stored resources ${score.resources}. Each city is worth 20; plants use their printed numbers; fuel uses its current market price.`}
+            title={isLegacyIndustry(state) ? `Cash target: ${industryMoneyTarget(state.settings)} Elektro` : `${player.name} total assets: ${score.total}`}
+            content={isLegacyIndustry(state) ? 'Only cash determines the winner. Everyone receives power and facility income before final standings.' : `Elektro ${score.elektro} + cities ${score.cities} + plants ${score.plants} + stored resources ${score.resources}. Each city is worth 20; plants use their printed numbers; fuel uses its current market price.`}
           >
-            <span className="pg-ghudcard__score" tabIndex={0} aria-label={isIndustry(state) ? `Cash target ${industryMoneyTarget(state.settings)}` : `${player.name} total assets: ${score.total}`}>
-              <span>{isIndustry(state) ? 'Cash target' : 'Total Assets'}</span>
-              <strong className="tt-numeral">{isIndustry(state) ? industryMoneyTarget(state.settings) : score.total}</strong>
+            <span className="pg-ghudcard__score" tabIndex={0} aria-label={isLegacyIndustry(state) ? `Cash target ${industryMoneyTarget(state.settings)}` : `${player.name} total assets: ${score.total}`}>
+              <span>{isLegacyIndustry(state) ? 'Cash target' : 'Total Assets'}</span>
+              <strong className="tt-numeral">{isLegacyIndustry(state) ? industryMoneyTarget(state.settings) : score.total}</strong>
             </span>
           </Tooltip>
           <Tooltip
             placement="bottom"
             title={`${cities} connected ${plural(cities, 'city', 'cities')}`}
             rule="§10 Step 2, §11 End of game"
-            content={isIndustry(state) ? `Step 2 opens at ${step2At} cities. Cities do not trigger victory in Industry. ${player.housesRemaining} houses remain.` : `Step 2 begins once any player reaches ${step2At} cities with ${count} players; the game ends after Phase 4 once any player reaches ${endAt}. ${player.housesRemaining} houses remain in supply.`}
+            content={isLegacyIndustry(state) ? `Step 2 opens at ${step2At} cities. Cities do not trigger victory in Industry. ${player.housesRemaining} houses remain.` : `Step 2 begins once any player reaches ${step2At} cities with ${count} players; the game ends after Phase 4 once any player reaches ${endAt}. ${player.housesRemaining} houses remain in supply.`}
           >
             <span className="pg-ghudcard__cities" tabIndex={0}>
               <span className="tt-numeral">{cities}</span>

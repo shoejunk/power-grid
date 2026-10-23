@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { GameMap, LegalActions, MapCity } from '@game/power-grid';
-import { END_GAME_THRESHOLD, STEP2_THRESHOLD, getMap, legalActions, isIndustry, industryMoneyTarget } from '@game/power-grid';
+import { END_GAME_THRESHOLD, STEP2_THRESHOLD, getMap, legalActions, isIndustry, isLegacyIndustry, industryMoneyTarget } from '@game/power-grid';
 
 import { BoardSlot } from '../game/BoardSlot';
 import { PlayerHud } from '../game/Hud';
@@ -163,7 +163,7 @@ export function GameScreen(): JSX.Element {
               placement="bottom"
               title="How close is the end?"
               rule="§10 Step 2, §11 End of game"
-              content={isIndustry(gameState) ? `Step 2 begins at ${step2At} connected cities. The cash target is ${industryMoneyTarget(gameState.settings)} Elektro, checked after all round income.` : `With ${count} players, Step 2 begins at ${step2At} connected cities and the game ends after Phase 4 once anyone reaches ${endAt}. The largest network right now is ${leader}.`}
+              content={isLegacyIndustry(gameState) ? `Step 2 begins at ${step2At} connected cities. The cash target is ${industryMoneyTarget(gameState.settings)} Elektro, checked after all round income.` : `With ${count} players, Step 2 begins at ${step2At} connected cities and the game ends after Phase 4 once anyone reaches ${endAt}. The largest network right now is ${leader}.`}
             >
               <div className="pg-gclock" tabIndex={0}>
                 <span className="pg-gclock__track" aria-hidden="true">
@@ -181,7 +181,7 @@ export function GameScreen(): JSX.Element {
                 <span className="pg-gclock__legend">
                   <b className="tt-numeral">{leader}</b>
                   <em>
-                    Step 2 at {step2At} · {isIndustry(gameState) ? `cash target ${industryMoneyTarget(gameState.settings)}₤` : `ends at ${endAt}`}
+                    Step 2 at {step2At} · {isLegacyIndustry(gameState) ? `cash target ${industryMoneyTarget(gameState.settings)}₤` : `ends at ${endAt}`}
                   </em>
                 </span>
               </div>

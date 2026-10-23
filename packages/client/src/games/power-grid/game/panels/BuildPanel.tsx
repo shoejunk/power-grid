@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import type { BuildTarget } from '@game/power-grid';
 import {
   END_GAME_THRESHOLD,
-  isIndustry, industryMoneyTarget,
+  isLegacyIndustry, industryMoneyTarget,
   HOUSE_SLOT_COSTS,
   PAYMENT_TABLE,
   SLOTS_OPEN_AT_STEP,
@@ -127,7 +127,7 @@ export function BuildPanel(): JSX.Element {
           <b className="tt-numeral">{me.cities.length}</b> {plural(me.cities.length, 'city', 'cities')}
         </span>
         <span className="tt-caption">
-          Step 2 at {step2At} cities · {isIndustry(state) ? `cash target ${industryMoneyTarget(state.settings)} Elektro` : `game ends at ${endAt} cities`}
+          Step 2 at {step2At} cities · {isLegacyIndustry(state) ? `cash target ${industryMoneyTarget(state.settings)} Elektro` : `game ends at ${endAt} cities`}
         </span>
       </div>
 
