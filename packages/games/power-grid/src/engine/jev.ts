@@ -9,7 +9,7 @@ import { endGameThreshold } from './endgame.js';
 import { PAYMENT_TABLE, STEP2_THRESHOLD, REFILL_TABLE, HOUSE_SLOT_COSTS, payoutFor } from './constants.js';
 import { JEV_RULES } from './jevRules.js';
 import { cardLimit, industryBaseRefill, industryMoneyTarget, isIndustry, isLegacyIndustry } from './industry.js';
-import { FACILITIES, findFacility } from '../data/facilities.js';
+import { facilitiesForVersion, findFacility } from '../data/facilities.js';
 
 /** Finite, validated choices. Money decisions are bounded by the player's cash. */
 export function jevChoices(state: GameState, playerId: string): GameAction[] {
@@ -71,7 +71,7 @@ export function jevChoices(state: GameState, playerId: string): GameAction[] {
 export function jevContext(state: GameState, playerId: string) {
   return {
     game: isIndustry(state) ? 'Power Grid: Industry' : 'Power Grid', playerId, phase: state.phase, step: state.step, round: state.round,
-    ...(isIndustry(state) ? { facilities: FACILITIES, ...(isLegacyIndustry(state) ? { facilityMarket: state.facilityMarket, moneyTarget: industryMoneyTarget(state.settings) } : {}), baselineRefill: industryBaseRefill(state), maxCards: cardLimit(state) } : {}),
+    ...(isIndustry(state) ? { facilities: facilitiesForVersion(state.version), ...(isLegacyIndustry(state) ? { facilityMarket: state.facilityMarket, moneyTarget: industryMoneyTarget(state.settings) } : {}), baselineRefill: industryBaseRefill(state), maxCards: cardLimit(state) } : {}),
     settings: { mapId: state.settings.mapId, playerCount: state.settings.playerCount, experiencedStart: state.settings.experiencedStart, againstTheTrust: state.settings.againstTheTrust },
     setupStage: state.setupStage, activePlayerId: state.activePlayerId,
     zone: state.zone, playerOrder: state.playerOrder, citySlots: state.citySlots,

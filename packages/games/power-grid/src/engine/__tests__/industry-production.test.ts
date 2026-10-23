@@ -1,0 +1,84 @@
+import { expect, it } from 'vitest';
+import { FACILITIES, facilitiesForVersion, getFacility, compareMarketCards } from '../../data/facilities.js';
+import { RESOURCE_TYPES } from '../../types.js';
+import { createGame, applyAction, acquirePlant, scrapPlant, refillMarket } from '../index.js';
+import { jevContext } from '../jev.js';
+import { NOW, seats, settingsFor } from './helpers.js';
+
+function industry(version = 6) {
+  const state = createGame({ ...settingsFor({ playerCount: 2 }), rulesMode: 'industry' }, seats(2), 'p1', 'PROD01', { now: NOW, version });
+  return applyAction(state, 'p1', { type: 'selectZone', areas: [] }, NOW);
+}
+
+it('has two independently identified copies of each resource and size, producing 1/3/5 at unchanged costs', () => {
+  expect(FACILITIES).toHaveLength(24);
+  expect(new Set(FACILITIES.map(f => f.id)).size).toBe(24);
+  for (const resource of RESOURCE_TYPES) {
+    for (const [size, output] of [['small', 1], ['medium', 3], ['large', 5]] as const) {
+      const copies = FACILITIES.filter(f => f.resource === resource && f.size === size);
+      expect(copies).toHaveLength(2);
+      expect(copies.map(f => f.output)).toEqual([output, output]);
+      expect(copies.map(f => f.cost)).toEqual([getFacility(copies[0]!.id, 5).cost, getFacility(copies[0]!.id, 5).cost]);
+    }
+  }
+  expect([110, 210, 102, 202, 18].sort(compareMarketCards)).toEqual([18, 102, 202, 110, 210]);
+});
+
+it.each([4, 5])('keeps the twelve-card 1/2/3 catalog for version %i saves and AI context', version => {
+  const state = industry(version);
+  const cards = facilitiesForVersion(version);
+  expect(cards).toHaveLength(12);
+  expect(cards.slice(0, 3).map(f => f.output)).toEqual([1, 2, 3]);
+  expect(jevContext(state, state.activePlayerId!).facilities).toEqual(cards);
+  state.players.p1!.facilities = [103];
+  for (const slot of state.resourceMarket.coal) slot.filled = 0;
+  state.supply.coal = 24;
+  refillMarket(state, NOW);
+  expect(state.log.find(e => e.data?.event === 'facilityIncome')?.data?.requested).toBe(3);
+});
+
+it('lets one player acquire both copies and scrap just one', () => {
+  const state = industry();
+  state.plantMarket.current = [101, 201, 10, 13];
+  state.plantMarket.future = []; state.plantMarket.stack = [];
+  state.plantMarket.discountPlantId = null;
+  acquirePlant(state, NOW, 'p1', 101, { price: 8, via: 'auction' });
+  acquirePlant(state, NOW, 'p1', 201, { price: 8, via: 'auction' });
+  expect(state.players.p1!.facilities).toEqual([101, 201]);
+  expect(state.players.p1!.money).toBe(34);
+  scrapPlant(state, NOW, 'p1', 101);
+  expect(state.players.p1!.facilities).toEqual([201]);
+  expect(state.plantMarket.removed).toContain(101);
+  expect(state.plantMarket.removed).not.toContain(201);
+});
+
+it.each([1, 2, 3] as const)('delivers both large mines at five each and charges ten handling fees in Step %i', step => {
+  const state = industry(); state.step = step;
+  state.players.p1!.facilities = [103]; state.players.p2!.facilities = [203];
+  for (const slot of state.resourceMarket.coal) slot.filled = 0;
+  state.supply.coal = 24;
+  refillMarket(state, NOW);
+  const payments = state.log.filter(e => e.data?.event === 'facilityIncome').map(e => e.data!);
+  expect(payments).toHaveLength(2);
+  for (const payment of payments) {
+    expect(payment.output).toBe(5);
+    expect(payment.requested).toBe(10);
+    expect(payment.delivered).toBe(10);
+    expect(payment.totalRevenue).toBe(55); // 65 in filled-slot prices less ten handling fees
+  }
+  expect(state.players.p1!.money + state.players.p2!.money).toBe(155);
+  expect(state.supply.coal).toBe(13); // one free baseline plus ten produced
+  expect(state.resourceMarket.coal.reduce((n, slot) => n + slot.filled, 0)).toBe(11);
+});
+
+it('limits doubled five-token output to the remaining finite reserves', () => {
+  const state = industry();
+  state.players.p1!.facilities = [103]; state.players.p2!.facilities = [203];
+  for (const slot of state.resourceMarket.coal) slot.filled = 0;
+  state.supply.coal = 3;
+  refillMarket(state, NOW);
+  expect(state.supply.coal).toBe(0);
+  expect(state.players.p1!.money).toBe(57);
+  expect(state.players.p2!.money).toBe(57);
+  expect(state.log.find(e => e.data?.event === 'facilityIncome')?.data?.delivered).toBe(2);
+});

@@ -84,7 +84,7 @@ function ResupplySummaryButton(): JSX.Element {
   const steps = [1, 2, 3] as const;
   if (isIndustry(state)) {
     const baseline = industryBaseRefill(state);
-    const facilities = Object.values(state.players).flatMap(p => p.facilities ?? []).map(getFacility);
+    const facilities = Object.values(state.players).flatMap(p => p.facilities ?? []).map(id => getFacility(id, state.version));
     return <><Button variant="ghost" size="sm" onClick={() => setOpen(true)}>Resupply & production</Button>
       {open ? <Modal open onClose={() => setOpen(false)} title="Industry resupply" description="Fixed baseline plus owned facilities, every round." width="560px">
         <div className="pg-gsheet"><table><thead><tr><th>Resource</th><th>Baseline</th><th>Facilities</th><th>Total requested</th></tr></thead>

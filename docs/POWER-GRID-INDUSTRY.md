@@ -1,10 +1,10 @@
 # Power Grid: Industry
 
-Industry is an optional Power Grid rules mode selected when creating a table. Classic remains the default; existing saves without `rulesMode` retain classic rules. Industry shares auctions, maps, resource purchases, power production, networking and rendering with classic. Its economy and balance tables live in `engine/industry.ts`; facility definitions live in `data/facilities.ts`. New Industry games use version 5; classic games still use version 3. Existing version-4 Industry saves retain their separate facility offers and cash victory for deterministic replay. New games use the rules below.
+Industry is an optional Power Grid rules mode selected when creating a table. Classic remains the default; existing saves without `rulesMode` retain classic rules. Industry shares auctions, maps, resource purchases, power production, networking and rendering with classic. Its economy and balance tables live in `engine/industry.ts`; facility definitions live in `data/facilities.ts`. New Industry games use version 6; classic games still use version 3. Existing version-4 Industry saves retain their separate facility offers and cash victory for deterministic replay. Version-5 saves retain one copy per facility and 1/2/3 output. New games use the rules below.
 
 ## Rules
 
-- Twelve facility cards: small, medium and large for coal, oil, garbage and uranium. Each makes one resource type, at 1, 2 or 3 tokens per round. No abilities, upkeep, city placement or connection cost.
+- Twenty-four facility cards: two copies each of small, medium and large facilities for coal, oil, garbage and uranium. Each makes one resource type, at 1, 3 or 5 tokens per round. Copies have distinct identities and can be owned together; each counts toward the five-card limit. No abilities, upkeep, city placement or connection cost.
 - Facilities are shuffled into the plant deck and share the current and future markets. Facilities costing 15 or less join the opening plug-backed pool; the rest join the socket-backed pool. Normal random setup removals apply to both kinds, so not every facility appears in every game. All replacement, discount, removal, burial and Step-transition rules apply equally. Cards sort by printed cost; plants precede facilities on equal cost, then facilities sort coal, oil, garbage, uranium.
 - One auction purchase per round: a plant **or** a facility. In the first round, acquire either kind. Printed cost is the minimum bid, or 1 Elektro when discounted; only the winning bid is paid. The discount replacement rule compares printed costs strictly: equal-cost replacements are kept.
 - Own up to five plants and facilities combined. Acquiring a sixth pauses play for a scrap choice. Industry permits scrapping any of the six, including the newly acquired card. Fuel on a scrapped plant transfers normally; facilities cannot store or consume fuel.
@@ -19,10 +19,10 @@ Industry is an optional Power Grid rules mode selected when creating a table. Cl
 
 | Resource | Small cost / output | Medium cost / output | Large cost / output |
 |---|---|---|---|
-| Coal | 8 / 1 | 18 / 2 | 30 / 3 |
-| Oil | 10 / 1 | 22 / 2 | 36 / 3 |
-| Garbage | 12 / 1 | 24 / 2 | 40 / 3 |
-| Uranium | 18 / 1 | 36 / 2 | 54 / 3 |
+| Coal | 8 / 1 | 18 / 3 | 30 / 5 |
+| Oil | 10 / 1 | 22 / 3 | 36 / 5 |
+| Garbage | 12 / 1 | 24 / 3 | 40 / 5 |
+| Uranium | 18 / 1 | 36 / 3 | 54 / 5 |
 
 | Players | Coal baseline | Oil baseline | Garbage baseline | Uranium baseline |
 |---|---|---|---|---|
@@ -40,7 +40,8 @@ These numbers are starting values, not a demonstrated balance result. Watch faci
 - `npm run test -w @tt/server -- power-grid-legacy-replay power-grid-industry-replay games integration table-improvements`
 - `node --import tsx --conditions=development tools/verify-power-grid-classic.mjs` compares original commit `4cc87a6` against current classic states, logs, RNG and bot decisions for versions 1–3.
 - `node --import tsx --conditions=development tools/verify-power-grid-classic.mjs --legacy-industry` compares complete version-4 games against released commit `a64be9b`.
+- `node --import tsx --conditions=development tools/verify-power-grid-classic.mjs --industry-v5` compares complete version-5 games against released commit `f375e74`.
 - `npm run build -w @tt/client -- --outDir ../../.shots/industry-client-build`
 - `node tools/screenshot/industry-smoke.mjs` starts a temporary Vite server on port 5188 and uses an installed Chromium test browser (override with `BROWSER_EXE`). It exercises the actual UI and reducer with local fixtures, not live multiplayer or human gameplay. Screenshots and report go to `.shots/industry-ui/`.
 
-The engine tests include full deterministic games at 2–6 players, city-based victory, no final income, mixed-deck setup and discount rules, mixed scrapping, exact price-slot revenue, finite reserves, full markets, proportional revenue, map exceptions and classic isolation. The server test replays complete version-4 and version-5 Industry games through the persisted audit contract. None of these proves competitive balance or human enjoyment.
+The engine tests include full deterministic games at 2–6 players, city-based victory, no final income, mixed-deck setup and discount rules, mixed scrapping, exact price-slot revenue, finite reserves, full markets, proportional revenue, map exceptions and classic isolation. The server test replays complete version-4, version-5 and version-6 Industry games through the persisted audit contract. None of these proves competitive balance or human enjoyment.

@@ -10,7 +10,7 @@ export interface Facility {
   cost: number;
 }
 
-export const FACILITIES: readonly Facility[] = [
+export const LEGACY_FACILITIES: readonly Facility[] = [
   { id: 101, name: 'Small Coal Mine', resource: 'coal', size: 'small', output: 1, cost: 8 },
   { id: 102, name: 'Medium Coal Mine', resource: 'coal', size: 'medium', output: 2, cost: 18 },
   { id: 103, name: 'Large Coal Mine', resource: 'coal', size: 'large', output: 3, cost: 30 },
@@ -25,9 +25,15 @@ export const FACILITIES: readonly Facility[] = [
   { id: 112, name: 'Large Uranium Mine', resource: 'uranium', size: 'large', output: 3, cost: 54 },
 ];
 
-export const findFacility = (id: number): Facility | undefined => FACILITIES.find(f => f.id === id);
-export function getFacility(id: number): Facility {
-  const facility = findFacility(id);
+/** Each physical card needs its own ID for auctions, discounts and scrapping. */
+export const FACILITIES: readonly Facility[] = [0, 100].flatMap(offset =>
+  LEGACY_FACILITIES.map(f => ({ ...f, id: f.id + offset, output: { small: 1, medium: 3, large: 5 }[f.size] })));
+
+/** Preserve the deck and production used by existing audited games. */
+export const facilitiesForVersion = (version: number): readonly Facility[] => version < 6 ? LEGACY_FACILITIES : FACILITIES;
+export const findFacility = (id: number, version = 6): Facility | undefined => facilitiesForVersion(version).find(f => f.id === id);
+export function getFacility(id: number, version = 6): Facility {
+  const facility = findFacility(id, version);
   if (!facility) throw new Error(`Unknown facility: ${id}`);
   return facility;
 }
@@ -35,4 +41,6 @@ export const cardName = (id: number): string => findFacility(id)?.name ?? `plant
 
 /** Printed number sorts cards; stable IDs break equal-cost ties (plants first). */
 export const cardNumber = (id: number): number => findFacility(id)?.cost ?? id;
-export const compareMarketCards = (a: number, b: number): number => cardNumber(a) - cardNumber(b) || a - b;
+const facilityTypeId = (id: number): number => id >= 201 && id <= 212 ? id - 100 : id;
+export const compareMarketCards = (a: number, b: number): number =>
+  cardNumber(a) - cardNumber(b) || facilityTypeId(a) - facilityTypeId(b) || a - b;

@@ -9,9 +9,11 @@ import { PowerGridSettings } from '../../settings/PowerGridSettings';
 import '@tt/ui/styles/index.scss';
 import '../../styles/power-grid.scss';
 
-const view = new URLSearchParams(location.search).get('view');
+const params = new URLSearchParams(location.search);
+const view = params.get('view');
+const rulesVersion = params.get('version') === '5' ? 5 : 6;
 let state = createGame({ ...powerGrid.defaultSettings(), playerCount: 2, rulesMode: view === 'classic' ? 'classic' : 'industry', seed: 'industry-ui' },
-  [{ id: 'p1', name: 'Ada' }, { id: 'p2', name: 'Brunel' }], 'p1', 'UI0001', { gameId: 'industry-fixture', now: 1000 });
+  [{ id: 'p1', name: 'Ada' }, { id: 'p2', name: 'Brunel' }], 'p1', 'UI0001', { gameId: 'industry-fixture', now: 1000, version: view === 'classic' ? 3 : rulesVersion });
 state = applyAction(state, 'p1', { type: 'selectZone', areas: [] }, 1000);
 
 function publish() {
@@ -62,7 +64,7 @@ function CardFixture() {
   return <div style={{ padding: 40, display: 'grid', gap: 30 }}>{(['xs', 'sm', 'md'] as const).map(size =>
     <div key={size} data-size={size} style={{ display: 'flex', gap: 12, alignItems: 'start' }}>
       {[4, 101, 102, 103, 3, 104, 105, 106, 6, 107, 108, 109, 11, 110, 111, 112].map(plantId =>
-        <PlantCard key={plantId} plantId={plantId} size={size} />)}
+        <PlantCard rulesVersion={state.version} key={plantId} plantId={plantId} size={size} />)}
     </div>)}</div>;
 }
 createRoot(document.getElementById('root')!).render(view === 'settings' ? <SettingsFixture /> : view === 'cards' ? <CardFixture /> : <GameScreen />);

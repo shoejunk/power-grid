@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FACILITIES } from '../../data/facilities.js';
+import { LEGACY_FACILITIES as FACILITIES } from '../../data/facilities.js';
 import { powerGrid } from '../../plugin.js';
 import { RESOURCE_TYPES, type GameState } from '../../types.js';
 import { acquirePlant, applyAction, botActionFor, checkEndGameTrigger, createGame, defaultActionFor,

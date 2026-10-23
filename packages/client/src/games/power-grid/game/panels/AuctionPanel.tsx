@@ -192,7 +192,7 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
                  * had to hover each option to compare them.
                  */}
                 <span className="pg-gpicker__spec">
-                  {findFacility(option.plantId) ? <span>{findFacility(option.plantId)!.name}<br /><b>+{findFacility(option.plantId)!.output} {findFacility(option.plantId)!.resource}/round</b></span> : <>
+                  {findFacility(option.plantId) ? <span>{findFacility(option.plantId)!.name}<br /><b>+{findFacility(option.plantId, state.version)!.output} {findFacility(option.plantId)!.resource}/round</b></span> : <>
                   {fuelText(getPlant(option.plantId))}
                   <span className="pg-gpicker__arrow" aria-hidden="true">
                     ▸
@@ -226,7 +226,7 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
           animate={{ opacity: 1, y: 0 }}
           transition={springSoft}
         >
-          <PlantCard plantId={chosen.plantId} size="md" discounted={chosen.discounted} />
+          <PlantCard rulesVersion={state.version} plantId={chosen.plantId} size="md" discounted={chosen.discounted} />
           <div className="pg-gbidbox__ctrl">
             <span className="tt-overline">Your sealed bid range</span>
             <NumberStepper
@@ -347,7 +347,7 @@ function AuctionFloor(): JSX.Element {
       }
     >
       <div className="pg-gfloor">
-        <PlantCard plantId={auction.plantId} size="md" discounted={auction.discounted} />
+        <PlantCard rulesVersion={state.version} plantId={auction.plantId} size="md" discounted={auction.discounted} />
         <div className="pg-gfloor__figures">
           <Stat label="Minimum bid" value={`${bidding?.minimumRaise ?? auction.currentBid + 1}₤`} />
           <Stat label="Decisions received" value={`${submittedCount}/${auction.eligibleBidders.length}`} />
@@ -478,7 +478,7 @@ function ScrapChooser(): JSX.Element {
             const isNew = owned.plantId === pending.newPlantId;
             const allowed = legal.scrappablePlants.includes(owned.plantId);
             return (
-              <PlantCard
+              <PlantCard rulesVersion={state.version}
                 key={owned.plantId}
                 plantId={owned.plantId}
                 size="md"
@@ -507,7 +507,7 @@ function ScrapChooser(): JSX.Element {
 
       {choice !== null ? (
         <Callout tone="danger" title={`${cardName(choice)} leaves the game`}>
-          {findFacility(choice) ? `It produces ${findFacility(choice)!.output} ${findFacility(choice)!.resource} per round.` : `It supplies ${getPlant(choice).cities} cities.`} Scrapped cards never return to the market.
+          {findFacility(choice) ? `It produces ${findFacility(choice, state.version)!.output} ${findFacility(choice)!.resource} per round.` : `It supplies ${getPlant(choice).cities} cities.`} Scrapped cards never return to the market.
         </Callout>
       ) : null}
     </PhaseShell>
@@ -532,7 +532,7 @@ function MyPlantLimit(): JSX.Element | null {
           const id = ownedCardIds(me).sort((a, b) => a - b)[i];
           const owned = id === undefined ? undefined : me.plants.find(p => p.plantId === id) ?? { plantId: id, stored: emptyResources() };
           return owned ? (
-            <PlantCard key={owned.plantId} plantId={owned.plantId} size="xs" owned={owned} />
+            <PlantCard rulesVersion={state.version} key={owned.plantId} plantId={owned.plantId} size="xs" owned={owned} />
           ) : (
             <span key={`empty-${i}`} className="pg-glimit__empty" aria-hidden="true" />
           );

@@ -15,6 +15,7 @@ export type PlantCardSize = 'xs' | 'sm' | 'md';
 
 export interface PlantCardProps {
   plantId: number;
+  rulesVersion?: number;
   size?: PlantCardSize;
   /** Discount token sits on this plant: minimum bid is 1₤. §6. */
   discounted?: boolean;
@@ -48,6 +49,7 @@ export interface PlantCardProps {
  */
 export function PlantCard({
   plantId,
+  rulesVersion = 6,
   size = 'sm',
   discounted = false,
   minimumBid,
@@ -60,7 +62,7 @@ export function PlantCard({
   badge,
   className,
 }: PlantCardProps): JSX.Element {
-  if (findFacility(plantId)) return <FacilityCard plantId={plantId} size={size} minimumBid={minimumBid}
+  if (findFacility(plantId)) return <FacilityCard rulesVersion={rulesVersion} plantId={plantId} size={size} minimumBid={minimumBid}
     selected={selected} onSelect={onSelect} disabledReason={disabledReason} badge={badge} className={className} discounted={discounted} muted={muted} />;
   const def = getPlant(plantId);
   const art = plantArtFor(def);

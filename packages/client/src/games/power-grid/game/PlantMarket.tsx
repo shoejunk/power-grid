@@ -85,7 +85,7 @@ export function PlantMarket({
       {isLegacyIndustry(state) ? <div className="pg-gmarketrow">
         <span className="pg-gmarketrow__tag tt-overline">Facilities<em>biddable</em></span>
         <div className="pg-gplantrow">
-          {(state.facilityMarket ?? []).map(id => <PlantCard key={id} plantId={id} size="sm"
+          {(state.facilityMarket ?? []).map(id => <PlantCard rulesVersion={state.version} key={id} plantId={id} size="sm"
             minimumBid={getFacility(id).cost} selected={selectedPlantId === id || auctionPlantId === id}
             {...(selectable ? { onSelect: () => onSelect?.(id) } : {})}
             disabledReason={selectable ? reasonFor(id).reason : null} />)}
@@ -111,7 +111,7 @@ export function PlantMarket({
                   exit={{ opacity: 0, scale: 0.8, y: 10 }}
                   transition={springSoft}
                 >
-                  <PlantCard
+                  <PlantCard rulesVersion={state.version}
                     plantId={plantId}
                     size="sm"
                     discounted={market.discountPlantId === plantId}
@@ -151,7 +151,7 @@ export function PlantMarket({
                   exit={{ opacity: 0, scale: 0.8 }}
                   transition={springSoft}
                 >
-                  <PlantCard plantId={plantId} size="sm" muted />
+                  <PlantCard rulesVersion={state.version} plantId={plantId} size="sm" muted />
                 </motion.div>
               ))}
             </AnimatePresence>

@@ -7,9 +7,9 @@ import { Token } from './Tokens';
 
 const RESOURCE_ART = { coal: 4, oil: 3, garbage: 6, uranium: 11 } as const;
 
-export function FacilityCard({ plantId, size = 'sm', minimumBid, discounted = false, muted = false,
+export function FacilityCard({ plantId, rulesVersion = 6, size = 'sm', minimumBid, discounted = false, muted = false,
   selected = false, onSelect, disabledReason = null, badge, className }: PlantCardProps): JSX.Element {
-  const facility = getFacility(plantId);
+  const facility = getFacility(plantId, rulesVersion);
   const art = plantArtFor(getPlant(RESOURCE_ART[facility.resource]));
   const disabled = disabledReason !== null;
   const classes = ['pg-gplant', `pg-gplant--${size}`, 'pg-facility', selected ? 'is-selected' : '',

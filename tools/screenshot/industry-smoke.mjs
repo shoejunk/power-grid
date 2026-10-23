@@ -51,6 +51,7 @@ try {
     cards: [...row.querySelectorAll('.pg-gplant')].map(card => ({
       width: card.getBoundingClientRect().width, height: card.getBoundingClientRect().height,
       art: getComputedStyle(card.querySelector('.pg-gplant__art')).backgroundImage,
+      output: card.querySelector('.pg-gplant__cities')?.textContent,
       factory: !!card.querySelector('.pg-facility__symbol'),
       overflow: card.querySelector('.pg-gplant__mid').scrollWidth > card.querySelector('.pg-gplant__mid').clientWidth,
     }))
@@ -66,11 +67,15 @@ try {
       assert.equal(row.cards[start].factory, false);
       for (const offset of [1, 2, 3]) {
         assert.equal(row.cards[start + offset].factory, true);
+        assert.equal(row.cards[start + offset].output, String([1, 3, 5][offset - 1]));
         assert.equal(row.cards[start + offset].art, row.cards[start].art);
       }
     }
   }
   await page.screenshot({ path: resolve(out, 'facility-card-sizes.png'), fullPage: true });
+  await open('cards&version=5');
+  const oldOutputs = await page.$$eval('[data-size=sm] .pg-facility .pg-gplant__cities', nodes => nodes.map(n => n.textContent));
+  assert.deepEqual(oldOutputs, [1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3].map(String));
   await open('auction');
   await page.waitForSelector('button.pg-facility');
   assert.ok(await page.$('.pg-facility .pg-gplant__discount'));
@@ -102,7 +107,7 @@ try {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   assert.equal(overflow, false);
   assert.deepEqual(errors, []);
-  writeFileSync(resolve(out, 'report.json'), JSON.stringify({ passed: true, errors, overflow, checks: ['settings opt-in', 'facility nomination and sealed auction', 'facility ownership', 'six-card scrap', 'city victory', 'matching card sizes and resource art', 'facility discounts and future market', 'classic mode', '1280px viewport'] }, null, 2));
+  writeFileSync(resolve(out, 'report.json'), JSON.stringify({ passed: true, errors, overflow, checks: ['settings opt-in', 'facility nomination and sealed auction', 'facility ownership', 'six-card scrap', 'city victory', 'matching card sizes and resource art', 'versioned 1/3/5 and 1/2/3 output labels', 'facility discounts and future market', 'classic mode', '1280px viewport'] }, null, 2));
   console.log(`Industry UI smoke passed. Screenshots: ${out}`);
 } catch (error) {
   console.error('Page errors:', errors);

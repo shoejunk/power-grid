@@ -9,10 +9,11 @@ import { pathToFileURL } from 'node:url';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 
-const legacyIndustry = process.argv.includes('--legacy-industry');
-const reference = legacyIndustry ? 'a64be9b39302a5ef8d5bc5085a1d864c94b4fc3b' : '4cc87a660c0afb173af007ca52697e8aad98d5fb';
+const industryVersion = process.argv.includes('--industry-v5') ? 5 : 4;
+const legacyIndustry = process.argv.includes('--legacy-industry') || process.argv.includes('--industry-v5');
+const reference = industryVersion === 5 ? 'f375e74518afb6a4a807d08ae28b8f181e7d462c' : legacyIndustry ? 'a64be9b39302a5ef8d5bc5085a1d864c94b4fc3b' : '4cc87a660c0afb173af007ca52697e8aad98d5fb';
 const prefix = 'packages/games/power-grid/';
-const root = resolve(legacyIndustry ? '.shots/industry-v4-reference' : '.shots/industry-classic-reference');
+const root = resolve(legacyIndustry ? `.shots/industry-v${industryVersion}-reference` : '.shots/industry-classic-reference');
 const files = execFileSync('git', ['ls-tree', '-r', '--name-only', reference, `${prefix}src`, `${prefix}package.json`], { encoding: 'utf8' }).trim().split('\n');
 for (const file of files) {
   const target = resolve(root, file.slice(prefix.length));
@@ -21,7 +22,7 @@ for (const file of files) {
 }
 const { powerGrid: before } = await import(pathToFileURL(resolve(root, 'src/index.ts')).href);
 const { powerGrid: after } = await import('../packages/games/power-grid/src/index.ts');
-for (const version of legacyIndustry ? [4] : [1, 2, 3]) {
+for (const version of legacyIndustry ? [industryVersion] : [1, 2, 3]) {
   for (const count of [2, 4]) {
     const seats = Array.from({ length: count }, (_, i) => ({ playerId: `p${i + 1}`, name: `P${i + 1}`, color: before.descriptor.seatColors[i], isBot: true }));
     const settings = { ...before.defaultSettings(), playerCount: count, seed: 'classic-preservation', ...(legacyIndustry ? { rulesMode: 'industry' } : {}) };

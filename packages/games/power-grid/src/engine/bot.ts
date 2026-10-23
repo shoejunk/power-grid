@@ -494,7 +494,7 @@ function industryUtility(ctx: BotContext, cards: readonly number[], pool: Resour
   // Public prices only. This is a conservative valuation heuristic, not a promised payout.
   let income = 0;
   for (const id of cards) {
-    const facility = findFacility(id);
+    const facility = findFacility(id, ctx.state.version);
     if (!facility) continue;
     const price = ctx.state.resourceMarket[facility.resource].find(s => s.filled > 0)?.price ?? 8;
     income += facility.output * Math.max(0, price - 1);

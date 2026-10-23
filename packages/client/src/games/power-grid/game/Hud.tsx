@@ -144,9 +144,9 @@ function HudCard({
             player.plants
               .slice()
               .sort((a, b) => a.plantId - b.plantId)
-              .map((owned) => <PlantCard key={owned.plantId} plantId={owned.plantId} size="xs" owned={owned} />)
+              .map((owned) => <PlantCard rulesVersion={state.version} key={owned.plantId} plantId={owned.plantId} size="xs" owned={owned} />)
           )}
-          {(player.facilities ?? []).map(id => <PlantCard key={id} plantId={id} size="xs" />)}
+          {(player.facilities ?? []).map(id => <PlantCard rulesVersion={state.version} key={id} plantId={id} size="xs" />)}
           {ownedCardIds(player).length > 0 && ownedCardIds(player).length < cardLimit(state) ? (
             <span className="pg-ghudcard__slot" aria-hidden="true">
               {cardLimit(state) - ownedCardIds(player).length}

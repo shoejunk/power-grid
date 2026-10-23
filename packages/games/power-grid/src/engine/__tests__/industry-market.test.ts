@@ -22,7 +22,7 @@ function market(s: GameState, current = [101, 10, 107, 13], future = [18, 102, 1
 describe('Industry shared deck and market', () => {
   it.each([2, 3, 4, 5, 6])('shuffles facilities through normal setup for %i players', count => {
     const s = industry(count);
-    expect(s.version).toBe(5);
+    expect(s.version).toBe(6);
     expect(s.facilityMarket).toBeUndefined();
     const m = s.plantMarket;
     const all = [...m.current, ...m.future, ...m.stack, ...m.removed];

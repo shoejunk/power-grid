@@ -1,7 +1,7 @@
 /** Industry rules and balance values. Classic never calls the economy below. */
 import type { GameSettings, GameState, Player, ResourceBundle, ResourceType } from '../types.js';
 import { RESOURCE_TYPES } from '../types.js';
-import { FACILITIES, getFacility } from '../data/facilities.js';
+import { facilitiesForVersion, getFacility } from '../data/facilities.js';
 import { humanPlayers, pushLog } from './state.js';
 
 export const isIndustry = (state: Pick<GameState, 'settings'>): boolean => state.settings.rulesMode === 'industry';
@@ -24,7 +24,7 @@ export const cardLimit = (state: GameState): number => isIndustry(state) ? 5 : 3
 export const auctionCardIds = (state: GameState): number[] => [...state.plantMarket.current, ...(isLegacyIndustry(state) ? state.facilityMarket ?? [] : [])];
 
 export function initializeIndustry(state: GameState): void {
-  if (isLegacyIndustry(state)) state.facilityMarket = FACILITIES.filter(f => f.size === 'small').map(f => f.id);
+  if (isLegacyIndustry(state)) state.facilityMarket = facilitiesForVersion(state.version).filter(f => f.size === 'small').map(f => f.id);
   state.scrappedFacilities = [];
   for (const player of humanPlayers(state)) player.facilities = [];
 }
@@ -71,7 +71,7 @@ export function refillIndustryMarket(state: GameState, now: number): void {
 
   for (const resource of RESOURCE_TYPES) {
     const producers = humanPlayers(state).map(player => ({ player,
-      output: (player.facilities ?? []).map(getFacility).filter(f => f.resource === resource).reduce((n, f) => n + f.output, 0),
+      output: (player.facilities ?? []).map(id => getFacility(id, state.version)).filter(f => f.resource === resource).reduce((n, f) => n + f.output, 0),
     })).filter(p => p.output > 0).sort((a, b) => a.player.id < b.player.id ? -1 : a.player.id > b.player.id ? 1 : 0);
     if (!producers.length) continue;
     const weights = producers.map(p => p.output);
