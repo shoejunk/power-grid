@@ -52,19 +52,27 @@ const VERSION_7_FACILITIES: readonly Facility[] = facilitySpecs.map(({ anchor: _
   ({ ...facility, cost: INDUSTRY_CARD_COSTS.get(facility.id)! }));
 
 // Higher output keeps every physical card ID, price and market position unchanged.
-export const FACILITIES: readonly Facility[] = VERSION_7_FACILITIES.map(f => {
+const VERSION_8_FACILITIES: readonly Facility[] = VERSION_7_FACILITIES.map(f => {
   const output = f.output + ({ coal: 2, oil: 1, garbage: 0, uranium: 1 }[f.resource]);
   return { ...f, output, name: f.name.replace(/\(\d+\)$/, `(${output})`) };
 });
 
+// Remove the largest coal and oil facilities, retaining the relative deck order.
+const CURRENT_CARD_COSTS = new Map(pricedDeck.filter(card => card.id !== 306 && card.id !== 316)
+  .map((card, i) => [card.id, i + 3]));
+export const FACILITIES: readonly Facility[] = VERSION_8_FACILITIES
+  .filter(f => CURRENT_CARD_COSTS.has(f.id))
+  .map(f => ({ ...f, cost: CURRENT_CARD_COSTS.get(f.id)!,
+    size: f.id === 305 || f.id === 315 ? 'large' : f.size }));
+
 // Versionless lookups identify historical cards too. Production and deck membership
 // must use the saved game's version; names and costs of historical cards stay intact.
-const ALL_FACILITIES = [...FACILITIES, ...VERSION_6_FACILITIES];
+const ALL_FACILITIES = [...FACILITIES, ...VERSION_8_FACILITIES, ...VERSION_6_FACILITIES];
 
 /** Preserve the deck and production used by existing audited games. */
-export const facilitiesForVersion = (version: number): readonly Facility[] => version < 6 ? LEGACY_FACILITIES : version === 6 ? VERSION_6_FACILITIES : version === 7 ? VERSION_7_FACILITIES : FACILITIES;
+export const facilitiesForVersion = (version: number): readonly Facility[] => version < 6 ? LEGACY_FACILITIES : version === 6 ? VERSION_6_FACILITIES : version === 7 ? VERSION_7_FACILITIES : version === 8 ? VERSION_8_FACILITIES : FACILITIES;
 export const findFacility = (id: number, version?: number): Facility | undefined => (version === undefined ? ALL_FACILITIES : facilitiesForVersion(version)).find(f => f.id === id);
-export function getFacility(id: number, version = 8): Facility {
+export function getFacility(id: number, version = 9): Facility {
   const facility = findFacility(id, version);
   if (!facility) throw new Error(`Unknown facility: ${id}`);
   return facility;
@@ -73,7 +81,7 @@ export const cardName = (id: number, version = 3): string => (findFacility(id, v
 
 /** Printed number sorts cards; stable IDs break equal-cost ties (plants first). */
 export const cardNumber = (id: number, version = 3): number =>
-  version >= 7 ? INDUSTRY_CARD_COSTS.get(id) ?? id : findFacility(id)?.cost ?? id;
+  version >= 9 ? CURRENT_CARD_COSTS.get(id) ?? id : version >= 7 ? INDUSTRY_CARD_COSTS.get(id) ?? id : findFacility(id)?.cost ?? id;
 const facilityTypeId = (id: number): number => id >= 201 && id <= 212 ? id - 100 : id;
 export const compareMarketCards = (a: number, b: number, version = 3): number =>
   cardNumber(a, version) - cardNumber(b, version) || facilityTypeId(a) - facilityTypeId(b) || a - b;

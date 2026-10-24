@@ -1,11 +1,11 @@
 # Power Grid: Industry
 
-Industry is an optional Power Grid rules mode selected when creating a table. Classic remains the default; existing saves without `rulesMode` retain classic rules. Industry shares auctions, maps, resource purchases, power production, networking and rendering with classic. Its economy and balance tables live in `engine/industry.ts`; facility definitions live in `data/facilities.ts`. New Industry games use version 8; classic games still use version 3. Existing version-4 Industry saves retain their separate facility offers and cash victory for deterministic replay. Version-5 saves retain one copy per facility and 1/2/3 output. Version-6 saves retain two copies per facility and 1/3/5 output. Version-7 saves retain coal/oil output 1–6, garbage 2–5 and uranium 1–3. Versions 4–7 retain the 1-Elektro handling fee. New games use the rules below.
+Industry is an optional Power Grid rules mode selected when creating a table. Classic remains the default; existing saves without `rulesMode` retain classic rules. Industry shares auctions, maps, resource purchases, power production, networking and rendering with classic. Its economy and balance tables live in `engine/industry.ts`; facility definitions live in `data/facilities.ts`. New Industry games use version 9; classic games still use version 3. Existing version-4 Industry saves retain their separate facility offers and cash victory for deterministic replay. Version-5 saves retain one copy per facility and 1/2/3 output. Version-6 saves retain two copies per facility and 1/3/5 output. Version-7 saves retain coal/oil output 1–6, garbage 2–5 and uranium 1–3. Versions 4–7 retain the 1-Elektro handling fee. Version-8 saves retain six coal mines (3–8) and six oil refineries (2–7), with their original prices. New games use the rules below.
 
 ## Rules
 
-- Nineteen facility cards: six coal mines producing 3–8 and six oil refineries producing 2–7, four recycling facilities producing 2–5, and three uranium mines producing 2–4 tokens per round. There is one copy of each card, and each counts toward the five-card limit. No abilities, upkeep, city placement or connection cost.
-- Facilities are shuffled into the plant deck and share the current and future markets. Facilities costing 15 or less join the opening plug-backed pool; the rest join the socket-backed pool. Normal random setup removals apply to both kinds, so not every facility appears in every game. All replacement, discount, removal, burial and Step-transition rules apply equally. All 42 plants and 19 facilities have distinct printed costs, consecutively numbered 3–63. The plant order and plant backs are unchanged; facilities are interleaved among them. Cards sort by printed cost. Stable internal IDs are not prices.
+- Seventeen facility cards: five coal mines producing 3–7 and five oil refineries producing 2–6, four recycling facilities producing 2–5, and three uranium mines producing 2–4 tokens per round. There is one copy of each card, and each counts toward the five-card limit. No abilities, upkeep, city placement or connection cost.
+- Facilities are shuffled into the plant deck and share the current and future markets. Facilities costing 15 or less join the opening plug-backed pool; the rest join the socket-backed pool. Normal random setup removals apply to both kinds, so not every facility appears in every game. All replacement, discount, removal, burial and Step-transition rules apply equally. All 42 plants and 17 facilities have distinct printed costs, consecutively numbered 3–61. The plant order and plant backs are unchanged; facilities are interleaved among them. Cards sort by printed cost. Stable internal IDs are not prices.
 - One auction purchase per round: a plant **or** a facility. In the first round, acquire either kind. Printed cost is the minimum bid, or 1 Elektro when discounted; only the winning bid is paid. The discount replacement rule compares printed costs strictly. Historical games with tied costs retain the equal-cost replacement rule.
 - Own up to five plants and facilities combined. Acquiring a sixth pauses play for a scrap choice. Industry permits scrapping any of the six, including the newly acquired card. Fuel on a scrapped plant transfers normally; facilities cannot store or consume fuel.
 - The opening resource market is unchanged. Subsequent free refills are reduced and depend only on player count, never Step.
@@ -19,12 +19,12 @@ Industry is an optional Power Grid rules mode selected when creating a table. Cl
 
 | Resource | Production tiers | Printed costs (same order) |
 |---|---|---|
-| Coal | 3, 4, 5, 6, 7, 8 | 9, 17, 24, 34, 44, 52 |
-| Oil | 2, 3, 4, 5, 6, 7 | 12, 21, 31, 42, 53, 60 |
+| Coal | 3, 4, 5, 6, 7 | 9, 17, 24, 34, 44 |
+| Oil | 2, 3, 4, 5, 6 | 12, 21, 31, 42, 52 |
 | Garbage | 2, 3, 4, 5 | 15, 25, 35, 45 |
-| Uranium | 2, 3, 4 | 26, 39, 54 |
+| Uranium | 2, 3, 4 | 26, 39, 53 |
 
-Plant prices fill the remaining numbers from 3–63 in their original relative order. `data/facilities.ts` defines the interleaving anchors and generates the unique price map. Classic and saved versions 4–6 keep their previous plant prices, facility catalogs and plant-only order tiebreaker.
+Plant prices fill the remaining numbers from 3–61 in their original relative order. `data/facilities.ts` defines the interleaving anchors and generates the unique price map. Classic and saved versions 4–6 keep their previous plant prices, facility catalogs and plant-only order tiebreaker.
 
 | Players | Coal baseline | Oil baseline | Garbage baseline | Uranium baseline |
 |---|---|---|---|---|
@@ -45,7 +45,8 @@ These numbers are starting values, not a demonstrated balance result. Watch faci
 - `node --import tsx --conditions=development tools/verify-power-grid-classic.mjs --industry-v5` compares complete version-5 games against released commit `f375e74`.
 - `node --import tsx --conditions=development tools/verify-power-grid-classic.mjs --industry-v6` compares complete version-6 games against released commit `b9080a1`.
 - `node --import tsx --conditions=development tools/verify-power-grid-classic.mjs --industry-v7` compares complete version-7 games against released commit `6484659`.
+- `node --import tsx --conditions=development tools/verify-power-grid-classic.mjs --industry-v8` compares complete version-8 games against released commit `ab2cdbe`.
 - `npm run build -w @tt/client -- --outDir ../../.shots/industry-client-build`
 - `node tools/screenshot/industry-smoke.mjs` starts a temporary Vite server on port 5188 and uses an installed Chromium test browser (override with `BROWSER_EXE`). It exercises the actual UI and reducer with local fixtures, not live multiplayer or human gameplay. Screenshots and report go to `.shots/industry-ui/`.
 
-The engine tests include full deterministic games at 2–6 players, city-based victory, no final income, mixed-deck setup and discount rules, mixed scrapping, exact price-slot revenue, finite reserves, full markets, proportional revenue, map exceptions and classic isolation. The server test replays complete version-4, version-5, version-6, version-7 and version-8 Industry games through the persisted audit contract. None of these proves competitive balance or human enjoyment.
+The engine tests include full deterministic games at 2–6 players, city-based victory, no final income, mixed-deck setup and discount rules, mixed scrapping, exact price-slot revenue, finite reserves, full markets, proportional revenue, map exceptions and classic isolation. The server test replays complete version-4, version-5, version-6, version-7, version-8 and version-9 Industry games through the persisted audit contract. None of these proves competitive balance or human enjoyment.

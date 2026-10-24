@@ -3,13 +3,15 @@ import { getFacility, getPlant } from '@game/power-grid';
 import { springSnappy, Tooltip } from '@tt/ui';
 import type { PlantCardProps } from './PlantCard';
 import { plantArtFor } from '../format';
+import { cardName } from '../cardNames';
 import { Token } from './Tokens';
 
 const RESOURCE_ART = { coal: 4, oil: 3, garbage: 6, uranium: 11 } as const;
 
-export function FacilityCard({ plantId, rulesVersion = 8, size = 'sm', minimumBid, discounted = false, muted = false,
+export function FacilityCard({ plantId, rulesVersion = 8, size = 'sm', discounted = false, muted = false,
   selected = false, onSelect, disabledReason = null, badge, className }: PlantCardProps): JSX.Element {
   const facility = getFacility(plantId, rulesVersion);
+  const name = cardName(plantId, rulesVersion);
   const art = plantArtFor(getPlant(RESOURCE_ART[facility.resource]));
   const disabled = disabledReason !== null;
   const classes = ['pg-gplant', `pg-gplant--${size}`, 'pg-facility', selected ? 'is-selected' : '',
@@ -28,14 +30,14 @@ export function FacilityCard({ plantId, rulesVersion = 8, size = 'sm', minimumBi
     </span>
     {discounted ? <motion.span className="pg-gplant__discount" layoutId="pg-discount-token" transition={springSnappy}
       title="Discount token — minimum bid 1₤">1₤</motion.span> : null}
-    {minimumBid !== undefined && !discounted ? <span className="pg-gplant__min">min {minimumBid}₤</span> : null}
+
     {badge}
   </>;
-  return <Tooltip title={facility.name} rule="Industry" placement="left"
-    content={`${facility.output} ${facility.resource} produced per round. The factory symbol marks a facility: it supplies resources, not cities. Minimum bid ${discounted ? 1 : facility.cost} Elektro. Sales earn ${rulesVersion >= 8 ? 'full filled-slot prices with no handling fee' : 'filled-slot prices less 1 Elektro per delivered token'}. ${disabledReason ?? ''}`}>
-    {onSelect ? <motion.button type="button" className={classes} data-kind={facility.resource} aria-label={facility.name}
+  return <Tooltip title={name} rule="Industry" placement="left"
+    content={`Produces up to ${facility.output} ${facility.resource} each round and automatically sells it to the resource market. You earn income for resources delivered. ${disabledReason ?? ''}`.trim()}>
+    {onSelect ? <motion.button type="button" className={classes} data-kind={facility.resource} aria-label={name}
       aria-pressed={selected} aria-disabled={disabled} onClick={disabled ? undefined : onSelect}
       whileHover={disabled ? undefined : { y: -2 }} whileTap={disabled ? undefined : { scale: .97 }} transition={springSnappy}>{content}</motion.button>
-      : <div className={classes} data-kind={facility.resource} tabIndex={0} aria-label={facility.name}>{content}</div>}
+      : <div className={classes} data-kind={facility.resource} tabIndex={0} aria-label={name}>{content}</div>}
   </Tooltip>;
 }

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { cardLimit, cardName, cardNumber, emptyResources, findFacility, getPlant, isIndustry, isLegacyIndustry, ownedCardIds } from '@game/power-grid';
+import { cardLimit, cardNumber, emptyResources, findFacility, getPlant, isIndustry, isLegacyIndustry, ownedCardIds } from '@game/power-grid';
 
 import { net } from '@/net';
 import { springSoft } from '@tt/ui';
@@ -13,6 +13,7 @@ import {
 } from '@tt/ui';
 import { ConfirmDialog } from '@tt/ui';
 import { fuelText } from '../format';
+import { cardName } from '../cardNames';
 import { useMatch } from '../model';
 import { PlantCard } from '../parts/PlantCard';
 import { Callout, CostRow, PhaseShell, Stat, Waiting, type RuleLine } from './shell';
@@ -192,7 +193,7 @@ function NominatePanel({ selectedPlantId, onSelectPlant }: AuctionPanelProps): J
                  * had to hover each option to compare them.
                  */}
                 <span className="pg-gpicker__spec">
-                  {findFacility(option.plantId) ? <span>{findFacility(option.plantId, state.version)!.name}<br /><b>+{findFacility(option.plantId, state.version)!.output} {findFacility(option.plantId)!.resource}/round</b></span> : <>
+                  {findFacility(option.plantId) ? <span>{cardName(option.plantId, state.version)}<br /><b>+{findFacility(option.plantId, state.version)!.output} {findFacility(option.plantId)!.resource}/round</b></span> : <>
                   {fuelText(getPlant(option.plantId))}
                   <span className="pg-gpicker__arrow" aria-hidden="true">
                     ▸

@@ -58,17 +58,17 @@ try {
     }))
   })));
   for (const row of cards) {
-    assert.equal(row.cards.length, 23);
+    assert.equal(row.cards.length, 21);
     assert.equal(new Set(row.cards.map(c => c.cost)).size, row.cards.length);
-    assert.equal(row.cards[20].cost, '26'); // first uranium facility, distinct from plant 11
-    assert.equal(row.cards[19].cost, '13'); // plant 11 now costs 13 in Industry
+    assert.equal(row.cards[18].cost, '26'); // first uranium facility, distinct from plant 11
+    assert.equal(row.cards[17].cost, '13'); // plant 11 now costs 13 in Industry
     for (const card of row.cards) {
       assert.equal(card.width, row.cards[0].width, row.size);
       assert.equal(card.height, row.cards[0].height, row.size);
       assert.equal(card.overflow, false, row.size);
       assert.notEqual(card.art, 'none');
     }
-    for (const [start, outputs] of [[0, [3, 4, 5, 6, 7, 8]], [7, [2, 3, 4, 5, 6, 7]], [14, [2, 3, 4, 5]], [19, [2, 3, 4]]]) {
+    for (const [start, outputs] of [[0, [3, 4, 5, 6, 7]], [6, [2, 3, 4, 5, 6]], [12, [2, 3, 4, 5]], [17, [2, 3, 4]]]) {
       assert.equal(row.cards[start].factory, false);
       for (let offset = 1; offset <= outputs.length; offset++) {
         assert.equal(row.cards[start + offset].factory, true);
@@ -92,7 +92,7 @@ try {
   assert.ok(await page.$('.pg-facility .pg-gplant__discount'));
   assert.ok(await page.$('.pg-gmarketrow--future .pg-facility.is-muted'));
   assert.equal(await page.$('.pg-gmarketrow--future button.pg-facility'), null);
-  await page.click('button.pg-facility[aria-label="Coal Mine (3)"]');
+  await page.click('button.pg-facility[aria-label="Cinderbrook Colliery"]');
   await clickText('Submit sealed range');
   await page.waitForFunction(() => window.industryFixture.state().auction?.plantId === 301);
   await page.screenshot({ path: resolve(out, 'facility-auction.png') });
@@ -101,8 +101,8 @@ try {
   await open('scrap');
   await page.waitForSelector('.pg-gscrap .pg-facility');
   await page.screenshot({ path: resolve(out, 'six-card-scrap.png') });
-  await page.click('.pg-gscrap .pg-facility[aria-label="Oil Refinery (2)"]');
-  await clickText('Scrap Oil Refinery (2)');
+  await page.click('.pg-gscrap .pg-facility[aria-label="Copperport Refinery"]');
+  await clickText('Scrap Copperport Refinery');
   await page.waitForFunction(() => window.industryFixture.state().scrappedFacilities?.includes(311));
   await open('end');
   assert.match(await page.$eval('body', el => el.innerText), /No cash paid|This phase pays nothing/);

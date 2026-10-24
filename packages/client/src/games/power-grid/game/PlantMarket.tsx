@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { NominatablePlant } from '@game/power-grid';
-import { isIndustry, isLegacyIndustry, getFacility } from '@game/power-grid';
+import { isIndustry, isLegacyIndustry } from '@game/power-grid';
 
 import { springSoft } from '@tt/ui';
 import {
@@ -86,7 +86,7 @@ export function PlantMarket({
         <span className="pg-gmarketrow__tag tt-overline">Facilities<em>biddable</em></span>
         <div className="pg-gplantrow">
           {(state.facilityMarket ?? []).map(id => <PlantCard rulesVersion={state.version} key={id} plantId={id} size="sm"
-            minimumBid={getFacility(id, state.version).cost} selected={selectedPlantId === id || auctionPlantId === id}
+            selected={selectedPlantId === id || auctionPlantId === id}
             {...(selectable ? { onSelect: () => onSelect?.(id) } : {})}
             disabledReason={selectable ? reasonFor(id).reason : null} />)}
           {!state.facilityMarket?.length ? <span className="tt-caption">All 12 facilities have been sold.</span> : null}
@@ -100,7 +100,6 @@ export function PlantMarket({
         <div className="pg-gplantrow">
           <AnimatePresence initial={false} mode="popLayout">
             {market.current.map((plantId) => {
-              const option = byId.get(plantId);
               const { reason, rule } = reasonFor(plantId);
               return (
                 <motion.div
@@ -115,7 +114,6 @@ export function PlantMarket({
                     plantId={plantId}
                     size="sm"
                     discounted={market.discountPlantId === plantId}
-                    minimumBid={option?.minimumBid}
                     selected={selectedPlantId === plantId || auctionPlantId === plantId}
                     {...(selectable ? { onSelect: () => onSelect?.(plantId) } : {})}
                     disabledReason={reason}

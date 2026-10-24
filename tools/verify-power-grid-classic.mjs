@@ -9,9 +9,9 @@ import { pathToFileURL } from 'node:url';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 
-const industryVersion = process.argv.includes('--industry-v7') ? 7 : process.argv.includes('--industry-v6') ? 6 : process.argv.includes('--industry-v5') ? 5 : 4;
+const industryVersion = process.argv.includes('--industry-v8') ? 8 : process.argv.includes('--industry-v7') ? 7 : process.argv.includes('--industry-v6') ? 6 : process.argv.includes('--industry-v5') ? 5 : 4;
 const legacyIndustry = process.argv.includes('--legacy-industry') || industryVersion >= 5;
-const reference = industryVersion === 7 ? '6484659a464c4e70b05cc322417c5a7719feb584' : industryVersion === 6 ? 'b9080a1500dbeae481cae2a76daaf806d5bd9460' : industryVersion === 5 ? 'f375e74518afb6a4a807d08ae28b8f181e7d462c' : legacyIndustry ? 'a64be9b39302a5ef8d5bc5085a1d864c94b4fc3b' : '4cc87a660c0afb173af007ca52697e8aad98d5fb';
+const reference = industryVersion === 8 ? 'ab2cdbe08946b66d038007a9d9fdcd563bc81cff' : industryVersion === 7 ? '6484659a464c4e70b05cc322417c5a7719feb584' : industryVersion === 6 ? 'b9080a1500dbeae481cae2a76daaf806d5bd9460' : industryVersion === 5 ? 'f375e74518afb6a4a807d08ae28b8f181e7d462c' : legacyIndustry ? 'a64be9b39302a5ef8d5bc5085a1d864c94b4fc3b' : '4cc87a660c0afb173af007ca52697e8aad98d5fb';
 const prefix = 'packages/games/power-grid/';
 const root = resolve(legacyIndustry ? `.shots/industry-v${industryVersion}-reference` : '.shots/industry-classic-reference');
 const files = execFileSync('git', ['ls-tree', '-r', '--name-only', reference, `${prefix}src`, `${prefix}package.json`], { encoding: 'utf8' }).trim().split('\n');

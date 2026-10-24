@@ -11,7 +11,7 @@ import '../../styles/power-grid.scss';
 
 const params = new URLSearchParams(location.search);
 const view = params.get('view');
-const rulesVersion = params.get('version') === '4' ? 4 : params.get('version') === '5' ? 5 : params.get('version') === '6' ? 6 : params.get('version') === '7' ? 7 : 8;
+const rulesVersion = params.get('version') === '4' ? 4 : params.get('version') === '5' ? 5 : params.get('version') === '6' ? 6 : params.get('version') === '7' ? 7 : params.get('version') === '8' ? 8 : 9;
 const facilityId = (old: number): number => rulesVersion < 7 ? old : ({ 101: 301, 102: 303, 103: 305, 104: 311, 105: 313, 106: 315, 107: 321, 108: 323, 109: 324, 110: 331, 111: 332, 112: 333 } as Record<number, number>)[old]!;
 let state = createGame({ ...powerGrid.defaultSettings(), playerCount: 2, rulesMode: view === 'classic' ? 'classic' : 'industry', seed: 'industry-ui' },
   [{ id: 'p1', name: 'Ada' }, { id: 'p2', name: 'Brunel' }], 'p1', 'UI0001', { gameId: 'industry-fixture', now: 1000, version: view === 'classic' ? 3 : rulesVersion });

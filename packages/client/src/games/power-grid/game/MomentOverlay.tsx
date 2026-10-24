@@ -2,7 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { LogEntry } from '@game/power-grid';
-import { cardName } from '@game/power-grid';
+import { cardName } from './cardNames';
 
 import { springBouncy, springHeavy } from '@tt/ui';
 import { useMatch } from './model';

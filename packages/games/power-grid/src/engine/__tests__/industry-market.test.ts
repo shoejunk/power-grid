@@ -20,7 +20,7 @@ function market(s: GameState, current = [101, 10, 107, 13], future = [18, 102, 1
 }
 
 describe('Industry shared deck and market', () => {
-  it.each([6, 7, 8].flatMap(version => [2, 3, 4, 5, 6].map(count => [version, count] as const)))('shuffles version %i facilities for %i players', (version, count) => {
+  it.each([6, 7, 8, 9].flatMap(version => [2, 3, 4, 5, 6].map(count => [version, count] as const)))('shuffles version %i facilities for %i players', (version, count) => {
     const s = industry(count, 'mixed-market', version);
     expect(s.version).toBe(version);
     expect(s.facilityMarket).toBeUndefined();
@@ -160,7 +160,7 @@ describe('Industry city victory', () => {
   });
 
   it.each([2, 3, 4, 5, 6])('completes and exactly replays a legal %i-player game', count => {
-    let s = industry(count, 'mixed-market', 8); const initial = structuredClone(s);
+    let s = industry(count, 'mixed-market', 9); const initial = structuredClone(s);
     const actions: { id: string; action: GameAction }[] = [];
     for (let i = 0; i < 2500 && s.phase !== 'gameOver'; i++) {
       const id = s.activePlayerId!;

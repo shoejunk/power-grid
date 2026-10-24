@@ -86,16 +86,16 @@ it('limits doubled five-token output to the remaining finite reserves', () => {
 });
 
 
-it('uses nineteen unique facilities with the requested output tiers', () => {
-  expect(FACILITIES).toHaveLength(19);
-  expect(new Set(FACILITIES.map(f => f.id)).size).toBe(19);
-  expect(FACILITIES.filter(f => f.resource === 'coal').map(f => f.output)).toEqual([3, 4, 5, 6, 7, 8]);
-  expect(FACILITIES.filter(f => f.resource === 'oil').map(f => f.output)).toEqual([2, 3, 4, 5, 6, 7]);
+it('uses seventeen unique facilities with the requested output tiers', () => {
+  expect(FACILITIES).toHaveLength(17);
+  expect(new Set(FACILITIES.map(f => f.id)).size).toBe(17);
+  expect(FACILITIES.filter(f => f.resource === 'coal').map(f => f.output)).toEqual([3, 4, 5, 6, 7]);
+  expect(FACILITIES.filter(f => f.resource === 'oil').map(f => f.output)).toEqual([2, 3, 4, 5, 6]);
   expect(FACILITIES.filter(f => f.resource === 'garbage').map(f => f.output)).toEqual([2, 3, 4, 5]);
   expect(FACILITIES.filter(f => f.resource === 'uranium').map(f => f.output)).toEqual([2, 3, 4]);
-  expect(jevContext(industry(8), 'p1').facilities).toEqual(FACILITIES);
-  expect(FACILITIES.map(f => [f.id, f.cost])).toEqual(facilitiesForVersion(7).map(f => [f.id, f.cost]));
-  expect(createGame({ ...settingsFor({ playerCount: 2 }), rulesMode: 'industry' }, seats(2), 'p1', 'NEW001', { now: NOW }).version).toBe(8);
+  expect(jevContext(industry(9), 'p1').facilities).toEqual(FACILITIES);
+  expect(facilitiesForVersion(8).map(f => [f.id, f.cost])).toEqual(facilitiesForVersion(7).map(f => [f.id, f.cost]));
+  expect(createGame({ ...settingsFor({ playerCount: 2 }), rulesMode: 'industry' }, seats(2), 'p1', 'NEW001', { now: NOW }).version).toBe(9);
   expect(jevContext(industry(6), 'p1').facilities).toEqual(VERSION_6_FACILITIES);
   for (const id of [109, 112, ...VERSION_6_FACILITIES.filter(f => f.id >= 200).map(f => f.id)]) {
     expect(findFacility(id, 7)).toBeUndefined();

@@ -648,19 +648,6 @@
   font-size: var(--tt-text-sm);
   color: var(--tt-cyan-bright);
 }
-.pg-gplant__min {
-  position: absolute;
-  bottom: 2px;
-  right: 3px;
-  padding: 0 3px;
-  border-radius: var(--tt-radius-xs);
-  background: rgba(7, 11, 17, 0.78);
-  font-size: 8px;
-  /* Was --tt-text-faint straight over the illustration. With the art at full
-     strength that is not a safe background, so it gets its own well and a
-     brighter ink. */
-  color: var(--tt-text-secondary);
-}
 .pg-gplant__discount {
   position: absolute;
   top: 5px;

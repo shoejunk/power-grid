@@ -19,8 +19,6 @@ export interface PlantCardProps {
   size?: PlantCardSize;
   /** Discount token sits on this plant: minimum bid is 1₤. §6. */
   discounted?: boolean;
-  /** Printed under the number when the card is biddable. */
-  minimumBid?: number;
   /** Renders the plant's stored fuel underneath. Owned plants only. */
   owned?: OwnedPlant;
   selected?: boolean;
@@ -52,7 +50,6 @@ export function PlantCard({
   rulesVersion = 7,
   size = 'sm',
   discounted = false,
-  minimumBid,
   owned,
   selected = false,
   onSelect,
@@ -62,7 +59,7 @@ export function PlantCard({
   badge,
   className,
 }: PlantCardProps): JSX.Element {
-  if (findFacility(plantId)) return <FacilityCard rulesVersion={rulesVersion} plantId={plantId} size={size} minimumBid={minimumBid}
+  if (findFacility(plantId)) return <FacilityCard rulesVersion={rulesVersion} plantId={plantId} size={size}
     selected={selected} onSelect={onSelect} disabledReason={disabledReason} badge={badge} className={className} discounted={discounted} muted={muted} />;
   const def = getPlant(plantId);
   const number = cardNumber(plantId, rulesVersion);
@@ -158,9 +155,6 @@ export function PlantCard({
         >
           1₤
         </motion.span>
-      ) : null}
-      {minimumBid !== undefined && !discounted ? (
-        <span className="pg-gplant__min">min {minimumBid}₤</span>
       ) : null}
       {badge}
     </>

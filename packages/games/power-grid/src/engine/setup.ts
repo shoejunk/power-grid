@@ -97,7 +97,7 @@ export interface PlantSetup {
   removed: number[];
 }
 
-export function buildPlantSetup(rng: Rng, playerCount: number, mixedMarket = false, version = 8): PlantSetup {
+export function buildPlantSetup(rng: Rng, playerCount: number, mixedMarket = false, version = 9): PlantSetup {
   // 8. Shuffle the plug-backed plants 03–15, draw 8, sort, split 4/4,
   //    then set one more plug-backed plant aside face down.
   const plugs = rng.shuffle([...PLUG_PLANT_IDS, ...(mixedMarket ? facilitiesForVersion(version).filter(f => f.cost <= 15).map(f => f.id) : [])]);
@@ -202,7 +202,7 @@ export function createGame(
     playerOrder = [humanOrder[0]!, TRUST_PLAYER_ID, humanOrder[1]!];
   }
 
-  const version = options.version ?? (settings.rulesMode === 'industry' ? 8 : 3);
+  const version = options.version ?? (settings.rulesMode === 'industry' ? 9 : 3);
   const plantSetup = buildPlantSetup(rng, settings.playerCount, settings.rulesMode === 'industry' && version >= 5, version);
   const { market, supply } = buildResourceMarket();
   const map = resolveMap(settings.mapId);
